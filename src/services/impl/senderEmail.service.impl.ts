@@ -27,7 +27,7 @@ export class SenderEmailServiceImpl implements SenderEmailService{
     getAllSenderEmails(): Promise<SenderEmailModel[]> {
         return SenderModel.find();
     }
-    async updateSenderEmail(id: String, data: Partial<{ sender: string; type: string; email: string; }>): Promise<SenderEmailModel> {
+    async updateSenderEmail(id: String, data: Partial<{ sender: String; type: String; email: String; }>): Promise<SenderEmailModel> {
        const updated = await SenderModel.findByIdAndUpdate(id, data, { new: true });
 
     if (!updated) {
