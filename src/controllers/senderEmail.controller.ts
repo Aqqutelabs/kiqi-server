@@ -78,7 +78,12 @@ export class SenderEmailController {
     try {
       const id = req.params.id;
       const updateData = req.body;
-      const updated = await this.senderEmailService.updateSenderEmail(id, updateData);
+      const updated = await this.senderEmailService.updateSenderEmail(id, {
+        senderName: req.body.senderName,
+        senderEmail: req.body.senderEmail,
+        type: req.body.type,
+      });
+      
 
       res.status(StatusCodes.OK).json({
         error: false,
