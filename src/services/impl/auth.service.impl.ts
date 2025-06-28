@@ -12,10 +12,10 @@ async login(
 email: String
 }
   ): Promise<{ accessToken: string; refreshToken: string }> {
-   const sender = await SenderModel.findOne({ senderEmail: data.email });
+    const sender = await SenderModel.findOne({ senderEmail: data.email });
 
     if (!sender) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid password or email");
+      throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid email");
     }
 
     const accessToken = generateAccessToken(sender.id, sender.senderEmail);
@@ -28,31 +28,25 @@ email: String
     return { accessToken, refreshToken };
   }
 
-  async createSenderEmail(data: {sender: String, type: String, email: String}): Promise<SenderEmailModel> {
-    const isUserExist = await SenderModel.findOne({
-      where: {
-        email: data.email,
-      },
-    });
-
+  async createSenderEmail(data: { sender: String, type: String, email: String }): Promise<SenderEmailModel> {
+    const isUserExist = await SenderModel.findOne({ senderEmail: data.email });
+  
     if (isUserExist) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, "oops email already taken");
+      throw new ApiError(StatusCodes.BAD_REQUEST, "Oops, email already taken");
     }
-      
-        const sender = await SenderModel.create({
-            sender: data.sender,
-            type: data.type,
-            senderEmail: data.email
-          });
-          
-
-        if(sender){
-            return sender;
-        }
-        throw new ApiError(
-            StatusCodes.INTERNAL_SERVER_ERROR,
-            "Unexpected error during user creation"
-          );
-      }
-    }
-    
+  
+    const sender = await SenderModel.create({
+      senderName: data.sender, 
+      type: data.type,
+      senderEmail: data.email,
+    });
+  
+    if (sender) return sender;
+  
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      "Unexpected error during user creation"
+    );
+  }
+  
+}

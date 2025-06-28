@@ -1,19 +1,26 @@
+import { StatusCodes } from "http-status-codes";
 import { SenderEmailModel, SenderModel } from "../../models/SenderEmail";
 import { User } from "../../models/User";
+import { ApiError } from "../../utils/ApiError";
 import { SenderEmailService } from "../senderEmail.service";
 
 
 export class SenderEmailServiceImpl implements SenderEmailService{
-    async createSenderEmail(sender: String, type: String, email: String): Promise<SenderEmailModel> {
-        const isSenderExist = await SenderModel.findOne({ email });
-
-        if (isSenderExist) {
-          throw new Error("Sender email already exists");
+    async createSenderEmail( senderName: String, type: String, email: String ): Promise<SenderEmailModel> {
+        const isUserExist = await SenderModel.findOne({ senderEmail: email });
+        if (isUserExist) {
+          throw new ApiError(StatusCodes.BAD_REQUEST, "Email already exists");
         }
-    
-        const newSender = new SenderModel({ sender, type, email });
-        return await newSender.save();
-    }
+      
+        const sender = await SenderModel.create({
+          senderName,     
+          type: type,
+          senderEmail: email       
+        });
+      
+        return sender;
+      }
+      
     async getSenderEmailById(id: String): Promise<SenderEmailModel | null> {
         return SenderModel.findById(id);
     }

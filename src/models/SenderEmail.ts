@@ -2,13 +2,12 @@ import mongoose, { Document, Schema } from "mongoose"
 
 export interface SenderEmailModel extends Document{ 
     _id: string;
-    senderName: string;
+    senderName: String;
     type: String;
-    senderEmail: string;
+    senderEmail: String;
 }
 
 const SenderEmailSchema: Schema = new Schema<SenderEmailModel>({
-    id: {type: String, required: true},
     senderName: { type: String, required: true },
     type: { type: String, required: true }, 
     senderEmail: { type: String, required: true }
