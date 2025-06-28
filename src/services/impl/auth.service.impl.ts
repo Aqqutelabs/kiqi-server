@@ -30,7 +30,7 @@ password: string
     return { accessToken, refreshToken };
   }
 
-  async createSenderEmail(data: { firstName: string, lastName: string, email: string, password: string, organizationName: string }): Promise<User> {
+  async createUser(data: { firstName: string, lastName: string, email: string, password: string, organizationName: string }): Promise<User> {
     const isUserExist = await UserModel.findOne({ email: data.email });
   
     if (isUserExist) {
