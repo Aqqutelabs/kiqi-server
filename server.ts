@@ -4,7 +4,12 @@ import cors from 'cors';
 import errorHandler from './src/middlewares/ErrorHandler';
 import config from './src/config/index';
 import mainRouter from './src/routes/index';
+import senderRouter from './src/routes/senderEmail.routes';
+import authRoutes from './src/routes/auth.route';
+import connectDB from './src/config/ConnectDB';
 // import errorHandler from './middlewares/errorHandler.middleware';
+
+connectDB()
 
 // Initialize express app
 const app: Express = express();
@@ -24,6 +29,8 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 app.use('/api/v1', mainRouter);
+app.use("/api/v1/senderEmail", senderRouter)
+app.use("/api/v1/auth", authRoutes)
 
 // Global Error Handler Middleware (must be last)
 // app.use(errorHandler);
