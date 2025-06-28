@@ -25,7 +25,7 @@ const UserSchema: Schema = new Schema<User>({
     // senderEmail: { type: String, required: true 
 })
 
-export const UserModel = mongoose.model<User>("SenderEmail", UserSchema)
+export const UserModel = mongoose.model<User>("User", UserSchema)
 
 export interface Organization {
     id: string;
