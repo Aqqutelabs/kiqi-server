@@ -1,4 +1,6 @@
-export interface User {
+import mongoose, { Document, Schema } from "mongoose";
+
+export interface User extends Document{
     id: string;
     firstName: string;
     lastName: string;
@@ -13,6 +15,17 @@ export interface User {
     createdAt: Date;
     updatedAt: Date;
 }
+
+const UserSchema: Schema = new Schema<User>({
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true }, 
+    email: { type: String, required: true },
+    password: { type: String, required: true },
+    // type: { type: String, required: true }, 
+    // senderEmail: { type: String, required: true 
+})
+
+export const UserModel = mongoose.model<User>("User", UserSchema)
 
 export interface Organization {
     id: string;

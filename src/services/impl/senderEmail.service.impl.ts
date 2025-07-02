@@ -27,15 +27,22 @@ export class SenderEmailServiceImpl implements SenderEmailService{
     getAllSenderEmails(): Promise<SenderEmailModel[]> {
         return SenderModel.find();
     }
-    async updateSenderEmail(id: String, data: Partial<{ sender: string; type: string; email: string; }>): Promise<SenderEmailModel> {
-       const updated = await SenderModel.findByIdAndUpdate(id, data, { new: true });
-
-    if (!updated) {
-      throw new Error("Sender email not found");
-    }
-
-    return updated;
-    }
+    async updateSenderEmail(
+        id: string,
+        data: Partial<{ senderName: string; type: string; senderEmail: string }>
+      ): Promise<SenderEmailModel> {
+        const updated = await SenderModel.findByIdAndUpdate(id, data, {
+          new: true,
+          runValidators: true,
+        });
+      
+        if (!updated) {
+          throw new Error("Sender email not found");
+        }
+      
+        return updated;
+      }
+      
     async deleteSenderEmail(id: String): Promise<void> {
         await SenderModel.findByIdAndDelete(id);
     }

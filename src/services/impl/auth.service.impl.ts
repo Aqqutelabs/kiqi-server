@@ -3,45 +3,49 @@ import { SenderEmailModel, SenderModel } from "../../models/SenderEmail";
 import { ApiError } from "../../utils/ApiError";
 import { generateAccessToken, generateRefreshToken } from "../../utils/auth.util";
 import { AuthService } from "../auth.service";
+import { User, UserModel } from "../../models/User";
 
 
 export class AuthServiceImpl implements AuthService{
    
 async login(
     data: {
-email: String
+email: string,
+password: string
 }
   ): Promise<{ accessToken: string; refreshToken: string }> {
-    const sender = await SenderModel.findOne({ senderEmail: data.email });
+    const user = await UserModel.findOne({ email: data.email });
 
-    if (!sender) {
+    if (!user) {
       throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid email");
     }
 
-    const accessToken = generateAccessToken(sender.id, sender.senderEmail);
+    const accessToken = generateAccessToken(user.id, user.email);
 
     const refreshToken = generateRefreshToken(
-      sender.id,
-      sender.senderEmail,
+      user.id,
+      user.email,
     );
 
     return { accessToken, refreshToken };
   }
 
-  async createSenderEmail(data: { sender: String, type: String, email: String }): Promise<SenderEmailModel> {
-    const isUserExist = await SenderModel.findOne({ senderEmail: data.email });
+  async createUser(data: { firstName: string, lastName: string, email: string, password: string, organizationName: string }): Promise<User> {
+    const isUserExist = await UserModel.findOne({ email: data.email });
   
     if (isUserExist) {
       throw new ApiError(StatusCodes.BAD_REQUEST, "Oops, email already taken");
     }
   
-    const sender = await SenderModel.create({
-      senderName: data.sender, 
-      type: data.type,
-      senderEmail: data.email,
+    const user = await UserModel.create({
+      firstName: data.firstName, 
+      lastName: data.lastName,
+      email: data.email,
+      password: data.password,
+      organizationName: data.organizationName
     });
   
-    if (sender) return sender;
+    if (user) return user;
   
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
