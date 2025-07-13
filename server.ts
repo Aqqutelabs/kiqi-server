@@ -7,9 +7,11 @@ import mainRouter from './src/routes/index';
 import senderRouter from './src/routes/senderEmail.routes';
 import authRoutes from './src/routes/auth.route';
 import connectDB from './src/config/ConnectDB';
+import { GoogleAI } from './src/config/GoogleAI';
 // import errorHandler from './middlewares/errorHandler.middleware';
 
 connectDB()
+GoogleAI()
 
 // Initialize express app
 const app: Express = express();
