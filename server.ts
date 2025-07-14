@@ -8,6 +8,7 @@ import senderRouter from './src/routes/senderEmail.routes';
 import authRoutes from './src/routes/auth.route';
 import connectDB from './src/config/ConnectDB';
 import { GoogleAI } from './src/config/GoogleAI';
+import templateRouter from './src/routes/templates.route';
 // import errorHandler from './middlewares/errorHandler.middleware';
 
 connectDB()
@@ -33,6 +34,7 @@ app.get('/', (req: Request, res: Response) => {
 app.use('/api/v1', mainRouter);
 app.use("/api/v1/senderEmail", senderRouter)
 app.use("/api/v1/auth", authRoutes)
+app.use("/api/v1/templates", templateRouter)
 
 // Global Error Handler Middleware (must be last)
 // app.use(errorHandler);
