@@ -10,3 +10,5 @@ const GenerateEmailSchema: Schema = new Schema<GenerateEmail>({
 })
 
 export const GenerateEmailModel = mongoose.model<GenerateEmail>("aiPrompt-generate-email", GenerateEmailSchema)
+
+
