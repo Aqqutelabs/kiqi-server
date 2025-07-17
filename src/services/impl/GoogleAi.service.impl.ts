@@ -1,7 +1,7 @@
 import axios from "axios";
-import { AiChat } from "../../models/AiChat";
-import { GenerateEmail } from "../../models/GoogleAI";
-import { ReGenerateEmail } from "../../models/ReGenerate";
+import { AiChat, AiChatModel } from "../../models/AiChat";
+import { GenerateEmail, GenerateEmailModel } from "../../models/GoogleAI";
+import { ReGenerateEmail, ReGenerateModel } from "../../models/ReGenerate";
 import { GoogleAiService } from "../GoogleAi.service";
 
 const GOOGLE_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
@@ -19,11 +19,12 @@ export class GoogleAiServiceImpl implements GoogleAiService{
         
             const text = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "No content generated";
         
-            return {
+            const generated = await GenerateEmailModel.create({
               prompt,
               result: text,
               createdAt: new Date().toISOString(),
-            };
+            });
+            return generated
         } catch (error: any) {
           console.error("generateEmail error:", error.message);
           throw new Error("Failed to generate email");
@@ -42,37 +43,40 @@ export class GoogleAiServiceImpl implements GoogleAiService{
         
             const text = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "No regenerated content";
         
-            return {
+            const aiResponse = await ReGenerateModel.create({
               emailId,
               prompt,
               regenerated: text,
               regeneratedAt: new Date().toISOString(),
-            };
+            });
+            return aiResponse;
         } catch (error: any) {
             console.error("regenerateEmail error:", error.message);
             throw new Error("Failed to regenerate email");
           }
     }
     async aiChat(sessionId: String, message: String): Promise<AiChat> {
-        try {
-            const response = await axios.post(
-              `${GOOGLE_API_URL}?key=${API_KEY}`,
-              {
-                contents: [{ parts: [{ text: message }] }],
-              }
-            );
-        
-            const reply = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "No reply";
-        
-            return {
-              sessionId,
-              message: message,
-              aiResponse: reply,
-              timestamp: new Date().toISOString(),
-            };
-        } catch (error: any) {
-            console.error("aiChat error:", error.message);
-            throw new Error("Chat failed");
+            try {
+              const response = await axios.post(
+                `${GOOGLE_API_URL}?key=${API_KEY}`,
+                {
+                  contents: [{ parts: [{ text: message }] }],
+                }
+              );
+          
+              const aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "No reply";
+          
+              const savedChat = await AiChatModel.create({
+                sessionId,
+                message,
+                aiResponse,
+                timestamp: new Date().toISOString(),
+              });
+          
+              return savedChat;
+            } catch (error: any) {
+              console.error("aiChat error:", error.message);
+              throw new Error("Chat failed");
+            }
           }
     }
-}
