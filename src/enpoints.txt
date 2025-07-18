@@ -1,0 +1,33 @@
+Other endpoints needed: 
+POST /api/campaigns - Create a new campaign with details (e.g., Campaign Name, Subject Line, Campaign Type).
+GET /api/campaigns - Retrieve a list of all campaigns (e.g., Active, Scheduled, Completed).
+GET /api/campaigns/{id} - Retrieve details of a specific campaign.
+PUT /api/campaigns/{id} - Update campaign settings (e.g., Audience, Sender Info).
+DELETE /api/campaigns/{id} - Delete a campaign.
+
+Audience Management
+POST /api/email-lists - Create a new email list.
+GET /api/email-lists - Retrieve all email lists.
+GET /api/email-lists/{id} - Retrieve details of a specific email list.
+POST /api/email-lists/{id}/contacts - Add contacts to an email list.
+DELETE /api/email-lists/{id}/contacts/{contactId} - Remove a contact from an email list.
+GET /api/contacts - Retrieve all contacts with filters (e.g., Unsubscribed, Bounced, Inactive).
+Email Templates
+
+POST /api/campaigns/{id}/send - Send a campaign to the selected audience.
+POST /api/campaigns/{id}/schedule - Schedule a campaign for later delivery.
+GET /api/campaigns/{id}/delivery-status - Retrieve delivery status (e.g., Deliveries, Opens, Clicks).
+Analytics
+GET /api/analytics - Retrieve overall analytics (e.g., Emails Sent, Avg. Open Rate, Unsubscribe Rate).
+GET /api/campaigns/{id}/analytics - Retrieve analytics for a specific campaign.
+KIQ AI Integration
+POST /api/ai/generate-email - Generate an email content based on user input or prompts.
+POST /api/ai/smart-compose - Provide smart composition suggestions.
+POST /api/ai/optimize - Optimize email settings (e.g., send at best time, predict click-through rate).
+Mailbox and Chatbot
+GET /api/mailbox - Retrieve mailbox data (e.g., sent emails, drafts).
+POST /api/chatbot - Interact with the chatbot for assistance.
+System and Settings
+GET /api/settings - Retrieve system settings. 
+PUT /api/settings - Update system settings.
+GET /api/users-and-roles
