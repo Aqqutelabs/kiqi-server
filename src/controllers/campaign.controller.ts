@@ -87,4 +87,22 @@ export class CampaignController {
             next(error);
         }
     }
+
+    public deleteCampaign = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try{
+            const id = req.params.id
+            const deleted = await this.campaignService.deleteCampaign(id);
+
+            res.status(StatusCodes.OK).json({
+                error: false,
+                message: "Campaign has been deleted",
+            })
+        } catch (error) {
+            next(error)
+        }
+    }
 }
