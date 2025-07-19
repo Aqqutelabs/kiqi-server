@@ -9,3 +9,5 @@ templateRouter.post("/", isAuthenticated, templateController.createTemplate);
 templateRouter.get("/:id", isAuthenticated, templateController.getTemplateById);
 templateRouter.get("/", isAuthenticated, templateController.getAllTemplates);
 templateRouter.delete("/:id", isAuthenticated, templateController.deleteTemplates)
+
+export default templateRouter
