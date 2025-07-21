@@ -4,6 +4,8 @@ export interface TemplateModel extends Document{
     _id: string;
     title: string;
     content: string;
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 
 const TemplateSchema: Schema = new Schema<TemplateModel> ({

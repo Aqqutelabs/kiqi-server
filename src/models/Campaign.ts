@@ -7,6 +7,8 @@ export interface CampaignDoc extends Document{
     campaignType?: string;
     status: "Active" | "Scheduled" | "Completed" | "Pending";
     deliveryStatus: string;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 const CampaignSchema: Schema = new Schema<CampaignDoc>({

@@ -5,6 +5,8 @@ export interface SenderEmailModel extends Document{
     senderName: String;
     type: String;
     senderEmail: String;
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 
 const SenderEmailSchema: Schema = new Schema<SenderEmailModel>({

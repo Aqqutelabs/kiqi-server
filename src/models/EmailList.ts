@@ -7,6 +7,7 @@ export interface EmailList extends Document{
     emails?: [];
     emailFiles?: [];
     createdAt: Date;   
+    updatedAt: Date;
 }
 
 const EmailListSchema: Schema = new Schema<EmailList>({
