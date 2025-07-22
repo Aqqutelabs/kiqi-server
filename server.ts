@@ -11,6 +11,7 @@ import { GoogleAI } from './src/config/GoogleAI';
 import templateRouter from './src/routes/templates.route';
 import googleAIrouter from './src/routes/googeAi.route';
 import campaignRoute from './src/routes/campaign.route';
+import emailListRoute from './src/routes/emailList.route';
 // import errorHandler from './middlewares/errorHandler.middleware';
 
 connectDB()
@@ -39,6 +40,9 @@ app.use("/api/v1/auth", authRoutes)
 app.use("/api/v1/templates", templateRouter)
 app.use("/api/v1/ai", googleAIrouter)
 app.use("/api/v1/campaigns", campaignRoute)
+app.use("/api/email-lists", emailListRoute)
+app.use("/api/settings")
+app.use("/api/mailChat")
 
 // Global Error Handler Middleware (must be last)
 // app.use(errorHandler);
