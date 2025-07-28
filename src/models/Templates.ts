@@ -1,3 +1,4 @@
+import { timeStamp } from "console";
 import mongoose, { Schema } from "mongoose";
 
 export interface TemplateModel extends Document{
@@ -10,7 +11,11 @@ export interface TemplateModel extends Document{
 
 const TemplateSchema: Schema = new Schema<TemplateModel> ({
     title: { type: String, required: true },
-    content: { type: String, required: true}
-})
+    content: { type: String, required: true},
+}, 
+{
+    timestamps: true
+}
+)
 
 export const TemplatesModel = mongoose.model<TemplateModel>("Templates", TemplateSchema)

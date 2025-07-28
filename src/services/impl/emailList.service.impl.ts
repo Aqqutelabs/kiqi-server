@@ -17,9 +17,6 @@ export class EmailistServiceImpl implements EmailListService{
          email_listName: data.email_listName,
          emails: data.emails,
          emailFiles: data.emailFiles,
-         totalEmails: data.emails.length,
-         createdAt: Date.now(),
-         updatedAt: Date.now()
        })
 
        return newList;
