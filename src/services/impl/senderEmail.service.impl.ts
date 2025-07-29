@@ -15,7 +15,9 @@ export class SenderEmailServiceImpl implements SenderEmailService{
         const sender = await SenderModel.create({
           senderName,     
           type: type,
-          senderEmail: email       
+          senderEmail: email,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
         });
       
         return sender;
@@ -34,6 +36,7 @@ export class SenderEmailServiceImpl implements SenderEmailService{
         const updated = await SenderModel.findByIdAndUpdate(id, data, {
           new: true,
           runValidators: true,
+          updatedAt: Date.now()
         });
       
         if (!updated) {

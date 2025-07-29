@@ -16,7 +16,9 @@ export class TemplateServiceImpl implements TemplateService{
 
         const template = await TemplatesModel.create({
             title: title,
-            content: content
+            content: content,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
         })
         
         return template;

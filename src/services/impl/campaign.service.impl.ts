@@ -5,7 +5,7 @@ import { CampaignService } from "../campaign.service";
 
 export class CampaignServiceImpl implements CampaignService{
     async createCampaign(data: { campaignName: String; subjectLine: String; campaignType: String; }): Promise<CampaignDoc> {
-        const isCampaignExists = await CampaignModel.findById({
+        const isCampaignExists = await CampaignModel.findOne({
             campaignName: data.campaignName
         })
         if(isCampaignExists) {
@@ -15,7 +15,9 @@ export class CampaignServiceImpl implements CampaignService{
         const campaign = await CampaignModel.create({
             campaignName: data.campaignName,
             campaignType: data.campaignType,
-            subjectLine: data.subjectLine
+            subjectLine: data.subjectLine,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
         })
 
         return campaign;
@@ -32,7 +34,8 @@ export class CampaignServiceImpl implements CampaignService{
             data,
             {
                 new: true,
-                runValidators: true
+                runValidators: true,
+                updatedAt: Date.now()
             });
 
             if(!updated){
@@ -43,11 +46,11 @@ export class CampaignServiceImpl implements CampaignService{
     async deleteCampaign(id: String): Promise<void> {
        await CampaignModel.findByIdAndDelete(id)
     }
-    async sendCampaign(): Promise<CampaignDoc> {
+    async sendCampaign(id: String): Promise<CampaignDoc> {
         throw new Error("Method not implemented.");
     }
-    async scheduleCampaign(): Promise<CampaignDoc> {
-        throw new Error("Method not implemented.");
+    async scheduleCampaign(id: String): Promise<CampaignDoc> {
+        const campaignId = await CampaignModel.findById(id) 
     }
     async getCampaignDeliveryStatus(): Promise<CampaignDoc> {
         throw new Error("Method not implemented.");
