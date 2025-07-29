@@ -6,7 +6,7 @@ export interface CampaignService{
     getCampaignById(id: String): Promise<CampaignDoc | null>
     updateCampaign(id: String, data: Partial<{campaignName: String, subjectLine: String, campaignType: String }>): Promise<CampaignDoc>
     deleteCampaign(id: String): Promise<void>
-    sendCampaign(): Promise<CampaignDoc>
-    scheduleCampaign(): Promise<CampaignDoc>
+    sendCampaign(id: String): Promise<CampaignDoc>
+    scheduleCampaign(id: String): Promise<CampaignDoc>
     getCampaignDeliveryStatus(): Promise<CampaignDoc>
 }

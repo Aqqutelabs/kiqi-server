@@ -12,7 +12,7 @@ Analytics
 GET /api/analytics - Retrieve overall analytics (e.g., Emails Sent, Avg. Open Rate, Unsubscribe Rate).
 GET /api/campaigns/{id}/analytics - Retrieve analytics for a specific campaign.
 KIQ AI Integration
-POST /api/ai/generate-email - Generate an email content based on user input or prompts.
+
 POST /api/ai/smart-compose - Provide smart composition suggestions.
 POST /api/ai/optimize - Optimize email settings (e.g., send at best time, predict click-through rate).
 Mailbox and Chatbot

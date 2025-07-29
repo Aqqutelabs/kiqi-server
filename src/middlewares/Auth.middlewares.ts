@@ -40,42 +40,46 @@ export const verifyJWT = asyncHandler(async (req: any  , res: Response, next: Ne
     }
 });
 
-export const isAuthenticated = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try{
-    const authHeader = req?.headers["authorization"];
-  
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({
+
+export const isAuthenticated = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers["authorization"];
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      res.status(StatusCodes.UNAUTHORIZED).json({
         error: true,
-        message: 'Authorization token missing or malformed',
+        message: "Authorization token missing or malformed",
       });
+      return;
     }
-  
-    const token = authHeader?.split(' ')[1];
 
-    if(!token){
-        res.status(StatusCodes.UNAUTHORIZED).json({
-            message: "Token is missing from authorization header",
-        })
-    }
-  
-       jwt.verify(token || "", process.env.JWT_SECRET || "", (err, decode) => {
-        if(err){
-            res.status(StatusCodes.FORBIDDEN).json({
-                message: "Invalid or expired token"
-            })
-            return;
-        }
-
-        const payload = decode as JwtPayload;
-        req.user = payload.userId;
-        next()
-      }) 
-  
-    } catch (err: any) {
-      res.status(401).json({
-        message: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
-        error: err.message
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      res.status(StatusCodes.UNAUTHORIZED).json({
+        message: "Token is missing from authorization header",
       });
+      return;
     }
+
+    jwt.verify(token, process.env.JWT_SECRET || "", (err, decoded) => {
+      if (err || !decoded || typeof decoded !== "object") {
+        res.status(StatusCodes.FORBIDDEN).json({
+          message: "Invalid or expired token",
+        });
+        return;
+      }
+
+      req.user = (decoded as JwtPayload).userId;
+      next();
+    });
+  } catch (err: any) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
+      error: err.message,
+    });
+  }
   };

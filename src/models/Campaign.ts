@@ -9,11 +9,11 @@ export interface CampaignDoc extends Document {
   deliveryStatus: string;
   category: string;
   campaignTopic: string;
-  instructions: any[]; // or a specific type like string[]
+  instructions: any[]; 
   reward: string;
   startDate: Date;
   endDate: Date;
-  time: Date; // replaced DateTime with Date
+  time: Date;
   createdAt: Date;
   updatedAt: Date;
 }

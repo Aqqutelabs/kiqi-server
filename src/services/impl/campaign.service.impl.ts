@@ -46,11 +46,11 @@ export class CampaignServiceImpl implements CampaignService{
     async deleteCampaign(id: String): Promise<void> {
        await CampaignModel.findByIdAndDelete(id)
     }
-    async sendCampaign(): Promise<CampaignDoc> {
+    async sendCampaign(id: String): Promise<CampaignDoc> {
         throw new Error("Method not implemented.");
     }
-    async scheduleCampaign(): Promise<CampaignDoc> {
-        throw new Error("Method not implemented.");
+    async scheduleCampaign(id: String): Promise<CampaignDoc> {
+        const campaignId = await CampaignModel.findById(id) 
     }
     async getCampaignDeliveryStatus(): Promise<CampaignDoc> {
         throw new Error("Method not implemented.");
