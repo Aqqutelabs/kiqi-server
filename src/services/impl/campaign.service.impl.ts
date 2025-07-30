@@ -50,7 +50,8 @@ export class CampaignServiceImpl implements CampaignService{
         throw new Error("Method not implemented.");
     }
     async scheduleCampaign(id: String): Promise<CampaignDoc> {
-        const campaignId = await CampaignModel.findById(id) 
+        // const campaignId = await CampaignModel.findById(id)
+        throw new Error("Method not implemented."); 
     }
     async getCampaignDeliveryStatus(): Promise<CampaignDoc> {
         throw new Error("Method not implemented.");
