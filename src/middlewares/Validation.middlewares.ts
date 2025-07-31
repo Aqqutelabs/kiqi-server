@@ -23,8 +23,8 @@ const generateAccessAndRefreshTokens = async (userId: string) => {
     }
 
     // Get expiry values with proper defaults and explicit typing
-    const accessTokenExpiry = (process.env.ACCESS_TOKEN_EXPIRY || "1h") as jwt.SignOptions['expiresIn'];
-    const refreshTokenExpiry = (process.env.REFRESH_TOKEN_EXPIRY || "7d") as jwt.SignOptions['expiresIn'];
+    const accessTokenExpiry = (process.env.JWT_ACCESS_EXPIRES || "1h") as jwt.SignOptions['expiresIn'];
+    const refreshTokenExpiry = (process.env.JWT_REFRESH_EXPIRES || "7d") as jwt.SignOptions['expiresIn'];
 
     const accessTokenOptions: jwt.SignOptions = { expiresIn: accessTokenExpiry };
     const refreshTokenOptions: jwt.SignOptions = { expiresIn: refreshTokenExpiry };
