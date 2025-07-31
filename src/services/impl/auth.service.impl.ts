@@ -30,27 +30,37 @@ password: string
     return { accessToken, refreshToken };
   }
 
-  async createUser(data: { firstName: string, lastName: string, email: string, password: string, organizationName: string }): Promise<User> {
-    const isUserExist = await UserModel.findOne({ email: data.email });
+  async createUser(data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    organizationName: string;
+  }): Promise<User> {
+    const { firstName, lastName, email, password, organizationName } = data;
   
-    if (isUserExist) {
+    const existingUser = await UserModel.findOne({ email });
+    if (existingUser) {
       throw new ApiError(StatusCodes.BAD_REQUEST, "Oops, email already taken");
     }
   
     const user = await UserModel.create({
-      firstName: data.firstName, 
-      lastName: data.lastName,
-      email: data.email,
-      password: data.password,
-      organizationName: data.organizationName
+      firstName,
+      lastName,
+      email,
+      password, // Ensure this is hashed in middleware or before this call
+      organizationName,
     });
   
-    if (user) return user;
+    if (!user) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Unexpected error during user creation"
+      );
+    }
   
-    throw new ApiError(
-      StatusCodes.INTERNAL_SERVER_ERROR,
-      "Unexpected error during user creation"
-    );
+    return user;
   }
+  
   
 }
