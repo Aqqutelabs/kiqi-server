@@ -34,6 +34,10 @@ app.get('/', (req: Request, res: Response) => {
   res.status(200).json({ message: 'KiQi Backend is running!' });
 });
 
+console.log("Access Token Secret:", process.env.ACCESS_TOKEN_SECRET);
+console.log("Refresh Token Secret:", process.env.REFRESH_TOKEN_SECRET);
+
+
 app.use('/api/v1', mainRouter);
 app.use("/api/v1/senderEmail", senderRouter)
 app.use("/api/v1/auth", authRoutes)
