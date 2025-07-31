@@ -1,5 +1,4 @@
 import { StatusCodes } from "http-status-codes";
-import { SenderEmailModel, SenderModel } from "../../models/SenderEmail";
 import { ApiError } from "../../utils/ApiError";
 import { generateAccessToken, generateRefreshToken } from "../../utils/auth.util";
 import { AuthService } from "../auth.service";
