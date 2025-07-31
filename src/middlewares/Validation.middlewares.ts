@@ -15,8 +15,8 @@ const generateAccessAndRefreshTokens = async (userId: string) => {
     if (!user) throw new ApiError(500, 'User not found while generating tokens');
 
     // Ensure we have the required secrets
-    const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
-    const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET;
+    const accessTokenSecret = process.env.JWT_SECRET;
+    const refreshTokenSecret = process.env.JWT_SECRET;
     
     if (!accessTokenSecret || !refreshTokenSecret) {
         throw new ApiError(500, 'JWT secrets not configured');
