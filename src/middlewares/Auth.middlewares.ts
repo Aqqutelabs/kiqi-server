@@ -61,7 +61,7 @@ export const isAuthenticated = async (
     if (!token) {
       res.status(StatusCodes.UNAUTHORIZED).json({
         message: "Token is missing from authorization header",
-      });
+    });
       return;
     }
 
