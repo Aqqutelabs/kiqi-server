@@ -64,7 +64,6 @@ export const isAuthenticated = async (
     });
       return;
     }
-    console.log("Received token:", token);
 
 
     jwt.verify(token, process.env.JWT_SECRET || "", (err, decoded) => {
