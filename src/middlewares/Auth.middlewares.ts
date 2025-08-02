@@ -8,7 +8,7 @@ import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 
 interface JwtPayload {
     
-    userId: string;
+    id: string;
     email: string;
   
   }
@@ -64,6 +64,8 @@ export const isAuthenticated = async (
     });
       return;
     }
+    console.log("Received token:", token);
+
 
     jwt.verify(token, process.env.JWT_SECRET || "", (err, decoded) => {
       if (err || !decoded || typeof decoded !== "object") {
@@ -73,13 +75,13 @@ export const isAuthenticated = async (
         return;
       }
 
-      req.user = (decoded as JwtPayload).userId;
+      req.user = (decoded as JwtPayload).id;
       next();
     });
   } catch (err: any) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
       error: err.message,
-    });
+    }); 
   }
   };

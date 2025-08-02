@@ -12,10 +12,13 @@ import templateRouter from './src/routes/templates.route';
 import googleAIrouter from './src/routes/googeAi.route';
 import campaignRoute from './src/routes/campaign.route';
 import emailListRoute from './src/routes/emailList.route';
+import { configDotenv } from 'dotenv';
 // import errorHandler from './middlewares/errorHandler.middleware';
 
 connectDB()
 GoogleAI()
+
+configDotenv()
 
 // Initialize express app
 const app: Express = express();
