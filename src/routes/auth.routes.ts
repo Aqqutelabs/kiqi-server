@@ -6,8 +6,8 @@ import { registerUser, loginUser, logoutUser, forgotPassword, resetPassword, get
 const router = Router();
 
 // Traditional Auth
-router.route('/register').post(registerValidator, registerUser);
-router.route('/login').post(loginValidator, loginUser);
+// router.route('/register').post(registerValidator, registerUser);
+// router.route('/login').post(loginValidator, loginUser);
 router.route('/logout').post(verifyJWT, logoutUser);
 
 // Password Reset
