@@ -1,5 +1,5 @@
 import { timeStamp } from "console";
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
 export interface TemplateModel extends Document{
     _id: string;

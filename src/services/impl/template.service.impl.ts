@@ -6,9 +6,9 @@ import { ApiError } from "../../utils/ApiError";
 import { StatusCodes } from "http-status-codes";
 
 export class TemplateServiceImpl implements TemplateService{
-    async createTemplate(title: String, content: String): Promise<TemplateModel> {
+    async createTemplate(title: string, content: string): Promise<TemplateModel> {
         const isTemplateExists = await TemplatesModel.findById({
-            id
+            content
         })
         if(isTemplateExists){
             throw new ApiError(StatusCodes.BAD_REQUEST, "Template already exists")
