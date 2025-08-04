@@ -5,15 +5,15 @@ export interface CampaignDoc extends Document {
   campaignName: string;
   subjectLine: string;
   campaignType?: string;
-  status: "Active" | "Scheduled" | "Completed" | "Pending";
-  deliveryStatus: string;
-  category: string;
-  campaignTopic: string;
-  instructions: any[]; 
-  reward: string;
-  startDate: Date;
-  endDate: Date;
-  time: Date;
+  status?: "Active" | "Scheduled" | "Completed" | "Pending";
+  deliveryStatus?: string;
+  category?: string;
+  campaignTopic?: string;
+  instructions?: any[]; 
+  reward?: string;
+  startDate?: Date;
+  endDate?: Date;
+  time?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
