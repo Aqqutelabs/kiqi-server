@@ -7,7 +7,7 @@ import { StatusCodes } from "http-status-codes";
 
 export class TemplateServiceImpl implements TemplateService{
     async createTemplate(title: string, content: string): Promise<TemplateModel> {
-        const isTemplateExists = await TemplatesModel.findById({
+        const isTemplateExists = await TemplatesModel.findOne({
             content
         })
         if(isTemplateExists){
