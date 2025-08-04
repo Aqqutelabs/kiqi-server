@@ -4,7 +4,7 @@ import { ApiError } from "../../utils/ApiError";
 import { EmailListService } from "../emailList.service";
 
 export class EmailistServiceImpl implements EmailListService{
-    async createEmailList(data: { email_listName: String; emails: []; emailFiles: [];}): Promise<EmailList> {
+    async createEmailList(data: { email_listName: string; emails: string[]; emailFiles: string[];}): Promise<EmailList> {
        const isExists = await EmailListModel.findOne({
         email_listName: data.email_listName
        })
