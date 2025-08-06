@@ -26,7 +26,7 @@ const initialState: CampaignsState = {
 
 export const fetchSenders = createAsyncThunk<
   SenderEmail[], void, { rejectValue: ApiError }
->('campaigns/fetchSenders', async (_, thunkAPI) => {
+>('campaigns/fetchSenders', async (_: any, thunkAPI: { rejectWithValue: (arg0: any) => any; }) => {
   try {
     const response = await apiClient.get('/senderEmail/');
     console.log('Fetched senders:', response.data);
@@ -39,7 +39,7 @@ export const fetchSenders = createAsyncThunk<
 
 export const createSender = createAsyncThunk<
   SenderEmail, Pick<SenderEmail, 'email' | 'sender' | 'type'>, { rejectValue: ApiError }
->('campaigns/createSender', async (senderData, thunkAPI) => {
+>('campaigns/createSender', async (senderData: any, thunkAPI: { rejectWithValue: (arg0: any) => any; }) => {
   try {
     const response = await apiClient.post('/senderEmail/', senderData);
     return response.data;
@@ -53,7 +53,7 @@ export const createSender = createAsyncThunk<
 
 export const fetchEmailLists = createAsyncThunk<
   EmailList[], void, { rejectValue: ApiError }
->('campaigns/fetchEmailLists', async (_, thunkAPI) => {
+>('campaigns/fetchEmailLists', async (_: any, thunkAPI: { rejectWithValue: (arg0: any) => any; }) => {
   try {
     const response = await apiClient.get('/email-lists');
     return response.data;
@@ -64,7 +64,7 @@ export const fetchEmailLists = createAsyncThunk<
 
 export const createEmailList = createAsyncThunk<
   EmailList, { name: string, emails: string[] }, { rejectValue: ApiError }
->('campaigns/createEmailList', async (listData, thunkAPI) => {
+>('campaigns/createEmailList', async (listData: any, thunkAPI: { rejectWithValue: (arg0: any) => any; }) => {
   try {
     const response = await apiClient.post('/email-lists', listData);
     return response.data;
@@ -75,7 +75,7 @@ export const createEmailList = createAsyncThunk<
 
 export const fetchEmailListDetails = createAsyncThunk<
   EmailListDetails, string, { rejectValue: ApiError }
->('campaigns/fetchEmailListDetails', async (listId, thunkAPI) => {
+>('campaigns/fetchEmailListDetails', async (listId: any, thunkAPI: { rejectWithValue: (arg0: any) => any; }) => {
     try {
         const response = await apiClient.get(`/email-lists/${listId}`);
         return response.data;
@@ -89,7 +89,7 @@ export const fetchEmailListDetails = createAsyncThunk<
 
 export const fetchDrafts = createAsyncThunk<
   Campaign[], void, { rejectValue: ApiError }
->('campaigns/fetchDrafts', async (_, thunkAPI) => {
+>('campaigns/fetchDrafts', async (_: any, thunkAPI: { rejectWithValue: (arg0: any) => any; }) => {
     try {
         const response = await apiClient.get('/campaigns?status=draft');
         return response.data;
@@ -100,7 +100,7 @@ export const fetchDrafts = createAsyncThunk<
 
 export const createCampaign = createAsyncThunk<
   Campaign, CreateCampaignPayload, { rejectValue: ApiError }
->('campaigns/createCampaign', async (campaignData, thunkAPI) => {
+>('campaigns/createCampaign', async (campaignData: any, thunkAPI: { rejectWithValue: (arg0: any) => any; }) => {
     try {
         const response = await apiClient.post('/campaigns', campaignData);
         // This could be a draft or a scheduled campaign
@@ -115,38 +115,38 @@ const campaignsSlice = createSlice({
   initialState,
   reducers: {
     // Sync reducer to clear details when leaving a page
-    clearCurrentListDetails: (state) => {
+    clearCurrentListDetails: (state: { currentListDetails: null; }) => {
       state.currentListDetails = null;
     }
   },
-  extraReducers: (builder) => {
+  extraReducers: (builder: { addCase: (arg0: any, arg1: (state: any, action: any) => void) => { (): any; new(): any; addCase: { (arg0: any, arg1: (state: any, action: any) => void): { (): any; new(): any; addCase: { (arg0: any, arg1: (state: any, action: any) => void): { (): any; new(): any; addCase: { (arg0: any, arg1: (state: any, action: any) => void): { (): any; new(): any; addCase: { (arg0: any, arg1: (state: any, action: any) => void): { (): any; new(): any; addCase: { (arg0: any, arg1: (state: any, action: any) => void): { (): any; new(): any; addCase: { (arg0: any, arg1: (state: any, action: any) => void): void; new(): any; }; }; new(): any; }; }; new(): any; }; }; new(): any; }; }; new(): any; }; }; new(): any; }; }; addMatcher: (arg0: (action: any) => any, arg1: (state: any) => void) => { (): any; new(): any; addMatcher: { (arg0: (action: any) => any, arg1: (state: any, action: any) => void): void; new(): any; }; }; }) => {
     // --- Success Handlers for each Thunk ---
     builder
-      .addCase(fetchSenders.fulfilled, (state, action) => {
+      .addCase(fetchSenders.fulfilled, (state: { status: string; senders: any; }, action: { payload: any; }) => {
         state.status = 'succeeded';
         state.senders = action.payload;
       })
-      .addCase(createSender.fulfilled, (state, action) => {
+      .addCase(createSender.fulfilled, (state: { status: string; senders: any[]; }, action: { payload: any; }) => {
         state.status = 'succeeded';
         state.senders.push(action.payload);
       })
-      .addCase(fetchEmailLists.fulfilled, (state, action) => {
+      .addCase(fetchEmailLists.fulfilled, (state: { status: string; lists: any; }, action: { payload: any; }) => {
         state.status = 'succeeded';
         state.lists = action.payload;
       })
-      .addCase(createEmailList.fulfilled, (state, action) => {
+      .addCase(createEmailList.fulfilled, (state: { status: string; lists: any[]; }, action: { payload: any; }) => {
         state.status = 'succeeded';
         state.lists.push(action.payload);
       })
-      .addCase(fetchEmailListDetails.fulfilled, (state, action) => {
+      .addCase(fetchEmailListDetails.fulfilled, (state: { status: string; currentListDetails: any; }, action: { payload: any; }) => {
         state.status = 'succeeded';
         state.currentListDetails = action.payload;
       })
-      .addCase(fetchDrafts.fulfilled, (state, action) => {
+      .addCase(fetchDrafts.fulfilled, (state: { status: string; drafts: any; }, action: { payload: any; }) => {
         state.status = 'succeeded';
         state.drafts = action.payload;
       })
-      .addCase(createCampaign.fulfilled, (state, action) => {
+      .addCase(createCampaign.fulfilled, (state: { status: string; drafts: any[]; }, action: { payload: { status: string; }; }) => {
         state.status = 'succeeded';
         if (action.payload.status === 'draft') {
           state.drafts.push(action.payload);
@@ -156,12 +156,12 @@ const campaignsSlice = createSlice({
     // --- Generic Handlers for status/error ---
     builder
       .addMatcher(
-        (action) => action.type.startsWith('campaigns/') && action.type.endsWith('/pending'),
-        (state) => { state.status = 'loading'; state.error = null; }
+        (action: { type: string; }) => action.type.startsWith('campaigns/') && action.type.endsWith('/pending'),
+        (state: { status: string; error: null; }) => { state.status = 'loading'; state.error = null; }
       )
       .addMatcher(
-        (action) => action.type.startsWith('campaigns/') && action.type.endsWith('/rejected'),
-        (state, action) => {
+        (action: { type: string; }) => action.type.startsWith('campaigns/') && action.type.endsWith('/rejected'),
+        (state: { status: string; error: any; }, action: { error?: { message?: string; }; }) => {
           state.status = 'failed';
           state.error =
             (action as any).payload?.message ||

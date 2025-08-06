@@ -16,8 +16,6 @@ export class CampaignServiceImpl implements CampaignService{
             campaignName: data.campaignName,
             campaignType: data.campaignType,
             subjectLine: data.subjectLine,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
         })
 
         return campaign;
