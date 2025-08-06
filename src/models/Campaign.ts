@@ -5,15 +5,15 @@ export interface CampaignDoc extends Document {
   campaignName: string;
   subjectLine: string;
   campaignType?: string;
-  status: "Active" | "Scheduled" | "Completed" | "Pending";
-  deliveryStatus: string;
-  category: string;
-  campaignTopic: string;
-  instructions: any[]; 
-  reward: string;
-  startDate: Date;
-  endDate: Date;
-  time: Date;
+  status?: "Active" | "Scheduled" | "Completed" | "Pending";
+  deliveryStatus?: string;
+  category?: string;
+  campaignTopic?: string;
+  instructions?: any[]; 
+  reward?: string;
+  startDate?: Date;
+  endDate?: Date;
+  time?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,14 +29,14 @@ const CampaignSchema = new Schema<CampaignDoc>(
       default: "Pending",
       required: true,
     },
-    deliveryStatus: { type: String, required: true },
-    category: { type: String, required: true },
-    campaignTopic: { type: String, required: true },
-    instructions: { type: [], default: [] }, 
-    reward: { type: String, required: true },
-    startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
-    time: { type: Date, required: true },
+    deliveryStatus: { type: String, required: true, default: " " },
+    category: { type: String, required: true, default: " " },
+    campaignTopic: { type: String, required: true, default: " " },
+    instructions: { type: [], required: true, default: [] }, 
+    reward: { type: String, required: true, default: " " },
+    startDate: { type: Date, required: true, default: " " },
+    endDate: { type: Date, required: true, default: " " },
+    time: { type: Date, required: true, default: " " },
   },
   {
     timestamps: true
