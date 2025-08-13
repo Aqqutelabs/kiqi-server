@@ -24,13 +24,13 @@ export class EmailistServiceImpl implements EmailListService{
     async getAllEmailLists(): Promise<EmailList[]> {
        return EmailListModel.find()
     }
-    getEmailList(id: String): Promise<EmailList | null> {
+    async getEmailList(id: String): Promise<EmailList | null> {
         return EmailListModel.findById(id);
     }
-    addEmailListContacts(id: String, data: {}): Promise<EmailList> {
-        throw new Error("Method not implemented.");
+    async addEmailListContacts(id: String, data: {}): Promise<EmailList> {
+        const isExists = await EmailListModel.findOne()
     }
-    deleteEmailListContact(id: String): Promise<void> {
+    async deleteEmailListContact(id: String): Promise<void> {
         throw new Error("Method not implemented.");
     }
     getAllContacts(): Promise<void> {
