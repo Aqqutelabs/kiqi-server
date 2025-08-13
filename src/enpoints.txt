@@ -1,7 +1,12 @@
 
 Audience Management
-POST /api/email-lists/{id}/contacts - Add contacts to an email list.
-DELETE /api/email-lists/{id}/contacts/{contactId} - Remove a contact from an email list.
+// POST /api/email-lists/{id}/contacts - Add contacts to an email list.
+// DELETE /api/email-lists/{id}/contacts/{contactId} - Remove a contact from an email list.
+
+
+
+
+
 GET /api/contacts - Retrieve all contacts with filters (e.g., Unsubscribed, Bounced, Inactive).
 Email Templates
 
