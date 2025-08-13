@@ -24,6 +24,8 @@ GoogleAI()
 // Initialize express app
 const app: Express = express();
 
+const PORT = process.env.PORT || 3000;
+
 // Middlewares
 app.use(cors()); // Enable CORS for all routes
 app.use(express.json()); // Parse JSON bodies
@@ -53,6 +55,6 @@ app.use("/api/email-lists", emailListRoute)
 // app.use(errorHandler);
 
 // Start the server
-app.listen(config.port, () => {
-  console.log(`[server]: Server is running at http://localhost:${config.port}`);
+app.listen(PORT, () => {
+  console.log(`[server]: Server is running at http://localhost:${PORT}`);
 });
