@@ -6,7 +6,7 @@ export interface ContactDoc extends Document {
     lastName: string;
     emailAddress: string;
     phoneNumber: string;
-    group: string;
+    groupEmailList: string;
 }
 
 const ContactSchema = new Schema<ContactDoc>({
@@ -14,7 +14,7 @@ const ContactSchema = new Schema<ContactDoc>({
     lastName: { type: String, required: true },
     emailAddress: { type: String, required: true, unique: true },
     phoneNumber: { type: String, required: false },
-    group: { type: String, required: true }
+    groupEmailList: { type: String, required: true }
 },
 {
     timestamps: true
