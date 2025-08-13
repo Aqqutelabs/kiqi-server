@@ -8,5 +8,6 @@ const emailListController = new EmailListController()
 emailListRoute.post("/", isAuthenticated, emailListController.createEmailList)
 emailListRoute.get("/", isAuthenticated, emailListController.getAllEmailLists)
 emailListRoute.get("/:id", isAuthenticated, emailListController.getEmailList)
+emailListRoute.post("/:id/contacts", isAuthenticzted)
 
 export default emailListRoute;
