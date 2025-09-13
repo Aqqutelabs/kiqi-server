@@ -2,6 +2,17 @@ import { NextFunction, Request, Response } from "express";
 import { EmailistServiceImpl } from "../services/impl/emailList.service.impl";
 import { StatusCodes } from "http-status-codes";
 
+// Extend Express Request interface to include 'user'
+declare module "express-serve-static-core" {
+    interface Request {
+        user?: {
+            _id?: string;
+            id?: string;
+            [key: string]: any;
+        };
+    }
+}
+
 export class EmailListController {
     private emailListService: EmailistServiceImpl
 
@@ -15,14 +26,25 @@ export class EmailListController {
         next: NextFunction
     ): Promise<void> => {
         try{
-            const {email_listName, emails, emailFiles} = req.body
-            const emailList = await this.emailListService.createEmailList({email_listName, emails, emailFiles})
+            const { email_listName, emails, emailFiles } = req.body;
+            // Debug: log the user object
+            console.log('Authenticated user:', req.user);
+            // Only use _id, and ensure it's a valid ObjectId string
+            const userId = req.user?._id;
+            if (!userId || typeof userId !== 'string' || userId.length !== 24) {
+                res.status(StatusCodes.BAD_REQUEST).json({
+                    error: true,
+                    message: "Authenticated user does not have a valid MongoDB ObjectId (_id)."
+                });
+                return;
+            }
+            const emailList = await this.emailListService.createEmailList({ email_listName, emails, emailFiles, userId });
 
             res.status(StatusCodes.CREATED).json({
                 error: false,
                 message: "Email list has been created.",
                 data: emailList
-            })
+            });
         } catch(error){
             next(error)
         }
@@ -112,6 +134,23 @@ export class EmailListController {
             res.status(StatusCodes.OK).json({
                 error: false,
                 message: "Contact has been deleted from the email list."
+            })
+        } catch(error){
+            next(error)
+        }
+    }
+
+    public getEmailListsByUser = async (
+        req: Request & { user?: any },
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try{
+            const userId = req.user?._id || req.user?.id;
+            const emailLists = await this.emailListService.getEmailListsByUser(userId);
+            res.status(200).json({
+                error: false,
+                data: emailLists
             })
         } catch(error){
             next(error)

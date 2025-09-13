@@ -61,5 +61,10 @@ password: string
     return user;
   }
   
-  
+  generateAccessTokenForUser(user: User) {
+    return generateAccessToken((user._id as any).toString(), user.email);
+  }
+  generateRefreshTokenForUser(user: User) {
+    return generateRefreshToken((user._id as any).toString(), user.email);
+  }
 }

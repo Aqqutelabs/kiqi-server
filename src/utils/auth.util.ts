@@ -1,20 +1,20 @@
 import Jwt from "jsonwebtoken"
 
 
-export function generateAccessToken(id: string, email: String): string {
+export function generateAccessToken(_id: string, email: String): string {
     const secret = process.env.JWT_SECRET!;
-    const expiresIn = process.env.JWT_ACCESS_EXPIRES || "1week";
+    const expiresIn = process.env.JWT_ACCESS_EXPIRES || "30d";
   
-    return Jwt.sign({ id, email: email }, secret, {
-      expiresIn,
+    return Jwt.sign({ _id, email: email }, secret, {
+      expiresIn: expiresIn as any,
     });
-  }
+}
   
-  export function generateRefreshToken(id: string, email: String): string {
+export function generateRefreshToken(_id: string, email: String): string {
     const secret = process.env.REFRESH_TOKEN_SECRET!;
     const expiresIn = process.env.JWT_REFRESH_EXPIRES || "7d";
   
-    return Jwt.sign({ id, email: email }, secret, {
-      expiresIn,
+    return Jwt.sign({ _id, email: email }, secret, {
+      expiresIn: expiresIn as any,
     });
-  }
+}

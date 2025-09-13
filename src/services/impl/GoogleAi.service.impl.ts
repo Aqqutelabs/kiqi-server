@@ -9,6 +9,9 @@ const API_KEY = process.env.GEMINI_API_KEY!;
 
 export class GoogleAiServiceImpl implements GoogleAiService{
     async generateEmail(prompt: String): Promise<GenerateEmail> {
+        // Disable Google AI call due to quota exceeded
+        return Promise.reject(new Error("Google AI API temporarily disabled due to quota limits."));
+        /*
         try {
             const response = await axios.post(
               `${GOOGLE_API_URL}?key=${API_KEY}`,
@@ -29,8 +32,12 @@ export class GoogleAiServiceImpl implements GoogleAiService{
           console.error("generateEmail error:", error.message);
           throw new Error("Failed to generate email");
         }
+        */
     }
     async regenerateEmail(emailId: String, prompt: String): Promise<ReGenerateEmail> {
+        // Disable Google AI call due to quota exceeded
+        return Promise.reject(new Error("Google AI API temporarily disabled due to quota limits."));
+        /*
         try {
             const finalPrompt = `Modify the email with ID ${emailId}. ${prompt}`;
         
@@ -54,9 +61,13 @@ export class GoogleAiServiceImpl implements GoogleAiService{
             console.error("regenerateEmail error:", error.message);
             throw new Error("Failed to regenerate email");
           }
+        */
     }
     async aiChat(sessionId: String, message: String): Promise<AiChat> {
-            try {
+        // Disable Google AI call due to quota exceeded
+        return Promise.reject(new Error("Google AI API temporarily disabled due to quota limits."));
+        /*
+        try {
               const response = await axios.post(
                 `${GOOGLE_API_URL}?key=${API_KEY}`,
                 {
@@ -70,13 +81,13 @@ export class GoogleAiServiceImpl implements GoogleAiService{
                 sessionId,
                 message,
                 aiResponse,
-                timestamp: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
               });
-          
               return savedChat;
-            } catch (error: any) {
+        } catch (error: any) {
               console.error("aiChat error:", error.message);
-              throw new Error("Chat failed");
-            }
-          }
+              throw new Error("Failed to chat with AI");
+        }
+        */
     }
+}

@@ -2,9 +2,26 @@
 import { Request, Response, NextFunction } from 'express';
 import { MulterError } from 'multer';
 import AppError from '../utils/AppError';
+import { ApiError } from '../utils/ApiError';
 
 const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('💥 ERROR 💥', err);
+
+  if (err instanceof ApiError) {
+    // Handle Google API quota/rate limit errors (status 429)
+    if (err.statusCode === 429) {
+      return res.status(429).json({
+        status: 'error',
+        message: err.message || 'Too Many Requests: Quota exceeded.',
+        errors: err.errors || [],
+      });
+    }
+    return res.status(err.statusCode).json({
+      status: 'error',
+      message: err.message,
+      errors: err.errors || [],
+    });
+  }
 
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({

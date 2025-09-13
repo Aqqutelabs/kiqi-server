@@ -4,7 +4,7 @@ import { ApiError } from "../../utils/ApiError";
 import { CampaignService } from "../campaign.service";
 
 export class CampaignServiceImpl implements CampaignService{
-    async createCampaign(data: { campaignName: String; subjectLine: String; campaignType: String; }): Promise<CampaignDoc> {
+    async createCampaign(data: { campaignName: String; subjectLine: String; campaignType: String; status?: string; userId?: string; emailListId?: string; }): Promise<CampaignDoc> {
         const isCampaignExists = await CampaignModel.findOne({
             campaignName: data.campaignName
         })
@@ -16,6 +16,9 @@ export class CampaignServiceImpl implements CampaignService{
             campaignName: data.campaignName,
             campaignType: data.campaignType,
             subjectLine: data.subjectLine,
+            status: data.status,
+            userId: data.userId,
+            emailListId: data.emailListId
         })
 
         return campaign;
@@ -54,5 +57,19 @@ export class CampaignServiceImpl implements CampaignService{
     async getCampaignDeliveryStatus(): Promise<CampaignDoc> {
         throw new Error("Method not implemented.");
     }
-    
+    async getEmailListForUser(emailListId: string, userId: string) {
+        const EmailListModel = require("../../models/EmailList").EmailListModel;
+        return EmailListModel.findOne({ _id: emailListId, userId });
+    }
+    async sendBulkEmail(emails: string[], subject: string, body: string) {
+        const { sendEmail } = require("../../utils/EmailService");
+        for (const to of emails) {
+            await sendEmail({
+                to,
+                subject,
+                text: body,
+                html: body
+            });
+        }
+    }
 }

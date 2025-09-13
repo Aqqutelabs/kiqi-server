@@ -105,4 +105,63 @@ export class CampaignController {
             next(error)
         }
     }
+
+    public startCampaign = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const { campaignName, emailListId, subject, body } = req.body;
+            const userId = req.user?._id;
+            if (!campaignName || !emailListId || !subject || !body) {
+                res.status(StatusCodes.BAD_REQUEST).json({
+                    error: true,
+                    message: "All fields (campaignName, emailListId, subject, body) are required."
+                });
+                return;
+            }
+            if (!userId) {
+                res.status(StatusCodes.UNAUTHORIZED).json({
+                    error: true,
+                    message: "User not authenticated."
+                });
+                return;
+            }
+            // Fetch email list and validate ownership
+            const emailList = await this.campaignService.getEmailListForUser(emailListId, userId as string);
+            if (!emailList) {
+                res.status(StatusCodes.NOT_FOUND).json({
+                    error: true,
+                    message: "Email list not found or does not belong to user."
+                });
+                return;
+            }
+            if (!emailList.emails || emailList.emails.length === 0) {
+                res.status(StatusCodes.BAD_REQUEST).json({
+                    error: true,
+                    message: "Email list is empty."
+                });
+                return;
+            }
+            // Send emails
+            await this.campaignService.sendBulkEmail(emailList.emails, subject, body);
+            // Save campaign record
+            const campaign = await this.campaignService.createCampaign({
+                campaignName,
+                subjectLine: subject,
+                campaignType: 'Email',
+                status: 'Completed',
+                userId,
+                emailListId
+            });
+            res.status(StatusCodes.OK).json({
+                error: false,
+                message: "Campaign started and emails sent.",
+                data: campaign
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
 }

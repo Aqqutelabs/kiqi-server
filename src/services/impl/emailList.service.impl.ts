@@ -3,11 +3,21 @@ import { EmailList, EmailListModel } from "../../models/EmailList";
 import { ApiError } from "../../utils/ApiError";
 import { EmailListService } from "../emailList.service";
 import { ContactDoc, ContactModel } from "../../models/Contacts";
+import mongoose from "mongoose";
 
 export class EmailistServiceImpl implements EmailListService{
-    async createEmailList(data: { email_listName: string; emails: string[]; emailFiles: string[];}): Promise<EmailList> {
+    async createEmailList(data: { email_listName: string; emails: string[]; emailFiles: string[]; userId: any;}): Promise<EmailList> {
+       let userObjectId;
+       if (mongoose.Types.ObjectId.isValid(data.userId)) {
+         userObjectId = new mongoose.Types.ObjectId(data.userId);
+       } else if (data.userId && data.userId._id && mongoose.Types.ObjectId.isValid(data.userId._id)) {
+         userObjectId = new mongoose.Types.ObjectId(data.userId._id);
+       } else {
+         throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid userId: must be a valid MongoDB ObjectId");
+       }
        const isExists = await EmailListModel.findOne({
-        email_listName: data.email_listName
+        email_listName: data.email_listName,
+        userId: userObjectId
        })
 
        if(isExists){
@@ -18,9 +28,22 @@ export class EmailistServiceImpl implements EmailListService{
          email_listName: data.email_listName,
          emails: data.emails,
          emailFiles: data.emailFiles,
+         userId: userObjectId,
        })
 
        return newList;
+    }
+
+    async getEmailListsByUser(userId: any): Promise<EmailList[]> {
+        let userObjectId;
+        if (mongoose.Types.ObjectId.isValid(userId)) {
+          userObjectId = new mongoose.Types.ObjectId(userId);
+        } else if (userId && userId._id && mongoose.Types.ObjectId.isValid(userId._id)) {
+          userObjectId = new mongoose.Types.ObjectId(userId._id);
+        } else {
+          throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid userId: must be a valid MongoDB ObjectId");
+        }
+        return EmailListModel.find({ userId: userObjectId });
     }
     async getAllEmailLists(): Promise<EmailList[]> {
        return EmailListModel.find()

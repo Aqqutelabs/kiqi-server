@@ -34,9 +34,9 @@ const CampaignSchema = new Schema<CampaignDoc>(
     campaignTopic: { type: String, required: true, default: " " },
     instructions: { type: [], required: true, default: [] }, 
     reward: { type: String, required: true, default: " " },
-    startDate: { type: Date, required: true, default: " " },
-    endDate: { type: Date, required: true, default: " " },
-    time: { type: Date, required: true, default: " " },
+    startDate: { type: Date, required: false, default: null },
+    endDate: { type: Date, required: false, default: null },
+    time: { type: Date, required: false, default: null },
   },
   {
     timestamps: true

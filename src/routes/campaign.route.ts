@@ -10,5 +10,6 @@ campaignRoute.get("/", isAuthenticated, CampController.getAllCampaigns);
 campaignRoute.get("/:id", isAuthenticated, CampController.getCampaignById);
 campaignRoute.put("/:id", isAuthenticated, CampController.updateCampaign);
 campaignRoute.delete("/:id", isAuthenticated, CampController.deleteCampaign);
+campaignRoute.post("/start", isAuthenticated, CampController.startCampaign);
 
 export default campaignRoute;

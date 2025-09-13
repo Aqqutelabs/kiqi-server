@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
-import { User } from '../models/User';
-import { authService } from '../services/User';
+import { UserModel } from '../models/User';
 import { ApiError } from '../utils/ApiError';
 import { asyncHandler } from '../utils/AsyncHandler';
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
@@ -14,7 +13,11 @@ interface JwtPayload {
   }
 
 export interface AuthRequest extends Request {
-    user?: string;
+    user?: {
+        _id?: string;
+        id?: string;
+        [key: string]: any;
+    };
 }
 
 export const verifyJWT = asyncHandler(async (req: any  , res: Response, next: NextFunction) => {
@@ -26,8 +29,8 @@ export const verifyJWT = asyncHandler(async (req: any  , res: Response, next: Ne
         }
 
         const decodedToken: any = jwt.verify(token, process.env.JWT_SECRET!);
-        
-        const user = await authService.findUserById(decodedToken?.id);
+        // Use _id from token for MongoDB lookup
+        const user = await UserModel.findById(decodedToken?._id);
 
         if (!user) {
             throw new ApiError(401, 'Invalid Access Token');
@@ -74,7 +77,8 @@ export const isAuthenticated = async (
         return;
       }
 
-      req.user = (decoded as JwtPayload).id;
+      // req.user = (decoded as JwtPayload).id;
+      req.user = decoded;
       next();
     });
   } catch (err: any) {
