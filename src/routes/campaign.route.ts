@@ -11,5 +11,7 @@ campaignRoute.get("/:id", isAuthenticated, CampController.getCampaignById);
 campaignRoute.put("/:id", isAuthenticated, CampController.updateCampaign);
 campaignRoute.delete("/:id", isAuthenticated, CampController.deleteCampaign);
 campaignRoute.post("/start", isAuthenticated, CampController.startCampaign);
+campaignRoute.post("/add-email-list", isAuthenticated, CampController.addEmailListToCampaign);
+campaignRoute.get("/:id/with-email-list", isAuthenticated, CampController.getCampaignWithEmailList);
 
 export default campaignRoute;

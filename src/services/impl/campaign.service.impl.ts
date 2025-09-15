@@ -4,7 +4,7 @@ import { ApiError } from "../../utils/ApiError";
 import { CampaignService } from "../campaign.service";
 
 export class CampaignServiceImpl implements CampaignService{
-    async createCampaign(data: { campaignName: String; subjectLine: String; campaignType: String; status?: string; userId?: string; emailListId?: string; }): Promise<CampaignDoc> {
+    async createCampaign(data: { campaignName: String; subjectLine: String; status?: string; userId?: string; emailListIds?: string[]; senderEmail?: string; deliveryStatus?: string; category?: string; campaignTopic?: string; instructions?: any[]; reward?: string; startDate?: Date; endDate?: Date; time?: Date; }): Promise<CampaignDoc> {
         const isCampaignExists = await CampaignModel.findOne({
             campaignName: data.campaignName
         })
@@ -14,20 +14,28 @@ export class CampaignServiceImpl implements CampaignService{
 
         const campaign = await CampaignModel.create({
             campaignName: data.campaignName,
-            campaignType: data.campaignType,
             subjectLine: data.subjectLine,
             status: data.status,
             userId: data.userId,
-            emailListId: data.emailListId
+            emailListIds: data.emailListIds,
+            senderEmail: data.senderEmail,
+            deliveryStatus: data.deliveryStatus,
+            category: data.category,
+            campaignTopic: data.campaignTopic,
+            instructions: data.instructions,
+            reward: data.reward,
+            startDate: data.startDate,
+            endDate: data.endDate,
+            time: data.time
         })
 
         return campaign;
     }
     async getAllCampaigns(): Promise<CampaignDoc[]> {
-        return CampaignModel.find();
+        return CampaignModel.find().populate('emailListIds');
     }
     async getCampaignById(id: String): Promise<CampaignDoc | null> {
-        return CampaignModel.findById(id)
+        return CampaignModel.findById(id).populate('emailListIds');
     }
     async updateCampaign(id: String, data: Partial<{campaignName: String, subjectLine: String, campaignType: String}>): Promise<CampaignDoc> {
         const updated = await CampaignModel.findByIdAndUpdate(
@@ -61,15 +69,30 @@ export class CampaignServiceImpl implements CampaignService{
         const EmailListModel = require("../../models/EmailList").EmailListModel;
         return EmailListModel.findOne({ _id: emailListId, userId });
     }
-    async sendBulkEmail(emails: string[], subject: string, body: string) {
+    async sendBulkEmail(emails: any[], subject: string, body: string, senderEmail?: string) {
         const { sendEmail } = require("../../utils/EmailService");
-        for (const to of emails) {
+        for (const entry of emails) {
+            const to = entry.email || entry;
             await sendEmail({
                 to,
                 subject,
                 text: body,
-                html: body
+                html: body,
+                from: senderEmail
             });
         }
+   }
+    // Add an email list to a campaign
+    async addEmailListToCampaign(campaignId: string, emailListId: string) {
+        const campaign = await CampaignModel.findById(campaignId);
+        if (!campaign) return null;
+        (campaign as any).emailListId = emailListId;
+        await campaign.save();
+        return campaign;
+    }
+
+    // Fetch a campaign and its associated email list data
+    async getCampaignWithEmailList(campaignId: string) {
+        return CampaignModel.findById(campaignId).populate('emailListId');
     }
 }

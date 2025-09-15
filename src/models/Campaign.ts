@@ -14,6 +14,8 @@ export interface CampaignDoc extends Document {
   startDate?: Date;
   endDate?: Date;
   time?: Date;
+  senderEmail?: string;
+  emailListIds?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +39,8 @@ const CampaignSchema = new Schema<CampaignDoc>(
     startDate: { type: Date, required: false, default: null },
     endDate: { type: Date, required: false, default: null },
     time: { type: Date, required: false, default: null },
+    senderEmail: { type: String, required: false },
+    emailListIds: [{ type: Schema.Types.ObjectId, ref: 'Email-List', required: false }],
   },
   {
     timestamps: true

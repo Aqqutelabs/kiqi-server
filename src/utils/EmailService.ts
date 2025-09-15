@@ -1,4 +1,3 @@
-
 import nodemailer from 'nodemailer';
 
 // This is a mock email service. In a real application, you would integrate a
@@ -9,6 +8,7 @@ interface EmailOptions {
     subject: string;
     text: string;
     html: string;
+    from?: string;
 }
 
 const transporter = nodemailer.createTransport({
@@ -22,7 +22,7 @@ const transporter = nodemailer.createTransport({
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
     try {
         const mailOptions = {
-            from: process.env.EMAIL_FROM || 'aqqutelabs@gmail.com',
+            from: options.from || process.env.EMAIL_FROM || 'aqqutelabs@gmail.com',
             to: options.to,
             subject: options.subject,
             html: options.html,

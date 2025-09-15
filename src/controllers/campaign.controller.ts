@@ -15,9 +15,37 @@ export class CampaignController {
         next: NextFunction
     ): Promise<void> => {
         try{
-
-            const {campaignName, campaignType, subjectLine} = req.body;
-            const created = await this.campaignService.createCampaign({campaignName, subjectLine, campaignType});
+            // Accept all campaign fields from the request body
+            const {
+                campaignName,
+                subjectLine,
+                status,
+                emailListIds,
+                senderEmail,
+                deliveryStatus,
+                category,
+                campaignTopic,
+                instructions,
+                reward,
+                startDate,
+                endDate,
+                time
+            } = req.body;
+            const created = await this.campaignService.createCampaign({
+                campaignName,
+                subjectLine,
+                status,
+                emailListIds,
+                senderEmail,
+                deliveryStatus,
+                category,
+                campaignTopic,
+                instructions,
+                reward,
+                startDate,
+                endDate,
+                time
+            });
 
             res.status(StatusCodes.CREATED).json({
                 error: false,
@@ -71,10 +99,9 @@ export class CampaignController {
     ): Promise<void> => {
         try{
             const id = req.params.id;
-            const {campaignName, campaignType, subjectLine} = req.body
+            const {campaignName, subjectLine} = req.body
             const updated = await this.campaignService.updateCampaign(id, {
                 campaignName,
-                campaignType,
                 subjectLine
             })
 
@@ -112,12 +139,12 @@ export class CampaignController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const { campaignName, emailListId, subject, body } = req.body;
+            const { campaignName, emailListId, subject, body, senderEmail } = req.body;
             const userId = req.user?._id;
-            if (!campaignName || !emailListId || !subject || !body) {
+            if (!campaignName || !emailListId || !subject || !body || !senderEmail) {
                 res.status(StatusCodes.BAD_REQUEST).json({
                     error: true,
-                    message: "All fields (campaignName, emailListId, subject, body) are required."
+                    message: "All fields (campaignName, emailListId, subject, body, senderEmail) are required."
                 });
                 return;
             }
@@ -144,21 +171,79 @@ export class CampaignController {
                 });
                 return;
             }
-            // Send emails
-            await this.campaignService.sendBulkEmail(emailList.emails, subject, body);
+            // Send emails (pass senderEmail)
+            await this.campaignService.sendBulkEmail(emailList.emails, subject, body, senderEmail);
             // Save campaign record
             const campaign = await this.campaignService.createCampaign({
                 campaignName,
                 subjectLine: subject,
-                campaignType: 'Email',
                 status: 'Completed',
-                userId,
-                emailListId
+                emailListIds: [emailListId],
+                senderEmail
             });
             res.status(StatusCodes.OK).json({
                 error: false,
                 message: "Campaign started and emails sent.",
                 data: campaign
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // Add an email list to a campaign
+    public addEmailListToCampaign = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const { campaignId, emailListId } = req.body;
+            if (!campaignId || !emailListId) {
+                res.status(StatusCodes.BAD_REQUEST).json({
+                    error: true,
+                    message: "Both campaignId and emailListId are required."
+                });
+                return;
+            }
+            // Update the campaign to reference the email list
+            const updatedCampaign = await this.campaignService.addEmailListToCampaign(campaignId, emailListId);
+            if (!updatedCampaign) {
+                res.status(StatusCodes.NOT_FOUND).json({
+                    error: true,
+                    message: "Campaign or Email List not found."
+                });
+                return;
+            }
+            res.status(StatusCodes.OK).json({
+                error: false,
+                message: "Email list added to campaign.",
+                data: updatedCampaign
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // Fetch a campaign and its associated email list data
+    public getCampaignWithEmailList = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const { id } = req.params;
+            const campaignWithList = await this.campaignService.getCampaignWithEmailList(id);
+            if (!campaignWithList) {
+                res.status(StatusCodes.NOT_FOUND).json({
+                    error: true,
+                    message: "Campaign not found."
+                });
+                return;
+            }
+            res.status(StatusCodes.OK).json({
+                error: false,
+                data: campaignWithList
             });
         } catch (error) {
             next(error);

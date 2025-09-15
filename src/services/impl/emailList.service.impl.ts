@@ -6,7 +6,7 @@ import { ContactDoc, ContactModel } from "../../models/Contacts";
 import mongoose from "mongoose";
 
 export class EmailistServiceImpl implements EmailListService{
-    async createEmailList(data: { email_listName: string; emails: string[]; emailFiles: string[]; userId: any;}): Promise<EmailList> {
+    async createEmailList(data: { email_listName: string; emails: { email: string; fullName: string }[]; emailFiles: string[]; userId: any;}): Promise<EmailList> {
        let userObjectId;
        if (mongoose.Types.ObjectId.isValid(data.userId)) {
          userObjectId = new mongoose.Types.ObjectId(data.userId);
@@ -46,7 +46,7 @@ export class EmailistServiceImpl implements EmailListService{
         return EmailListModel.find({ userId: userObjectId });
     }
     async getAllEmailLists(): Promise<EmailList[]> {
-       return EmailListModel.find()
+       return EmailListModel.find();
     }
     async getEmailList(id: String): Promise<EmailList | null> {
         return EmailListModel.findById(id);

@@ -27,6 +27,14 @@ export class EmailListController {
     ): Promise<void> => {
         try{
             const { email_listName, emails, emailFiles } = req.body;
+            // Validate emails: must be array of objects with email (fullName is optional)
+            if (!Array.isArray(emails) || emails.some(e => !e.email)) {
+                res.status(StatusCodes.BAD_REQUEST).json({
+                    error: true,
+    message: "Each email must have an email address. Format: [{ email: string, fullName?: string }]"
+});
+                return;
+            }
             // Debug: log the user object
             console.log('Authenticated user:', req.user);
             // Only use _id, and ensure it's a valid ObjectId string
