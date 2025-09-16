@@ -40,6 +40,9 @@ app.get('/', (req: Request, res: Response) => {
   res.status(200).json({ message: 'KiQi Backend is running!' });
 });
 
+app.get('/health', (req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok', uptime: process.uptime() });
+});
 
 app.use('/api/v1', mainRouter);
 app.use("/api/v1/senderEmail", senderRouter)
