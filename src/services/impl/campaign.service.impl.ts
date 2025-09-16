@@ -8,9 +8,7 @@ export class CampaignServiceImpl implements CampaignService{
         const isCampaignExists = await CampaignModel.findOne({
             campaignName: data.campaignName
         })
-        if(isCampaignExists) {
-            throw new ApiError(StatusCodes.BAD_REQUEST, "Campaign already exists.")
-        }
+        
 
         const campaign = await CampaignModel.create({
             campaignName: data.campaignName,
