@@ -1,4 +1,3 @@
-
 import { Router } from "express";
 import { SenderEmailController } from "../controllers/senderEmail.controller";
 import { isAuthenticated } from "../middlewares/Auth.middlewares";
@@ -11,5 +10,6 @@ senderRouter.get("/", isAuthenticated, controller.getAllSenderEmails);
 senderRouter.get("/:id", isAuthenticated, controller.getSenderEmailById);
 senderRouter.put("/:id", isAuthenticated, controller.updateSenderEmail);
 senderRouter.delete("/:id", isAuthenticated, controller.deleteSenderEmail);
+senderRouter.post("/verify", isAuthenticated, controller.verifySender);
 
 export default senderRouter;

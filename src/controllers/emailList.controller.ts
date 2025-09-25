@@ -26,17 +26,20 @@ export class EmailListController {
         next: NextFunction
     ): Promise<void> => {
         try{
-            const { email_listName, emails, emailFiles } = req.body;
+            let { email_listName, emails, emailFiles } = req.body;
+            // If a CSV file is uploaded, parse it
+            if (req.file && req.file.mimetype === 'text/csv') {
+                const { parseEmailsFromCsv } = require('../utils/csvParser');
+                emails = parseEmailsFromCsv(req.file.buffer);
+            }
             // Validate emails: must be array of objects with email (fullName is optional)
             if (!Array.isArray(emails) || emails.some(e => !e.email)) {
                 res.status(StatusCodes.BAD_REQUEST).json({
                     error: true,
-    message: "Each email must have an email address. Format: [{ email: string, fullName?: string }]"
+                    message: "Each email must have an email address. Format: [{ email: string, fullName?: string }]"
 });
                 return;
             }
-            // Debug: log the user object
-            console.log('Authenticated user:', req.user);
             // Only use _id, and ensure it's a valid ObjectId string
             const userId = req.user?._id;
             if (!userId || typeof userId !== 'string' || userId.length !== 24) {

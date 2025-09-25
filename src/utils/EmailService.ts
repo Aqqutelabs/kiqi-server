@@ -9,6 +9,7 @@ interface EmailOptions {
     text: string;
     html: string;
     from?: string;
+    replyTo?: string;
 }
 
 const transporter = nodemailer.createTransport({
@@ -22,11 +23,12 @@ const transporter = nodemailer.createTransport({
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
     try {
         const mailOptions = {
-            from: options.from || process.env.EMAIL_FROM || 'aqqutelabs@gmail.com',
+            from: options.from || process.env.EMAIL_FROM || 'no-reply@yourapp.com',
             to: options.to,
             subject: options.subject,
             html: options.html,
             text: options.text,
+            replyTo: options.replyTo,
         };
 
         await transporter.sendMail(mailOptions);
