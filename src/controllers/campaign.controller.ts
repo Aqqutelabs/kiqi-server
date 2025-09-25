@@ -139,12 +139,12 @@ export class CampaignController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const { campaignName, emailListId, subject, body, senderEmail } = req.body;
+            const { campaignName, emailListId, subject, body, replyTo } = req.body;
             const userId = req.user?._id;
-            if (!campaignName || !emailListId || !subject || !body || !senderEmail) {
+            if (!campaignName || !emailListId || !subject || !body || !replyTo) {
                 res.status(StatusCodes.BAD_REQUEST).json({
                     error: true,
-                    message: "All fields (campaignName, emailListId, subject, body, senderEmail) are required."
+                    message: "All fields (campaignName, emailListId, subject, body, replyTo) are required."
                 });
                 return;
             }
@@ -171,15 +171,15 @@ export class CampaignController {
                 });
                 return;
             }
-            // Send emails (pass senderEmail)
-            await this.campaignService.sendBulkEmail(emailList.emails, subject, body, senderEmail);
+            // Send emails (use fixed sender, dynamic replyTo)
+            await this.campaignService.sendBulkEmail(emailList.emails, subject, body, replyTo);
             // Save campaign record
             const campaign = await this.campaignService.createCampaign({
                 campaignName,
                 subjectLine: subject,
                 status: 'Completed',
                 emailListIds: [emailListId],
-                senderEmail
+                senderEmail: process.env.EMAIL_FROM || 'no-reply@yourapp.com',
             });
             res.status(StatusCodes.OK).json({
                 error: false,

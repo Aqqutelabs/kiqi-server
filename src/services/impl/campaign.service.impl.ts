@@ -67,8 +67,9 @@ export class CampaignServiceImpl implements CampaignService{
         const EmailListModel = require("../../models/EmailList").EmailListModel;
         return EmailListModel.findOne({ _id: emailListId, userId });
     }
-    async sendBulkEmail(emails: any[], subject: string, body: string, senderEmail?: string) {
-        const { sendEmail } = require("../../utils/EmailService");
+    async sendBulkEmail(emails: any[], subject: string, body: string, replyTo?: string) {
+        const { sendEmail } = require("../../utils/SendGridService");
+        const from = process.env.EMAIL_FROM || 'no-reply@yourapp.com';
         for (const entry of emails) {
             const to = entry.email || entry;
             await sendEmail({
@@ -76,7 +77,8 @@ export class CampaignServiceImpl implements CampaignService{
                 subject,
                 text: body,
                 html: body,
-                from: senderEmail
+                from,
+                replyTo
             });
         }
    }
