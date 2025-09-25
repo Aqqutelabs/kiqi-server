@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const SENDGRID_API_KEY = "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";
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 const SENDGRID_API_URL = 'https://api.sendgrid.com/v3/verified_senders';
 
 /**
