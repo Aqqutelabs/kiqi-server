@@ -102,7 +102,10 @@ export const loginUser = asyncHandler(async (req, res) => {
 });
 
 export const logoutUser = asyncHandler(async (req: AuthRequest, res) => {
-    await authService.updateUser(req.user!.id, { refreshToken: undefined });
+    const userId = req.user?.id;
+    if (typeof userId === 'string') {
+        await authService.updateUser(userId, { refreshToken: undefined });
+    }
 
     res.status(200)
         .clearCookie("accessToken", cookieOptions)
