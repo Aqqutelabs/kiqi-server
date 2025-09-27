@@ -1,7 +1,7 @@
 // src/routes/upload.routes.ts
 import { Router } from 'express';
-import { uploadImage } from '../controllers/upload.controller';
-import upload from '../middlewares/upload.middleware';
+import { uploadImage } from '../controllers/Upload';
+import upload from '../middlewares/Upload';
 
 const router = Router();
 
