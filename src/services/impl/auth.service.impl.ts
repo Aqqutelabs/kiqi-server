@@ -9,10 +9,10 @@ export class AuthServiceImpl implements AuthService{
    
 async login(
     data: {
-email: string,
-password: string
-}
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+      email: string,
+      password: string
+    }
+  ): Promise<{ accessToken: string; refreshToken: string; user: any }> {
     const user = await UserModel.findOne({ email: data.email });
 
     if (!user) {
@@ -20,13 +20,14 @@ password: string
     }
 
     const accessToken = generateAccessToken(user.id, user.email);
+    const refreshToken = generateRefreshToken(user.id, user.email);
 
-    const refreshToken = generateRefreshToken(
-      user.id,
-      user.email,
-    );
+    // Exclude sensitive fields
+    const userObj = user.toObject();
+    delete userObj.password;
+    delete userObj.refreshToken;
 
-    return { accessToken, refreshToken };
+    return { accessToken, refreshToken, user: userObj };
   }
 
   async createUser(data: {
