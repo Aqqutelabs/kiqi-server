@@ -16,8 +16,14 @@ export class AuthController {
   ): Promise<void> => {
     try {
       const { email, password } = req.body;
-      const { accessToken, refreshToken } = await this.authService.login({ email, password });
-      res.status(StatusCodes.CREATED).json({ accessToken, refreshToken });
+      const { accessToken, refreshToken, user } = await this.authService.login({ email, password });
+      res.status(StatusCodes.CREATED).json({
+        error: false,
+        message: 'Login successful',
+        accessToken,
+        refreshToken,
+        user
+      });
     } catch (error) {
       next(error);
     }
