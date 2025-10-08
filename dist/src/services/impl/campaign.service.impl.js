@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -10,7 +43,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CampaignServiceImpl = void 0;
+const http_status_codes_1 = require("http-status-codes");
 const Campaign_1 = require("../../models/Campaign");
+const ApiError_1 = require("../../utils/ApiError");
 class CampaignServiceImpl {
     createCampaign(data) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -66,7 +101,46 @@ class CampaignServiceImpl {
     }
     sendCampaign(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            throw new Error("Method not implemented.");
+            // Fetch campaign
+            const campaign = yield Campaign_1.CampaignModel.findById(id);
+            if (!campaign) {
+                throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, "Campaign not found");
+            }
+            // Fetch user
+            const userId = campaign.userId;
+            if (!userId) {
+                throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, "Campaign does not have a userId");
+            }
+            const { UserModel } = yield Promise.resolve().then(() => __importStar(require("../../models/User")));
+            const user = yield UserModel.findById(userId);
+            if (!user) {
+                throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, "User not found");
+            }
+            // Get user's email to use as the reply-to address
+            const replyToEmail = user.email;
+            if (!replyToEmail) {
+                throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, "User email not found");
+            }
+            // Prepare email sending
+            const fromAddress = process.env.EMAIL_FROM || "no-reply@yourapp.com"; // Verified domain with Resend
+            // TODO: Fetch recipients from campaign.emailListIds
+            // TODO: Integrate with SendGrid/Resend/etc. to send email
+            try {
+                // Example: sendEmail({
+                //   from: fromAddress,
+                //   to: recipients,
+                //   subject: campaign.subjectLine,
+                //   replyTo: replyToEmail,
+                //   ...otherData
+                // });
+                // Simulate sending
+                campaign.deliveryStatus = "Sent";
+                yield campaign.save();
+            }
+            catch (err) {
+                throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR, "Failed to send campaign email");
+            }
+            return campaign;
         });
     }
     scheduleCampaign(id) {
@@ -88,14 +162,13 @@ class CampaignServiceImpl {
     }
     sendBulkEmail(emails, subject, body, replyTo) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { sendEmail } = require("../../utils/SendGridService");
+            const { sendEmail } = require("../../utils/ResendService");
             const from = process.env.EMAIL_FROM || 'no-reply@yourapp.com';
             for (const entry of emails) {
                 const to = entry.email || entry;
                 yield sendEmail({
                     to,
                     subject,
-                    text: body,
                     html: body,
                     from,
                     replyTo

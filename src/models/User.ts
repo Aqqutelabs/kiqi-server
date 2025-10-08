@@ -12,6 +12,7 @@ export interface User extends Document{
     refreshToken?: string;
     passwordResetToken?: string;
     passwordResetExpires?: Date;
+    senderEmail?: string; // New field for sender email
     createdAt: Date;
     updatedAt: Date;
 }
@@ -21,8 +22,7 @@ const UserSchema: Schema = new Schema<User>({
     lastName: { type: String, required: true }, 
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    // type: { type: String, required: true }, 
-    // senderEmail: { type: String, required: true 
+    senderEmail: { type: String, required: false }, // New field for sender email
 })
 
 export const UserModel = mongoose.model<User>("User", UserSchema)

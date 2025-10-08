@@ -40,7 +40,6 @@ const UserSchema = new mongoose_1.Schema({
     lastName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    // type: { type: String, required: true }, 
-    // senderEmail: { type: String, required: true 
+    senderEmail: { type: String, required: false }, // New field for sender email
 });
 exports.UserModel = mongoose_1.default.model("User", UserSchema);

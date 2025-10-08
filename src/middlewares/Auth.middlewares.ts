@@ -22,7 +22,9 @@ export interface AuthRequest extends Request {
 
 export const verifyJWT = asyncHandler(async (req: any  , res: Response, next: NextFunction) => {
     try {
+        console.log('Auth Middleware - Headers:', req.headers);
         const token = req.cookies?.accessToken || req.header('Authorization')?.replace('Bearer ', '');
+        console.log('Auth Middleware - Token:', token ? 'Present' : 'Missing');
 
         if (!token) {
             throw new ApiError(401, 'Unauthorized request');

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { StatusCodes } from "http-status-codes";
 import { SenderEmailServiceImpl } from "../services/impl/senderEmail.service.impl";
-import { sendgridVerifySender } from '../utils/sendgridVerifySender';
+import { verifyEmailSender } from '../utils/emailVerification';
 
 export class SenderEmailController {
   private senderEmailService: SenderEmailServiceImpl;
@@ -130,6 +130,7 @@ export class SenderEmailController {
       const state = req.body.state;
       const zip = req.body.zip;
       const country = req.body.country;
+
       if (!nickname || !fromEmail || !fromName || !address || !city || !state || !zip || !country) {
         res.status(StatusCodes.BAD_REQUEST).json({
           error: true,
@@ -137,35 +138,26 @@ export class SenderEmailController {
         });
         return;
       }
-      const result = await sendgridVerifySender({ nickname, fromEmail, fromName, replyTo, address, city, state, zip, country });
+
+      const result = await verifyEmailSender({ 
+        nickname, 
+        fromEmail, 
+        fromName, 
+        replyTo, 
+        address, 
+        city, 
+        state, 
+        zip, 
+        country 
+      });
+
       res.status(StatusCodes.OK).json({
         error: false,
-        message: 'Verification request sent to SendGrid',
+        message: 'Verification email sent successfully',
         data: result,
       });
     } catch (error: any) {
-      const response = error?.response;
-      if (response && response.data) {
-        const apiErrors = response.data.errors;
-        if (Array.isArray(apiErrors) && apiErrors.length > 0) {
-          res.status(response.status || 400).json({
-            error: true,
-            message: apiErrors[0].message,
-            field: apiErrors[0].field,
-            details: apiErrors.length > 1 ? apiErrors : undefined
-          });
-          return;
-        }
-        res.status(response.status || 400).json({
-          error: true,
-          message: response.data.message || 'SendGrid API error',
-        });
-        return;
-      }
-      res.status(500).json({
-        error: true,
-        message: error?.message || 'Internal server error',
-      });
+      next(error);
     }
   };
 }

@@ -179,7 +179,7 @@ export class CampaignController {
                 subjectLine: subject,
                 status: 'Completed',
                 emailListIds: [emailListId],
-                senderEmail: process.env.EMAIL_FROM || 'no-reply@yourapp.com',
+                senderEmail: process.env.EMAIL_FROM || 'noreply@data.widernetfarms.org',
             });
             res.status(StatusCodes.OK).json({
                 error: false,

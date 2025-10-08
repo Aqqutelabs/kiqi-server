@@ -21,7 +21,9 @@ const http_status_codes_1 = require("http-status-codes");
 exports.verifyJWT = (0, AsyncHandler_1.asyncHandler)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     try {
+        console.log('Auth Middleware - Headers:', req.headers);
         const token = ((_a = req.cookies) === null || _a === void 0 ? void 0 : _a.accessToken) || ((_b = req.header('Authorization')) === null || _b === void 0 ? void 0 : _b.replace('Bearer ', ''));
+        console.log('Auth Middleware - Token:', token ? 'Present' : 'Missing');
         if (!token) {
             throw new ApiError_1.ApiError(401, 'Unauthorized request');
         }
