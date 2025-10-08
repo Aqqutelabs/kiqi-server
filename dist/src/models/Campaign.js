@@ -55,6 +55,7 @@ const CampaignSchema = new mongoose_1.Schema({
     time: { type: Date, required: false, default: null },
     senderEmail: { type: String, required: false },
     emailListIds: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Email-List', required: false }],
+    userId: { type: String, required: false },
 }, {
     timestamps: true
 });

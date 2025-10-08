@@ -9,6 +9,57 @@ export class AuthController {
     this.authService = new AuthServiceImpl();
   }
 
+  
+  public updateSenderEmail = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      console.log('Update Sender Email - Request Body:', req.body);
+      console.log('Update Sender Email - User:', req.user);
+      // Get userId from req.user (set by auth middleware)
+      const userId = req.user?._id || req.user?.id;
+      const { senderEmail } = req.body;
+      if (!senderEmail) {
+        res.status(StatusCodes.BAD_REQUEST).json({
+          error: true,
+          message: "Sender email is required"
+        });
+        return;
+      }
+      // Validate email format
+      const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+      if (!emailRegex.test(senderEmail)) {
+        res.status(StatusCodes.BAD_REQUEST).json({
+          error: true,
+          message: "Invalid sender email format"
+        });
+        return;
+      }
+      const { UserModel } = await import("../models/User");
+      const user = await UserModel.findByIdAndUpdate(
+        userId,
+        { senderEmail },
+        { new: true }
+      );
+      if (!user) {
+        res.status(StatusCodes.NOT_FOUND).json({
+          error: true,
+          message: "User not found"
+        });
+        return;
+      }
+      res.status(StatusCodes.OK).json({
+        error: false,
+        message: "Sender email updated successfully",
+        user
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   public login = async (
     req: Request,
     res: Response,
@@ -27,7 +78,7 @@ export class AuthController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 
   public createUser = async (
     req: Request,
@@ -46,7 +97,7 @@ export class AuthController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 }
 
 // hpe

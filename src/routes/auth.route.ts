@@ -1,16 +1,19 @@
-import express from "express"
+import express from "express";
 import { AuthController } from "../controllers/auth.controller";
-
+import { verifyJWT } from "../middlewares/Auth.middlewares";
 
 const authController = new AuthController();
-const authRoutes = express.Router()
+const authRoutes = express.Router();
 
-authRoutes.post("/login", authController.login)
+// Debug middleware
+authRoutes.use((req, res, next) => {
+  console.log('Auth Route - Method:', req.method);
+  console.log('Auth Route - Path:', req.path);
+  next();
+});
 
-authRoutes.post(
-  "/register",
-  authController.createUser
-);
+authRoutes.post("/login", authController.login);
+authRoutes.post("/register", authController.createUser);
 
 
-export default authRoutes
+export default authRoutes;

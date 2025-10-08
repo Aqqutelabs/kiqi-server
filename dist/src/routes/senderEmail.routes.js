@@ -10,5 +10,5 @@ senderRouter.get("/", Auth_middlewares_1.isAuthenticated, controller.getAllSende
 senderRouter.get("/:id", Auth_middlewares_1.isAuthenticated, controller.getSenderEmailById);
 senderRouter.put("/:id", Auth_middlewares_1.isAuthenticated, controller.updateSenderEmail);
 senderRouter.delete("/:id", Auth_middlewares_1.isAuthenticated, controller.deleteSenderEmail);
-senderRouter.post("/verify", Auth_middlewares_1.isAuthenticated, controller.verifySender);
+// senderRouter.post("/verify", isAuthenticated, controller.verifySender);
 exports.default = senderRouter;

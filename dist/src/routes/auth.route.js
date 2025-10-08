@@ -7,6 +7,12 @@ const express_1 = __importDefault(require("express"));
 const auth_controller_1 = require("../controllers/auth.controller");
 const authController = new auth_controller_1.AuthController();
 const authRoutes = express_1.default.Router();
+// Debug middleware
+authRoutes.use((req, res, next) => {
+    console.log('Auth Route - Method:', req.method);
+    console.log('Auth Route - Path:', req.path);
+    next();
+});
 authRoutes.post("/login", authController.login);
 authRoutes.post("/register", authController.createUser);
 exports.default = authRoutes;

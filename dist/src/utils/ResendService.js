@@ -8,23 +8,27 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendEmail = void 0;
-const mail_1 = __importDefault(require("@sendgrid/mail"));
-mail_1.default.setApiKey(process.env.SENDGRID_API_KEY);
+const resend_1 = require("resend");
+const ApiError_1 = require("./ApiError");
+const http_status_codes_1 = require("http-status-codes");
+const resend = new resend_1.Resend(process.env.RESEND_API_KEY);
 const sendEmail = (options) => __awaiter(void 0, void 0, void 0, function* () {
-    const msg = {
-        to: options.to,
-        from: options.from || process.env.EMAIL_FROM || 'no-reply@yourapp.com',
-        subject: options.subject,
-        text: options.text,
-        html: options.html,
-        replyTo: options.replyTo,
-    };
-    yield mail_1.default.send(msg);
-    console.log(`[SendGrid] Email sent to: ${options.to}`);
+    try {
+        const data = yield resend.emails.send({
+            from: options.from,
+            to: options.to,
+            subject: options.subject,
+            html: options.html,
+            replyTo: options.replyTo,
+        });
+        console.log('Email sent successfully via Resend:', data);
+        return data;
+    }
+    catch (error) {
+        console.error('Error sending email via Resend:', error);
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to send email via Resend');
+    }
 });
 exports.sendEmail = sendEmail;
