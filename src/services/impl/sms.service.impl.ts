@@ -18,6 +18,12 @@ export class SmsServiceImpl implements SmsService {
     return SmsSenderModel.find({ userId });
   }
 
+  async updateSender(id: string, data: { name?: string; sampleMessage?: string }) {
+    const updated = await SmsSenderModel.findByIdAndUpdate(id, data, { new: true });
+    if (!updated) throw new ApiError(StatusCodes.NOT_FOUND, 'Sender not found');
+    return updated;
+  }
+
   async deleteSender(id: string) {
     await SmsSenderModel.findByIdAndDelete(id);
   }
@@ -35,6 +41,20 @@ export class SmsServiceImpl implements SmsService {
     return RecipientGroupModel.findById(id);
   }
 
+  async updateRecipientGroup(id: string, data: { name?: string; contacts?: string[] }) {
+    const updateData: any = {};
+    if (data.name) updateData.name = data.name;
+    if (Array.isArray(data.contacts)) updateData.contacts = data.contacts.map((p) => ({ phone: p }));
+    const updated = await RecipientGroupModel.findByIdAndUpdate(id, updateData, { new: true });
+    if (!updated) throw new ApiError(StatusCodes.NOT_FOUND, 'Recipient group not found');
+    return updated;
+  }
+
+  async sendMessage(to: string, body: string, from?: string) {
+    const result = await sendSms(to, body, from);
+    return result;
+  }
+
   async deleteRecipientGroup(id: string) {
     await RecipientGroupModel.findByIdAndDelete(id);
   }
@@ -50,6 +70,19 @@ export class SmsServiceImpl implements SmsService {
 
   async deleteTemplate(id: string) {
     await SmsTemplateModel.findByIdAndDelete(id);
+  }
+
+  async getTemplateById(id: string) {
+    return SmsTemplateModel.findById(id);
+  }
+
+  async updateTemplate(id: string, data: { title?: string; message?: string }) {
+    const updateData: any = {};
+    if (data.title) updateData.title = data.title;
+    if (data.message) updateData.message = data.message;
+    const updated = await SmsTemplateModel.findByIdAndUpdate(id, updateData, { new: true });
+    if (!updated) throw new ApiError(StatusCodes.NOT_FOUND, 'Template not found');
+    return updated;
   }
 
   async createDraft(data: any) {

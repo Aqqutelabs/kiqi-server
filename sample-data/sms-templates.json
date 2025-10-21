@@ -1,0 +1,14 @@
+[
+  {
+    "title": "Appointment Reminder",
+    "message": "Hi {{name}}, this is a reminder for your appointment on {{date}} at {{time}}. Reply YES to confirm."
+  },
+  {
+    "title": "Payment Due",
+    "message": "Hi {{name}}, your payment of ${{amount}} is due on {{due_date}}. Pay at: {{link}}"
+  },
+  {
+    "title": "Promo Offer",
+    "message": "Exclusive: Get 20% off your next purchase. Use code: PROMO20. Valid until {{date}}."
+  }
+]
