@@ -98,6 +98,35 @@ export class SmsServiceImpl implements SmsService {
     await SmsDraftModel.findByIdAndDelete(id);
   }
 
+  async getDraftById(id: string) {
+    return SmsDraftModel.findById(id);
+  }
+
+  async updateDraft(id: string, data: any) {
+    const updated = await SmsDraftModel.findByIdAndUpdate(id, data, { new: true });
+    if (!updated) throw new ApiError(StatusCodes.NOT_FOUND, 'Draft not found');
+    return updated;
+  }
+
+  async sendDraft(id: string) {
+    const draft = await SmsDraftModel.findById(id);
+    if (!draft) throw new ApiError(StatusCodes.NOT_FOUND, 'Draft not found');
+    // Use recipients from group or direct
+    let recipients: string[] = draft.recipients || [];
+    if ((!recipients || recipients.length === 0) && draft.recipientsGroupId) {
+      const group: any = await RecipientGroupModel.findById(draft.recipientsGroupId);
+      if (group && Array.isArray(group.contacts)) {
+        recipients = group.contacts.map((c: any) => c.phone);
+      }
+    }
+    recipients = Array.from(new Set(recipients)).filter(Boolean);
+    if (recipients.length === 0) throw new ApiError(StatusCodes.BAD_REQUEST, 'No recipients for draft');
+    const results = await this.sendBulkSms(recipients, draft.message);
+    draft.status = 'sent';
+    await draft.save();
+    return { draft, results };
+  }
+
   async sendBulkSms(recipients: string[], message: string, from?: string) {
     const results: any[] = [];
     for (const to of recipients) {

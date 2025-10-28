@@ -49,15 +49,25 @@ export class GoogleAiController {
         next: NextFunction
     ): Promise<void> => {
         try {
-          const { sessionId, message } = req.body;
-          if (!sessionId || !message)
-             res.status(400).json({ error: "sessionId and message are required" });
+          const { message } = req.body;
+          if (!message) {
+             res.status(400).json({ error: "message is required" });
+             return;
+          }
+
+          // Generate a sessionId if not provided (for new chats)
+          const sessionId = req.body.sessionId || `chat_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     
           const response = await this.googleAiService.aiChat(sessionId, message);
-           res.status(201).json(response);
+          
+          // Return both the response and sessionId so client can use it for follow-up messages
+          res.status(201).json({
+            ...response,
+            sessionId // Include sessionId in response
+          });
         } catch (error: any) {
           console.error("AI Chat Error:", error);
-           res.status(500).json({ error: "Internal Server Error" });
+          res.status(500).json({ error: "Internal Server Error" });
         }
       }
     

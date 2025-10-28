@@ -171,6 +171,7 @@ export class SmsController {
     } catch (err) { next(err); }
   }
 
+
   public deleteTemplate = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = req.params.id;
@@ -195,8 +196,63 @@ export class SmsController {
       }
       targets = Array.from(new Set(targets)).filter(Boolean);
       if (targets.length === 0) return res.status(StatusCodes.BAD_REQUEST).json({ error: true, message: 'No recipients provided' });
-      const from = undefined; // use configured Twilio from or sender mapping
+      const from = senderId || undefined; // use provided senderId or configured Twilio from
       const result = await this.smsService.sendBulkSms(targets, tpl.message, from);
+      res.status(StatusCodes.OK).json({ error: false, data: result });
+    } catch (err) { next(err); }
+  }
+
+  // --- Drafts ---
+  public createDraft = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?._id;
+      const { message, recipients, recipientsGroupId, title } = req.body;
+      if (!message || (!recipients && !recipientsGroupId)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({ error: true, message: 'Message and recipients or group are required' });
+      }
+      const draft = await this.smsService.createDraft({ message, recipients, recipientsGroupId, title, userId });
+      res.status(StatusCodes.CREATED).json({ error: false, data: draft });
+    } catch (err) { next(err); }
+  }
+
+  public getDrafts = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?._id;
+      const drafts = await this.smsService.getDrafts(userId);
+      res.status(StatusCodes.OK).json({ error: false, data: drafts });
+    } catch (err) { next(err); }
+  }
+
+  public getDraftById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = req.params.id;
+      const draft = await this.smsService.getDraftById(id);
+      if (!draft) return res.status(StatusCodes.NOT_FOUND).json({ error: true, message: 'Draft not found' });
+      res.status(StatusCodes.OK).json({ error: false, data: draft });
+    } catch (err) { next(err); }
+  }
+
+  public updateDraft = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = req.params.id;
+      const { message, recipients, recipientsGroupId, title } = req.body;
+      const updated = await this.smsService.updateDraft(id, { message, recipients, recipientsGroupId, title });
+      res.status(StatusCodes.OK).json({ error: false, data: updated });
+    } catch (err) { next(err); }
+  }
+
+  public deleteDraft = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = req.params.id;
+      await this.smsService.deleteDraft(id);
+      res.status(StatusCodes.OK).json({ error: false, message: 'Draft deleted' });
+    } catch (err) { next(err); }
+  }
+
+  public sendDraft = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = req.params.id;
+      const result = await this.smsService.sendDraft(id);
       res.status(StatusCodes.OK).json({ error: false, data: result });
     } catch (err) { next(err); }
   }
