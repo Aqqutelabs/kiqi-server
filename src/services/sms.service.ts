@@ -19,7 +19,10 @@ export interface SmsService {
 
   createDraft(data: any): Promise<any>;
   getDrafts(userId: any): Promise<any[]>;
+  getDraftById(id: string): Promise<any>;
+  updateDraft(id: string, data: any): Promise<any>;
   deleteDraft(id: string): Promise<void>;
+  sendDraft(id: string): Promise<any>;
 
   sendBulkSms(recipients: string[], message: string, from?: string): Promise<any>;
 }
