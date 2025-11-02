@@ -5,6 +5,8 @@ import { ApiError } from '../utils/ApiError';
 import { PressRelease } from '../models/PressRelease';
 import { Publisher } from '../models/Publisher';
 import { Order } from '../models/Order';
+import { Cart } from '../models/Cart';
+import { initializePaystackPayment, verifyPaystackPayment } from '../utils/paystack';
 import mongoose from 'mongoose';
 import { AuthRequest } from '../middlewares/Auth.middlewares';
 import { CheckoutPublicationItem } from '../types/pressRelease.types';
@@ -127,7 +129,7 @@ export const getPublishers = asyncHandler(async (req: AuthRequest, res: Response
 });
 
 export const getPublisherDetails = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const publisher = await Publisher.findOne({ id: req.params.id });
+    const publisher = await Publisher.findOne({ publisherId: req.params.id });
     
     if (!publisher) {
         throw new ApiError(404, 'Publisher not found');
@@ -136,15 +138,70 @@ export const getPublisherDetails = asyncHandler(async (req: AuthRequest, res: Re
     return res.json(new ApiResponse(200, publisher));
 });
 
-export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const userId = req.user?._id;
-    if (!userId) throw new ApiError(401, 'Unauthorized');
+// Add to cart
+export const addToCart = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user || !req.user._id) {
+        throw new ApiError(401, 'Unauthorized');
+    }
+    const userId = req.user._id;
 
-    const { publications, payment_method } = req.body;
+    const { publisherId } = req.body;
+
+    // Find the publisher
+    const publisher = await Publisher.findOne({ publisherId });
+    if (!publisher) {
+        throw new ApiError(404, 'Publisher not found');
+    }
+
+    // Add or update cart item
+    const cartItem = {
+        publisherId: publisher.publisherId,
+        name: publisher.name,
+        price: publisher.price,
+        selected: true
+    };
+
+    // Find existing cart or create new one
+    let cart = await Cart.findOneAndUpdate(
+        { user_id: userId },
+        { 
+            $addToSet: { items: cartItem },
+            updated_at: new Date()
+        },
+        { upsert: true, new: true }
+    );
+
+    return res.json(new ApiResponse(200, cart));
+});
+
+// Get cart items
+export const getCart = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user || !req.user._id) {
+        throw new ApiError(401, 'Unauthorized');
+    }
+    const userId = req.user._id;
+
+    const cart = await Cart.findOne({ user_id: userId });
+    return res.json(new ApiResponse(200, cart || { items: [] }));
+});
+
+// Create order from cart (checkout)
+export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user || !req.user._id || !req.user.email) {
+        throw new ApiError(401, 'Unauthorized');
+    }
+    const userId = req.user._id;
+    const userEmail = req.user.email;
+
+    // Get user's cart
+    const cart = await Cart.findOne({ user_id: userId });
+    if (!cart || cart.items.length === 0) {
+        throw new ApiError(400, 'Cart is empty');
+    }
 
     // Calculate order summary
-    const subtotal = publications.reduce((acc: number, pub: CheckoutPublicationItem) => {
-        const price = parseFloat(pub.price.replace(/[^0-9.-]+/g, ''));
+    const subtotal = cart.items.reduce((acc: number, item) => {
+        const price = parseFloat(item.price.replace(/[^0-9.-]+/g, ''));
         return acc + price;
     }, 0);
 
@@ -152,20 +209,130 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) 
     const vat_amount = subtotal * 0.075;
     const total_amount = subtotal + vat_amount;
 
+    // Generate unique reference for Paystack
+    const reference = `ORDER-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+
+    // Create the order
     const order = await Order.create({
-        user_id: userId,  // userId is already checked above
-        publications,
+        user_id: userId,
+        items: cart.items,
         order_summary: {
             subtotal: `₦${subtotal.toLocaleString()}`,
             vat_percentage,
             vat_amount: `₦${vat_amount.toLocaleString()}`,
             total_amount: `₦${total_amount.toLocaleString()}`
         },
-        payment_method,
-        status: 'Pending'
+        payment_method: 'Paystack',
+        status: 'Pending',
+        reference,
+        created_at: new Date()
     });
 
-    return res.json(new ApiResponse(201, order));
+    // Clear the cart after creating order
+    await Cart.findOneAndUpdate(
+        { user_id: userId },
+        { $set: { items: [] } }
+    );
+
+    // Initialize Paystack payment
+    const paystackResponse = await initializePaystackPayment({
+        amount: total_amount * 100, // Paystack expects amount in kobo
+        email: userEmail,
+        reference,
+        callback_url: `${process.env.FRONTEND_URL}/payment/callback`
+    });
+
+    return res.json(new ApiResponse(201, {
+        order,
+        payment: paystackResponse
+    }));
+});
+
+export const createPublisher = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user?._id;
+    if (!userId) throw new ApiError(401, 'Unauthorized');
+
+    console.log('Create Publisher - Request Body:', req.body);
+    const { name, description, website, turnaroundTime, industryFocus, region, audienceReach, price, isPopular, isSelected } = req.body;
+
+    const publisher = await Publisher.create({
+        publisherId: `PUB${Date.now()}`, // Generate a unique publisher ID
+        name,
+        description,
+        website,
+        avg_publish_time: turnaroundTime,
+        industry_focus: industryFocus,
+        region_reach: region,
+        audience_reach: audienceReach,
+        price,
+        isPopular: isPopular || false,
+        isSelected: isSelected || false,
+        key_features: [], // Add default empty array or get from req.body
+        metrics: {
+            social_signals: req.body.metrics?.social_signals || 0,
+            avg_traffic: req.body.metrics?.avg_traffic || 0,
+            trust_score: req.body.metrics?.trust_score || 0,
+            domain_authority: req.body.metrics?.domain_authority || 0
+        },
+        created_by: userId,
+        created_at: new Date().toISOString()
+    });
+
+    return res.status(201).json(new ApiResponse(201, publisher, 'Publisher created successfully'));
+});
+
+// Update cart item (select/deselect)
+export const updateCartItem = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user || !req.user._id) {
+        throw new ApiError(401, 'Unauthorized');
+    }
+    const userId = req.user._id;
+    const { publisherId } = req.params;
+    const { selected } = req.body;
+
+    const cart = await Cart.findOneAndUpdate(
+        { 
+            user_id: userId,
+            'items.publisherId': publisherId 
+        },
+        { 
+            $set: { 
+                'items.$.selected': selected,
+                updated_at: new Date()
+            } 
+        },
+        { new: true }
+    );
+
+    if (!cart) {
+        throw new ApiError(404, 'Cart item not found');
+    }
+
+    return res.json(new ApiResponse(200, cart));
+});
+
+// Remove item from cart
+export const removeFromCart = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user || !req.user._id) {
+        throw new ApiError(401, 'Unauthorized');
+    }
+    const userId = req.user._id;
+    const { publisherId } = req.params;
+
+    const cart = await Cart.findOneAndUpdate(
+        { user_id: userId },
+        { 
+            $pull: { items: { publisherId } },
+            $set: { updated_at: new Date() }
+        },
+        { new: true }
+    );
+
+    if (!cart) {
+        throw new ApiError(404, 'Cart not found');
+    }
+
+    return res.json(new ApiResponse(200, cart));
 });
 
 export const getOrderDetails = asyncHandler(async (req: AuthRequest, res: Response) => {

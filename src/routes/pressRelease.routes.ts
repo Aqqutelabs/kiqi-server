@@ -11,14 +11,26 @@ import {
     getPublishers,
     getPublisherDetails,
     createOrder,
-    getOrderDetails
+    getOrderDetails,
+    createPublisher,
+    addToCart,
+    getCart,
+    removeFromCart,
+    updateCartItem
 } from '../controllers/pressRelease.controller';
 
 import { 
     createPressReleaseSchema,
     updatePressReleaseSchema,
-    createOrderSchema 
+    createOrderSchema,
+    createPublisherSchema 
 } from '../validation/pressRelease.validation';
+
+import {
+    addToCartSchema,
+    updateCartItemSchema,
+    removeFromCartSchema
+} from '../validation/cart.validation';
 
 const router = Router();
 
@@ -29,18 +41,25 @@ router.use(isAuthenticated);
 router.get('/dashboard', getDashboardMetrics);
 router.get('/list', getPressReleasesList);
 
-// Press Release CRUD
+// Cart routes (these need to be before the generic routes)
+router.get('/cart', getCart);
+router.post('/cart/add', validateRequest(addToCartSchema), addToCart);
+router.put('/cart/:publisherId', validateRequest(updateCartItemSchema), updateCartItem);
+router.delete('/cart/:publisherId', validateRequest(removeFromCartSchema), removeFromCart);
+
+// Publisher routes (these need to be before the generic routes)
+router.get('/publishers', getPublishers);
+router.get('/publishers/:id', getPublisherDetails);
+router.post('/publishers', createPublisher);
+
+// Order routes (these need to be before the generic routes)
+router.post('/orders/checkout', createOrder);
+router.get('/orders/:id', getOrderDetails);
+
+// Press Release CRUD (generic routes should be last)
 router.post('/create', validateRequest(createPressReleaseSchema), createPressRelease);
 router.get('/:id', getPressReleaseDetails);
 router.put('/:id', validateRequest(updatePressReleaseSchema), updatePressRelease);
 router.delete('/:id', deletePressRelease);
-
-// Publisher routes
-router.get('/publishers', getPublishers);
-router.get('/publishers/:id', getPublisherDetails);
-
-// Order routes
-router.post('/orders', validateRequest(createOrderSchema), createOrder);
-router.get('/orders/:id', getOrderDetails);
 
 export default router;
