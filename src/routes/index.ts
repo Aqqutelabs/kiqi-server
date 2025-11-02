@@ -7,6 +7,7 @@ import templateRouter from './templates.route';
 import draftsRouter from './drafts.routes';
 import emailGenerationRouter from './emailGeneration.route';
 import pressReleaseRouter from './pressRelease.routes';
+import postRouter from './post.route';
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use('/sms-templates', templateRouter);
 router.use('/drafts', draftsRouter);
 router.use('/ai-email', emailGenerationRouter);
 router.use('/press-releases', pressReleaseRouter);
+router.use('/posts', postRouter);
 
 export default router;
