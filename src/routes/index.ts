@@ -7,6 +7,10 @@ import templateRouter from './templates.route';
 import draftsRouter from './drafts.routes';
 import emailGenerationRouter from './emailGeneration.route';
 import pressReleaseRouter from './pressRelease.routes';
+import accountRouter from './account.routes';
+import subscriptionRouter from './subscription.routes';
+import walletRouter from './wallet.routes';
+import cardRouter from './card.routes';
 
 const router = Router();
 
@@ -18,5 +22,9 @@ router.use('/sms-templates', templateRouter);
 router.use('/drafts', draftsRouter);
 router.use('/ai-email', emailGenerationRouter);
 router.use('/press-releases', pressReleaseRouter);
+router.use('/account', accountRouter);
+router.use('/subscriptions', subscriptionRouter);
+router.use('/wallets', walletRouter);
+router.use('/cards', cardRouter);
 
 export default router;
