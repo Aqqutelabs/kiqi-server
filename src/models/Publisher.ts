@@ -15,10 +15,10 @@ const PublisherSchema = new Schema<PublisherDocument>({
     audience_reach: { type: String, required: true },
     key_features: [{ type: String }],
     metrics: {
-        domain_authority: { type: Number, required: true },
-        trust_score: { type: Number, required: true },
-        avg_traffic: { type: Number, required: true },
-        social_signals: { type: Number, required: true }
+        domain_authority: { type: Number, required: false },
+        trust_score: { type: Number, required: false },
+        avg_traffic: { type: Number, required: false },
+        social_signals: { type: Number, required: false }
     }
 }, {
     timestamps: true
