@@ -12,6 +12,7 @@ export class PostImpl implements PostService {
         publish_date?: Date | null
     ): Promise<PostDoc> {
 
+       // console.log("Creating post:", { platform, message, is_draft, media, publish_date });
         const post = await PostModel.create({
             platform,
             message,

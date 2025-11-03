@@ -10,6 +10,7 @@ import AppError from '../utils/AppError';
 const uploadPath = path.join(__dirname, `../../${config.uploadDir}`);
 if (!fs.existsSync(uploadPath)) {
   fs.mkdirSync(uploadPath, { recursive: true });
+  console.log('Created uploads folder at:', uploadPath);
 }
 
 /**
@@ -17,7 +18,7 @@ if (!fs.existsSync(uploadPath)) {
  */
 const storage = multer.diskStorage({
   destination: (req: Request, file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
-    cb(null, config.uploadDir);
+    cb(null, uploadPath);
   },
   filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
@@ -30,11 +31,12 @@ const storage = multer.diskStorage({
  * File filter for validating image types
  */
 const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
-  const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png'];
+  const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'video/mp4', 'video/quicktime',];
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new AppError('Invalid file type. Only JPEG, JPG, and PNG are allowed.', 400));
+    // cb(new AppError('Invalid file type. Only JPEG, JPG, and PNG are allowed.', 400));
+    cb(new AppError('Invalid file type. Only JPEG, JPG, MP4, MOV and PNG are allowed.', 400));
   }
 };
 

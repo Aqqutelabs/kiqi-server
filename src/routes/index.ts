@@ -16,12 +16,17 @@ import postRouter from './post.route';
 const router = Router();
 
 router.use('/onboarding', onboardingRouter);
-router.use('/campaigns', campaignRoute);
+//router.use('/campaigns', campaignRoute);
 router.use('/senders', senderRouter);
 router.use('/sms', smsRouter);
 router.use('/sms-templates', templateRouter);
 router.use('/drafts', draftsRouter);
 router.use('/ai-email', emailGenerationRouter);
 router.use('/press-releases', pressReleaseRouter);
+router.use('/account', accountRouter);
+router.use('/subscriptions', subscriptionRouter);
+router.use('/wallets', walletRouter);
+router.use('/cards', cardRouter);
+router.use('/posts', postRouter);
 
 export default router;

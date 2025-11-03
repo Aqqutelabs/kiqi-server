@@ -10,13 +10,24 @@ export class PostController {
         this.postService = new PostImpl();
     }
 
+
     public createPost = async (
         req: Request,
         res: Response,
         next: NextFunction
+
     ): Promise<void> => {
         try {
-            const { platform, message, media, publish_date, action } = req.body;
+            console.log("Incoming file:", req.file);
+            console.log("Request body:", req.body);
+
+            const { platform, message, publish_date, action } = req.body;
+
+            // handle uploaded media (single file)
+            let media: string | null = null;
+            if (req.file && req.file.path) {
+                media = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+            }
 
             let is_draft: boolean;
             let final_publish_date: Date | null = null;
@@ -39,21 +50,21 @@ export class PostController {
             }
 
             // Validation for publish / schedule
-        if (!is_draft) {
-            if (!platform || !message) {
-                res.status(StatusCodes.BAD_REQUEST).json({
-                    error: true,
-                    message: "Platform and message are required for publishing.",
-                });
-                return;
+            if (!is_draft) {
+                if (!platform || !message) {
+                    res.status(StatusCodes.BAD_REQUEST).json({
+                        error: true,
+                        message: "Platform and message are required for publishing.",
+                    });
+                    return;
+                }
             }
-        }
 
             const post = await this.postService.createPost(
                 platform,
                 message,
                 is_draft,
-                media,
+                media || undefined,
                 final_publish_date
             );
 

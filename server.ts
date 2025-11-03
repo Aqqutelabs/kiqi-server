@@ -15,6 +15,7 @@ import emailListRoute from './src/routes/emailList.route';
 import dotenv from 'dotenv';
 import { verifyJWT } from './src/middlewares/Auth.middlewares';
 import { AuthController } from './src/controllers/auth.controller';
+import path from "path";
 // import errorHandler from './middlewares/errorHandler.middleware';
 
 dotenv.config()
@@ -69,7 +70,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/senderEmail", senderRouter);
 app.use("/api/v1/templates", templateRouter);
 app.use("/api/v1/ai", googleAIrouter);
-app.use("/api/v1/campaigns", campaignRoute);
+//app.use("/api/v1/campaigns", campaignRoute);
 app.use("/api/v1/email-lists", emailListRoute);
 
 // Then the main router last for any remaining routes

@@ -22,4 +22,4 @@ const PostSchema: Schema = new Schema(
     { timestamps: true }
 );
 
-export const PostModel = mongoose.model<PostDoc>("Campaign", PostSchema);
+export const PostModel = mongoose.model<PostDoc>("Post", PostSchema);
