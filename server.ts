@@ -15,7 +15,8 @@ import emailListRoute from './src/routes/emailList.route';
 import dotenv from 'dotenv';
 import { verifyJWT } from './src/middlewares/Auth.middlewares';
 import { AuthController } from './src/controllers/auth.controller';
-import path from "path";
+import instagramRouter from "./src/sm/instagram";
+//import "./src/scheduler/post.scheduler";
 // import errorHandler from './middlewares/errorHandler.middleware';
 
 dotenv.config()
@@ -49,6 +50,9 @@ app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', uptime: process.uptime() });
 });
 
+// SM
+app.use("/", instagramRouter);
+
 // Initialize controller after app is created
 const authController = new AuthController();
 
@@ -70,7 +74,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/senderEmail", senderRouter);
 app.use("/api/v1/templates", templateRouter);
 app.use("/api/v1/ai", googleAIrouter);
-//app.use("/api/v1/campaigns", campaignRoute);
+app.use("/api/v1/campaigns", campaignRoute);
 app.use("/api/v1/email-lists", emailListRoute);
 
 // Then the main router last for any remaining routes

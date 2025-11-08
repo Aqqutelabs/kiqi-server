@@ -12,11 +12,12 @@ import subscriptionRouter from './subscription.routes';
 import walletRouter from './wallet.routes';
 import cardRouter from './card.routes';
 import postRouter from './post.route';
+import smCampaignRouter from './smCampaign.route';
 
 const router = Router();
 
 router.use('/onboarding', onboardingRouter);
-//router.use('/campaigns', campaignRoute);
+router.use('/campaigns', campaignRoute);
 router.use('/senders', senderRouter);
 router.use('/sms', smsRouter);
 router.use('/sms-templates', templateRouter);
@@ -28,5 +29,6 @@ router.use('/subscriptions', subscriptionRouter);
 router.use('/wallets', walletRouter);
 router.use('/cards', cardRouter);
 router.use('/posts', postRouter);
+router.use('/sm-campaigns', smCampaignRouter);
 
 export default router;

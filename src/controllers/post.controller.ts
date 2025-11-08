@@ -30,16 +30,20 @@ export class PostController {
             }
 
             let is_draft: boolean;
+            let is_published = false;
             let final_publish_date: Date | null = null;
 
             if (action === "draft") {
                 is_draft = true;
+                is_published = false;
             } else if (action === "publish_now") {
                 is_draft = false;
+                is_published = true;
                 final_publish_date = new Date();
             }
             else if (action === "schedule") {
                 is_draft = false;
+                is_published = false;
                 final_publish_date = new Date(publish_date);
             } else {
                 res.status(StatusCodes.BAD_REQUEST).json({
@@ -64,6 +68,7 @@ export class PostController {
                 platform,
                 message,
                 is_draft,
+                is_published,
                 media || undefined,
                 final_publish_date
             );

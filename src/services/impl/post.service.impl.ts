@@ -8,6 +8,7 @@ export class PostImpl implements PostService {
         platform: string,
         message: string,
         is_draft: boolean,
+        is_published: boolean,
         media?: string,
         publish_date?: Date | null
     ): Promise<PostDoc> {
@@ -17,6 +18,7 @@ export class PostImpl implements PostService {
             platform,
             message,
             is_draft,
+            is_published,
             media,
             publish_date,
         });
