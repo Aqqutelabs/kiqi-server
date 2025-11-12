@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { CampaignServiceImpl } from "../services/impl/campaign.service.impl";
 import { StatusCodes } from "http-status-codes";
+import { ApiError } from "../utils/ApiError";
 
 export class CampaignController {
     private campaignService: CampaignServiceImpl;
@@ -14,122 +15,135 @@ export class CampaignController {
         res: Response,
         next: NextFunction
     ): Promise<void> => {
-        try{
-            // Accept all campaign fields from the request body
+        try {
             const {
                 campaignName,
                 subjectLine,
-                status,
                 emailListIds,
                 senderEmail,
-                deliveryStatus,
-                category,
-                campaignTopic,
-                instructions,
-                reward,
                 startDate,
                 endDate,
                 time
             } = req.body;
+
+            const userId = req.user?._id;
+            if (!userId) {
+                throw new ApiError(StatusCodes.UNAUTHORIZED, "User not authenticated");
+            }
+
             const created = await this.campaignService.createCampaign({
                 campaignName,
                 subjectLine,
-                status,
                 emailListIds,
                 senderEmail,
-                deliveryStatus,
-                category,
-                campaignTopic,
-                instructions,
-                reward,
                 startDate,
                 endDate,
-                time
-            });
+                time,
+                user_id: userId
+            } as any);
 
             res.status(StatusCodes.CREATED).json({
                 error: false,
                 message: "Campaign has been created",
                 data: created,
-            })
-        } catch (error){
+            });
+        } catch (error) {
             next(error);
         }
-    }
+    };
 
     public getAllCampaigns = async (
         req: Request,
         res: Response,
         next: NextFunction
     ): Promise<void> => {
-        try{
-            
-            const campaigns = await this.campaignService.getAllCampaigns();
+        try {
+            const userId = req.user?._id;
+            if (!userId) {
+                throw new ApiError(StatusCodes.UNAUTHORIZED, "User not authenticated");
+            }
+
+            const campaigns = await this.campaignService.getCampaigns(userId);
             res.status(StatusCodes.OK).json({
                 error: false,
                 data: campaigns
             });
-        } catch (error){
+        } catch (error) {
             next(error);
         }
-    }
+    };
 
     public getCampaignById = async (
         req: Request,
         res: Response,
         next: NextFunction
     ): Promise<void> => {
-        try{
+        try {
             const id = req.params.id;
-            const campaign = await this.campaignService.getCampaignById(id)
+            const userId = req.user?._id;
+            if (!userId) {
+                throw new ApiError(StatusCodes.UNAUTHORIZED, "User not authenticated");
+            }
+
+            const campaign = await this.campaignService.getCampaignById(id, userId);
 
             res.status(StatusCodes.OK).json({
                 error: false,
                 data: campaign
             });
         } catch (error) {
-            next(error)
+            next(error);
         }
-    }
+    };
 
     public updateCampaign = async (
         req: Request,
         res: Response,
         next: NextFunction
     ): Promise<void> => {
-        try{
+        try {
             const id = req.params.id;
-            const {campaignName, subjectLine} = req.body
-            const updated = await this.campaignService.updateCampaign(id, {
+            const userId = req.user?._id;
+            if (!userId) {
+                throw new ApiError(StatusCodes.UNAUTHORIZED, "User not authenticated");
+            }
+
+            const { campaignName, subjectLine } = req.body;
+            const updated = await this.campaignService.updateCampaign(id, userId, {
                 campaignName,
                 subjectLine
-            })
+            });
 
             res.status(StatusCodes.OK).json({
                 error: false,
                 message: "Campaign has been updated.",
                 data: updated,
-            })
+            });
         } catch (error) {
             next(error);
         }
-    }
+    };
 
     public deleteCampaign = async (
         req: Request,
         res: Response,
         next: NextFunction
     ): Promise<void> => {
-        try{
-            const id = req.params.id
-            const deleted = await this.campaignService.deleteCampaign(id);
+        try {
+            const id = req.params.id;
+            const userId = req.user?._id;
+            if (!userId) {
+                throw new ApiError(StatusCodes.UNAUTHORIZED, "User not authenticated");
+            }
+
+            await this.campaignService.deleteCampaign(id, userId);
 
             res.status(StatusCodes.OK).json({
                 error: false,
                 message: "Campaign has been deleted",
-            })
+            });
         } catch (error) {
-            next(error)
+            next(error);
         }
     }
 
@@ -156,7 +170,7 @@ export class CampaignController {
                 return;
             }
             // Fetch email list and validate ownership
-            const emailList = await this.campaignService.getEmailListForUser(emailListId, userId as string);
+            const emailList = await (this.campaignService as any).getEmailListForUser(emailListId, userId as string);
             if (!emailList) {
                 res.status(StatusCodes.NOT_FOUND).json({
                     error: true,
@@ -172,15 +186,15 @@ export class CampaignController {
                 return;
             }
             // Send emails (use fixed sender, dynamic replyTo)
-            await this.campaignService.sendBulkEmail(emailList.emails, subject, body, replyTo);
+            await (this.campaignService as any).sendBulkEmail(emailList.emails, subject, body, replyTo);
             // Save campaign record
             const campaign = await this.campaignService.createCampaign({
                 campaignName,
                 subjectLine: subject,
-                status: 'Completed',
                 emailListIds: [emailListId],
                 senderEmail: process.env.EMAIL_FROM || 'noreply@data.widernetfarms.org',
-            });
+                user_id: userId
+            } as any);
             res.status(StatusCodes.OK).json({
                 error: false,
                 message: "Campaign started and emails sent.",
@@ -207,7 +221,7 @@ export class CampaignController {
                 return;
             }
             // Update the campaign to reference the email list
-            const updatedCampaign = await this.campaignService.addEmailListToCampaign(campaignId, emailListId);
+            const updatedCampaign = await (this.campaignService as any).addEmailListToCampaign(campaignId, emailListId);
             if (!updatedCampaign) {
                 res.status(StatusCodes.NOT_FOUND).json({
                     error: true,

@@ -2,8 +2,8 @@ import mongoose, { Schema, Document, Model, ObjectId } from 'mongoose';
 import { UserAccount } from './UserAccount';
 
 // Define the payment method types as const to ensure type safety
-const PaymentMethodTypes = ['Wallet', 'Card', 'BankTransfer'] as const;
-const TransactionTypes = ['Credit', 'Debit'] as const;
+const PaymentMethodTypes = ['Wallet', 'Card', 'BankTransfer', 'Paystack'] as const;
+const TransactionTypes = ['Credit', 'Debit', 'Referral', 'Conversion', 'Purchase', 'Refund'] as const;
 const TransactionStatuses = ['Pending', 'Completed', 'Failed'] as const;
 
 type PaymentMethodType = typeof PaymentMethodTypes[number];
@@ -21,10 +21,14 @@ interface PaymentMethodDetails {
 interface TransactionMetadata {
     campaignId?: ObjectId;
     subscriptionId?: ObjectId;
+    referralId?: ObjectId;
+    source?: string;
+    conversionRate?: number;
+    currencyType: 'go_credits' | 'go_coins';
 }
 
 // Define base transaction properties
-interface TransactionBase {
+export interface TransactionBase {
     user_id: ObjectId;
     transactionId: string;
     description: string;
@@ -32,6 +36,8 @@ interface TransactionBase {
     type: TransactionType;
     status: TransactionStatus;
     channel: PaymentMethodType;
+    currencyType: 'go_credits' | 'go_coins';
+    referenceId?: ObjectId; // For referrals or linked transactions
     paymentMethod: {
         type: PaymentMethodType;
         details: PaymentMethodDetails;
@@ -41,7 +47,7 @@ interface TransactionBase {
 }
 
 // Define the document interface
-interface TransactionDocument extends Document, Omit<TransactionBase, 'user_id' | 'metadata'> {
+export interface TransactionDocument extends Document, Omit<TransactionBase, 'user_id' | 'metadata'> {
     user_id: ObjectId;
     metadata?: TransactionMetadata;
     createdAt: Date;
@@ -49,7 +55,7 @@ interface TransactionDocument extends Document, Omit<TransactionBase, 'user_id' 
 }
 
 // Define the model interface with static methods
-interface TransactionModel extends Model<TransactionDocument> {
+export interface TransactionModel extends Model<TransactionDocument> {
     findByTransactionId: (transactionId: string) => Promise<TransactionDocument | null>;
     findUserTransactions: (userId: string | ObjectId) => Promise<TransactionDocument[]>;
     updateUserBalance: (transaction: TransactionDocument) => Promise<void>;
@@ -64,7 +70,7 @@ const TransactionSchema = new Schema<TransactionDocument>({
     },
     transactionId: { 
         type: String, 
-        required: true, 
+        required: false, 
         unique: true,
         validate: {
             validator: function(v: string) {
@@ -88,6 +94,15 @@ const TransactionSchema = new Schema<TransactionDocument>({
             },
             message: 'Amount must be greater than 0'
         }
+    },
+    currencyType: {
+        type: String,
+        enum: ['go_credits', 'go_coins'],
+        required: false
+    },
+    referenceId: {
+        type: Schema.Types.ObjectId,
+        index: true
     },
     type: { 
         type: String, 
@@ -114,7 +129,7 @@ const TransactionSchema = new Schema<TransactionDocument>({
     channel: { 
         type: String, 
         enum: PaymentMethodTypes,
-        required: true,
+        required: false,
         validate: {
             validator: (v: string): v is PaymentMethodType => 
                 PaymentMethodTypes.includes(v as PaymentMethodType),
@@ -124,44 +139,30 @@ const TransactionSchema = new Schema<TransactionDocument>({
     paymentMethod: {
         type: { 
             type: String, 
-            enum: PaymentMethodTypes,
+            enum: ['Wallet', 'Card', 'BankTransfer', 'Paystack'],
             required: true,
             validate: {
                 validator: (v: string): v is PaymentMethodType => 
-                    PaymentMethodTypes.includes(v as PaymentMethodType),
+                    ['Wallet', 'Card', 'BankTransfer', 'Paystack'].includes(v),
                 message: 'Invalid payment method type'
             }
         },
         details: {
-            walletId: { 
-                type: Schema.Types.ObjectId, 
+            walletId: {
+                type: Schema.Types.ObjectId,
                 ref: 'Wallet',
                 validate: {
                     validator: function(this: TransactionDocument, v: mongoose.Types.ObjectId) {
-                        return this.paymentMethod.type === 'Wallet' ? !!v : true;
+                        return this.paymentMethod?.type === 'Wallet' ? !!v : true;
                     },
                     message: 'Wallet ID is required for wallet payments'
                 }
             },
-            cardId: { 
-                type: Schema.Types.ObjectId, 
-                ref: 'Card',
-                validate: {
-                    validator: function(this: TransactionDocument, v: mongoose.Types.ObjectId) {
-                        return this.paymentMethod.type === 'Card' ? !!v : true;
-                    },
-                    message: 'Card ID is required for card payments'
-                }
+            cardId: {
+                type: Schema.Types.ObjectId,
+                ref: 'Card'
             },
-            bankName: {
-                type: String,
-                validate: {
-                    validator: function(this: TransactionDocument, v: string) {
-                        return this.paymentMethod.type === 'BankTransfer' ? !!v : true;
-                    },
-                    message: 'Bank name is required for bank transfers'
-                }
-            }
+            bankName: String
         }
     },
     metadata: {
@@ -237,31 +238,33 @@ TransactionSchema.pre<TransactionDocument>('save', function(next) {
 
     switch (type) {
         case 'Wallet':
-            if (!details.walletId) {
-                error = new Error('Wallet ID is required for wallet payments');
-            }
+            if (!details.walletId) error = new Error('Wallet ID is required for wallet payments');
             break;
         case 'Card':
-            if (!details.cardId) {
-                error = new Error('Card ID is required for card payments');
+            // Only require cardId if it's an internal saved card
+            if (!details.cardId && this.channel === 'Card') {
+                console.warn('Card ID missing, skipping for external payment method');
+                // Optional: don't throw, just skip
             }
             break;
         case 'BankTransfer':
-            if (!details.bankName) {
-                error = new Error('Bank name is required for bank transfers');
-            }
+            if (!details.bankName) error = new Error('Bank name is required for bank transfers');
+            break;
+        case 'Paystack':
+            // External gateway, no details required
             break;
         default:
             error = new Error('Invalid payment method type');
     }
 
     // Ensure channel matches payment method type
-    if (this.channel !== type) {
+    if (this.channel !== type && type !== 'Paystack') {
         error = new Error('Channel must match payment method type');
     }
 
     next(error);
 });
+
 
 // Define interface for balance update
 interface BalanceUpdate {

@@ -6,17 +6,16 @@ interface PressReleaseDocument extends Document, PressReleaseListItem {
     distribution_report: DistributionReportItem[];
     content: string;  // Rich text content
     campaign_id: Schema.Types.ObjectId;
+    image?: string;
 }
 
 const PressReleaseSchema = new Schema<PressReleaseDocument>({
-    title: { type: String, required: true },
     status: { 
         type: String, 
         enum: ['Published', 'Draft', 'Scheduled'],
         required: true 
     },
     distribution: { type: String },
-    campaign: { type: String, required: true },
     performance_views: { type: String },
     date_created: { type: String, required: true },
     metrics: {
@@ -42,7 +41,8 @@ const PressReleaseSchema = new Schema<PressReleaseDocument>({
         type: Schema.Types.ObjectId, 
         ref: 'Campaign',
         required: true 
-    }
+    },
+    image: { type: String } // Added optional image field
 }, {
     timestamps: true
 });

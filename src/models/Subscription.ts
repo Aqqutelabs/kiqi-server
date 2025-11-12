@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 import { Subscription as ISubscription } from '../types/account.types';
 
 // Define base subscription properties with Mongoose types
-interface SubscriptionBase {
+export interface SubscriptionBase {
     user_id: mongoose.Types.ObjectId;
     planName: ISubscription['planName'];
     price: number;
@@ -11,17 +11,26 @@ interface SubscriptionBase {
     startDate: Date;
     endDate: Date;
     nextBillingDate: Date;
-    paymentMethodId: string;
+    paymentMethodId?: string;
+    monthlyCredits: number;
+    coinMultiplier: number;
+    billingCycle?: 'monthly' | 'annual';
+    autoRenew: boolean;
+    metadata?: {
+        lastBillingDate: Date;
+        cancellationDate?: Date;
+        reason?: string;
+    };
 }
 
 // Define the document interface
-interface SubscriptionDocument extends Document, SubscriptionBase {
+export interface SubscriptionDocument extends Document, SubscriptionBase {
     createdAt: Date;
     updatedAt: Date;
 }
 
 // Define static methods interface
-interface SubscriptionModel extends Model<SubscriptionDocument> {
+export interface SubscriptionModel extends Model<SubscriptionDocument> {
     findActiveSubscription(userId: string | mongoose.Types.ObjectId): Promise<SubscriptionDocument | null>;
 }
 
@@ -78,8 +87,35 @@ const SubscriptionSchema = new Schema<SubscriptionDocument>({
     },
     paymentMethodId: { 
         type: String, 
-        required: true 
-    }
+        required: false 
+    },
+    monthlyCredits: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+    coinMultiplier: {
+        type: Number,
+        required: true,
+        min: 1,
+        default: 1
+    },
+    billingCycle: {
+        type: String,
+        enum: ['monthly', 'annual'],
+        required: false,
+        default: 'monthly'
+    },
+    autoRenew: {
+        type: Boolean,
+        default: true
+    },
+    metadata: {
+        lastBillingDate: Date,
+        cancellationDate: Date,
+        reason: String
+    },
+ 
 }, {
     timestamps: true
 });

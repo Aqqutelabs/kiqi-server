@@ -32,6 +32,8 @@ import {
     removeFromCartSchema
 } from '../validation/cart.validation';
 
+import upload from '../middlewares/Upload';
+
 const router = Router();
 
 // All routes require authentication
@@ -57,7 +59,7 @@ router.post('/orders/checkout', createOrder);
 router.get('/orders/:id', getOrderDetails);
 
 // Press Release CRUD (generic routes should be last)
-router.post('/create', validateRequest(createPressReleaseSchema), createPressRelease);
+router.post('/create', upload.single('image'), validateRequest(createPressReleaseSchema), createPressRelease);
 router.get('/:id', getPressReleaseDetails);
 router.put('/:id', validateRequest(updatePressReleaseSchema), updatePressRelease);
 router.delete('/:id', deletePressRelease);
