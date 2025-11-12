@@ -1,25 +1,27 @@
 import { Router } from 'express';
 import { subscriptionController } from '../controllers/subscription.controller';
 import { verifyJWT } from '../middlewares/Auth.middlewares';
+import { validateRequest } from '../middlewares/zod.validation.middleware';
+import { subscriptionSchema } from '../validation/account.validation';
 
 const router = Router();
 
 // All routes require authentication
 router.use(verifyJWT);
 
-// Create new subscription
-router.post('/', subscriptionController.createSubscription);
+// Subscribe to a plan
+router.post('/subscribe', validateRequest(subscriptionSchema.subscribe), subscriptionController.subscribeToPlan);
 
-// Get active subscription
-router.get('/active', subscriptionController.getActiveSubscription);
-
-// Get subscription history
-router.get('/history', subscriptionController.getSubscriptionHistory);
-
-// Cancel subscription
-router.post('/cancel', subscriptionController.cancelSubscription);
+// Get subscription details with usage
+router.get('/details', subscriptionController.getSubscriptionDetails);
 
 // Update subscription
-router.put('/update', subscriptionController.updateSubscription);
+router.put('/update', validateRequest(subscriptionSchema.update), subscriptionController.updateSubscription);
+
+// Cancel subscription
+router.post('/cancel', validateRequest(subscriptionSchema.cancel), subscriptionController.cancelSubscription);
+
+// Route to verify payment
+router.post('/verify-payment', subscriptionController.verifyPayment);
 
 export default router;

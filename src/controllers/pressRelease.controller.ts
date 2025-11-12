@@ -10,6 +10,14 @@ import { initializePaystackPayment, verifyPaystackPayment } from '../utils/payst
 import mongoose from 'mongoose';
 import { AuthRequest } from '../middlewares/Auth.middlewares';
 import { CheckoutPublicationItem } from '../types/pressRelease.types';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Configure Cloudinary
+cloudinary.config({ 
+    cloud_name: 'dphdvbdwg', 
+    api_key: '164375779418948', 
+    api_secret: 'otQq6cFFzqGeQO4umSVrrFumA30' // Replace with your actual API secret
+});
 
 export const getPressReleasesList = asyncHandler(async (req: AuthRequest, res: Response) => {
     const userId = req.user?._id;
@@ -76,16 +84,33 @@ export const getPressReleaseDetails = asyncHandler(async (req: AuthRequest, res:
 });
 
 export const createPressRelease = asyncHandler(async (req: AuthRequest, res: Response) => {
+    console.log('Request body:', req.body);
     const userId = req.user?._id;
     if (!userId) throw new ApiError(401, 'Unauthorized');
-    const { campaign_id, campaign, title, pr_content, status } = req.body;
-    
+    const { campaign_id, campaign, pr_content, status } = req.body;
+
+    let imageUrl = '';
+
+    // Handle image upload to Cloudinary
+    if (req.file) {
+        try {
+            const uploadResult = await cloudinary.uploader.upload(req.file.path, {
+                folder: 'press_releases',
+                public_id: `${userId}_${Date.now()}`
+            });
+            imageUrl = uploadResult.secure_url;
+        } catch (error) {
+            console.error('Cloudinary upload error:', error);
+            throw new ApiError(500, 'Failed to upload image');
+        }
+    }
+
     const pressRelease = await PressRelease.create({
         campaign_id: new mongoose.Types.ObjectId(campaign_id),
         campaign,  // Add the campaign name
-        title,
         content: pr_content,
         status,
+        image: imageUrl, // Store the Cloudinary image URL
         user_id: userId,  // userId is already checked above
         date_created: new Date().toISOString(),
         metrics: {
@@ -185,7 +210,7 @@ export const getCart = asyncHandler(async (req: AuthRequest, res: Response) => {
     return res.json(new ApiResponse(200, cart || { items: [] }));
 });
 
-// Create order from cart (checkout)
+
 export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.user || !req.user._id || !req.user.email) {
         throw new ApiError(401, 'Unauthorized');

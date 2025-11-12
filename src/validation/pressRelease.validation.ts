@@ -3,8 +3,6 @@ import { z } from 'zod';
 export const createPressReleaseSchema = z.object({
     body: z.object({
         campaign_id: z.string().nonempty('Campaign ID is required'),
-        campaign: z.string().nonempty('Campaign name is required'),
-        title: z.string().nonempty('Title is required'),
         pr_content: z.string().nonempty('Press release content is required'),
         status: z.enum(['Draft', 'Published', 'Scheduled'])
     })

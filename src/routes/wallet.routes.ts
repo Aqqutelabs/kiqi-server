@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { verifyJWT } from '../middlewares/Auth.middlewares';
 import { validateRequest } from '../middlewares/zod.validation.middleware';
 import { walletController } from '../controllers/wallet.controller';
-import { walletSchema } from '../validation/account.validation';
+import { walletSchema, walletOperationsSchema } from '../validation/account.validation';
 
 const router = Router();
 
@@ -14,6 +14,16 @@ router
     .post(validateRequest(walletSchema), walletController.addWallet)
     .get(walletController.getWallets);
 
+// Balance and transaction routes
+router.get('/balance', walletController.getWalletBalance);
+router.get('/transactions', walletController.getTransactionHistory);
+
+// Credit operations
+router.post('/credits/add', validateRequest(walletOperationsSchema.addCredits), walletController.addCredits);
+router.post('/credits/deduct', validateRequest(walletOperationsSchema.deductCredits), walletController.deductCredits);
+router.post('/credits/convert', validateRequest(walletOperationsSchema.convertCredits), walletController.convertCreditsToCoins);
+
+// Wallet management
 router
     .route('/:id')
     .put(validateRequest(walletSchema.partial()), walletController.updateWallet)

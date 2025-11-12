@@ -58,3 +58,14 @@ export const chatbotValidator = [
     body('tone').isIn(['Informal', 'Formal']).withMessage('Invalid tone'),
     handleValidationErrors
 ];
+
+export const subscribeToPlanValidator = [
+    body('planName').notEmpty().withMessage('Plan name is required'),
+    handleValidationErrors
+];
+
+export const subscribeValidator = [
+    body('planId').notEmpty().withMessage('Plan ID is required'),
+    body('paymentMethod').isIn(['paystack', 'card']).withMessage('Invalid payment method. Must be either paystack or card'),
+    handleValidationErrors
+];

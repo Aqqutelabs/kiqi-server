@@ -14,7 +14,7 @@ const AIEmailSchema = new Schema<IAIEmail>(
   {
     recipient: {
       type: String,
-      required: [true, 'Recipient is required'],
+      required: [false, 'Recipient is required'],
     },
     context: {
       type: String,
