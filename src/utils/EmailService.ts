@@ -1,40 +1,41 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-// This is a mock email service. In a real application, you would integrate a
-// service like Nodemailer, SendGrid, or AWS SES.
-
+// Use Resend exclusively. Fail fast if API key missing.
 interface EmailOptions {
     to: string;
     subject: string;
-    text: string;
-    html: string;
+    text?: string;
+    html?: string;
     from?: string;
     replyTo?: string;
 }
 
-const transporter = nodemailer.createTransport({
-    service: process.env.EMAIL_SERVICE || 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+if (!RESEND_API_KEY) {
+    console.error('[Email] RESEND_API_KEY is not set. Email sending is disabled.');
+}
+
+const resendClient = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : undefined;
 
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
+    if (!resendClient) {
+        throw new Error('Resend client not configured. Set RESEND_API_KEY in environment.');
+    }
+
+    const fromAddress = options.from || process.env.EMAIL_FROM || 'no-reply@yourapp.com';
+
     try {
-        const mailOptions = {
-            from: options.from || process.env.EMAIL_FROM || 'no-reply@yourapp.com',
+        await resendClient.emails.send({
+            from: fromAddress,
             to: options.to,
             subject: options.subject,
-            html: options.html,
+            html: options.html ?? options.text ?? '',
             text: options.text,
             replyTo: options.replyTo,
-        };
-
-        await transporter.sendMail(mailOptions);
-        console.log(`[Email] Successfully sent to: ${options.to}`);
-    } catch (error) {
-        console.error('[Email] Error sending email:', error);
-        throw error;
+        });
+        console.log(`[Email][Resend] Successfully sent to: ${options.to}`);
+    } catch (err) {
+        console.error('[Email][Resend] Error sending email:', err);
+        throw err;
     }
 };

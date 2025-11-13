@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { StatusCodes } from "http-status-codes";
 import { SenderEmailServiceImpl } from "../services/impl/senderEmail.service.impl";
 import { verifyEmailSender } from '../utils/emailVerification';
+import { sendEmail } from '../utils/EmailService';
 
 export class SenderEmailController {
   private senderEmailService: SenderEmailServiceImpl;
@@ -18,7 +19,8 @@ export class SenderEmailController {
     try {
 
       const { sender, type, email } = req.body;
-      const created = await this.senderEmailService.createSenderEmail( sender, type, email);
+      const userId = (req as any).user?._id;
+      const created = await this.senderEmailService.createSenderEmail( sender, type, email, userId);
 
       res.status(StatusCodes.CREATED).json({
         error: false,
@@ -157,6 +159,51 @@ export class SenderEmailController {
         data: result,
       });
     } catch (error: any) {
+      next(error);
+    }
+  };
+
+  public requestVerificationOtp = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { senderName, type, email } = req.body;
+      if (!email) {
+        res.status(StatusCodes.BAD_REQUEST).json({ error: true, message: 'email is required' });
+        return;
+      }
+      const userId = (req as any).user?._id;
+      const sender = await this.senderEmailService.requestVerification(senderName || 'Sender', type || 'default', email, userId);
+
+      // send otp via email
+      const code = (sender as any).verificationCode;
+      const html = `<p>Your verification code is <strong>${code}</strong>. It expires in 15 minutes.</p>`;
+      await sendEmail({ to: email, subject: 'Verify your sender email', text: `Your code: ${code}`, html });
+
+      res.status(StatusCodes.OK).json({ error: false, message: 'Verification code sent', data: { email } });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public verifyOtp = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { email, code } = req.body;
+      if (!email || !code) {
+        res.status(StatusCodes.BAD_REQUEST).json({ error: true, message: 'email and code are required' });
+        return;
+      }
+      const userId = (req as any).user?._id;
+      const sender = await this.senderEmailService.verifyOtp(email, code.toString(), userId);
+
+      res.status(StatusCodes.OK).json({ error: false, message: 'Email verified successfully', data: sender });
+    } catch (error) {
       next(error);
     }
   };

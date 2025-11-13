@@ -19,11 +19,9 @@ export class CampaignController {
             const {
                 campaignName,
                 subjectLine,
-                emailListIds,
-                senderEmail,
-                startDate,
-                endDate,
-                time
+                senderId,
+                autoStart,
+                scheduledAt
             } = req.body;
 
             const userId = req.user?._id;
@@ -31,22 +29,53 @@ export class CampaignController {
                 throw new ApiError(StatusCodes.UNAUTHORIZED, "User not authenticated");
             }
 
-            const created = await this.campaignService.createCampaign({
+            if (!senderId) {
+                throw new ApiError(StatusCodes.BAD_REQUEST, "senderId is required");
+            }
+
+            // Validate scheduledAt if autoStart is true
+            if (autoStart && scheduledAt) {
+                const scheduledDate = new Date(scheduledAt);
+                if (isNaN(scheduledDate.getTime())) {
+                    throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid scheduledAt date format");
+                }
+                if (scheduledDate < new Date()) {
+                    throw new ApiError(StatusCodes.BAD_REQUEST, "scheduledAt must be in the future");
+                }
+            }
+
+            const campaignData: any = {
                 campaignName,
                 subjectLine,
-                emailListIds,
-                senderEmail,
-                startDate,
-                endDate,
-                time,
+                senderId,
                 user_id: userId
-            } as any);
+            };
 
-            res.status(StatusCodes.CREATED).json({
-                error: false,
-                message: "Campaign has been created",
-                data: created,
-            });
+            let response: any;
+
+            if (autoStart) {
+                // Create campaign and schedule it to start
+                response = await (this.campaignService as any).createAndScheduleCampaign(
+                    campaignData,
+                    scheduledAt ? new Date(scheduledAt) : new Date()
+                );
+                res.status(StatusCodes.CREATED).json({
+                    error: false,
+                    message: scheduledAt 
+                        ? "Campaign has been created and scheduled for later" 
+                        : "Campaign has been created and scheduled to start immediately",
+                    data: response.campaign,
+                    jobId: response.jobId
+                });
+            } else {
+                // Just create campaign in Draft status
+                const created = await this.campaignService.createCampaign(campaignData);
+                res.status(StatusCodes.CREATED).json({
+                    error: false,
+                    message: "Campaign has been created",
+                    data: created,
+                });
+            }
         } catch (error) {
             next(error);
         }
