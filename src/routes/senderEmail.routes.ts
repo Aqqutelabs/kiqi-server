@@ -10,6 +10,10 @@ senderRouter.get("/", isAuthenticated, controller.getAllSenderEmails);
 senderRouter.get("/:id", isAuthenticated, controller.getSenderEmailById);
 senderRouter.put("/:id", isAuthenticated, controller.updateSenderEmail);
 senderRouter.delete("/:id", isAuthenticated, controller.deleteSenderEmail);
+// OTP verification endpoints
+senderRouter.post('/request-verification', isAuthenticated, controller.requestVerificationOtp);
+senderRouter.post('/verify-otp', isAuthenticated, controller.verifyOtp);
+
 // senderRouter.post("/verify", isAuthenticated, controller.verifySender);
 
 export default senderRouter;

@@ -64,16 +64,7 @@ export interface CreateCampaignDto {
     user_id: string;
     campaignName: string;
     subjectLine: string;
-    campaignType: CampaignType;
-    sender: CampaignSenderDto;
-    audience: CampaignAudienceDto;
-    content: CampaignContentDto;
-    resendSettings?: CampaignResendDto;
-    smartSettings?: CampaignSmartSettingsDto;
-    schedule?: CampaignScheduleDto;
-    metadata?: CampaignMetadataDto;
-    emailListIds?: string[]; // Added property
-    status?: CampaignStatus; // Added property
+    senderId: string; // ID of verified sender email record
 }
 
 export interface UpdateCampaignDto extends Partial<CreateCampaignDto> {

@@ -11,9 +11,10 @@ import {
   CampaignService, 
   CampaignFilters, 
   CampaignAnalytics, 
-  DashboardMetrics 
+  DashboardMetrics,
+  CreateCampaignDto,
+  UpdateCampaignDto
 } from "../campaign.service";
-import { CreateCampaignDto, UpdateCampaignDto } from "../../dtos/campaign.dto";
 import { validateEmail } from "../../utils/validator";
 import { sendEmail } from "../../utils/EmailService";
 import { queueService } from "../queue.service";
@@ -26,14 +27,28 @@ export class CampaignServiceImpl implements CampaignService {
   }
 
   async createCampaign(data: CreateCampaignDto): Promise<CampaignDoc> {
-    // Validate sender emails
-    if (!validateEmail(data.sender.senderEmail) || !validateEmail(data.sender.replyToEmail)) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid sender or reply-to email");
+    // Import SenderModel to validate sender
+    const { SenderModel } = require("../../models/SenderEmail");
+
+    // Validate senderId is provided
+    const senderId = (data as any).senderId;
+    if (!senderId) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, "senderId is required");
+    }
+
+    // Look up the sender and verify it's verified
+    const sender = await SenderModel.findById(senderId);
+    if (!sender) {
+      throw new ApiError(StatusCodes.NOT_FOUND, "Sender email not found");
+    }
+
+    if (!sender.verified) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, "Sender email is not verified. Please verify the sender first.");
     }
 
     // Check for existing campaign
     const existingCampaign = await CampaignModel.findOne({
-      userId: new mongoose.Types.ObjectId(data.user_id),
+      user_id: new mongoose.Types.ObjectId(data.user_id),
       campaignName: data.campaignName
     });
     
@@ -41,18 +56,62 @@ export class CampaignServiceImpl implements CampaignService {
       throw new ApiError(StatusCodes.CONFLICT, "A campaign with this name already exists");
     }
     
-    // Validate manual emails
-    if (data.audience.manualEmails?.length) {
-      const invalidEmails = data.audience.manualEmails.filter(email => !validateEmail(email));
-      if (invalidEmails.length) {
-        throw new ApiError(StatusCodes.BAD_REQUEST, `Invalid manual emails: ${invalidEmails.join(", ")}`);
-      }
-    }
-    
     const campaign = await CampaignModel.create({
-      ...data,
-      userId: new mongoose.Types.ObjectId(data.user_id),
+      user_id: new mongoose.Types.ObjectId(data.user_id),
+      campaignName: data.campaignName,
+      subjectLine: data.subjectLine,
+      campaignType: "Newsletter", // Default type
       status: "Draft",
+      // Populate sender info from verified SenderEmail record
+      sender: {
+        senderName: sender.senderName || "Default Sender",
+        senderEmail: sender.senderEmail,
+        replyToEmail: sender.senderEmail // Use same email as reply-to
+      },
+      // Provide empty content structure (user will add content later)
+      content: {
+        htmlContent: "<p>Email content will be added here</p>",
+        plainText: "Email content will be added here"
+      },
+      // Provide default structures for required nested fields
+      audience: {
+        emailLists: [],
+        excludeLists: [],
+        manualEmails: []
+      },
+      resendSettings: {
+        enabled: false,
+        waitTime: 48,
+        condition: "Unopened"
+      },
+      smartSettings: {
+        fallbacks: {
+          firstName: "there",
+          lastName: "",
+          custom: {}
+        },
+        sendLimits: {
+          dailyLimit: 5000,
+          batchSize: 500,
+          batchInterval: 10
+        },
+        compliance: {
+          includeUnsubscribe: true,
+          includePermissionReminder: true,
+          reminderText: "You're receiving this email because you subscribed to our mailing list"
+        },
+        footer: {
+          style: "default",
+          customText: ""
+        },
+        optimization: {
+          smartTimeEnabled: false,
+          predictCTR: false
+        }
+      },
+      schedule: {
+        useRecipientTimezone: false
+      },
       analytics: {
         deliveries: 0,
         opens: 0,
@@ -61,10 +120,58 @@ export class CampaignServiceImpl implements CampaignService {
         bounces: 0,
         complaints: 0,
         lastUpdated: new Date()
+      },
+      metadata: {
+        aiGenerated: false,
+        tags: []
       }
     });
 
     return campaign;
+  }
+
+  async createAndScheduleCampaign(
+    data: CreateCampaignDto,
+    scheduledDate: Date
+  ): Promise<{ campaign: CampaignDoc; jobId: string }> {
+    // First, create the campaign in Draft status
+    const campaign = await this.createCampaign(data);
+
+    // Then schedule it to start at the specified time
+    const isImmediate = scheduledDate <= new Date();
+    const status = isImmediate ? "Active" : "Scheduled";
+
+    const updated = await CampaignModel.findByIdAndUpdate(
+      campaign._id,
+      {
+        status,
+        "schedule.scheduledDate": scheduledDate,
+        ...(isImmediate ? { startedAt: new Date() } : {}),
+        updatedAt: new Date()
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updated) {
+      throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, "Failed to update campaign schedule");
+    }
+
+    // Queue the campaign start (this would integrate with your job queue)
+    // For now, return a mock jobId. In production, integrate with BullMQ or similar.
+    let jobId = "";
+    try {
+      if (queueService && typeof (queueService as any).scheduleCampaign === "function") {
+        jobId = await (queueService as any).scheduleCampaign(campaign._id, scheduledDate);
+      } else {
+        // Fallback: generate a simple jobId for tracking
+        jobId = `job_${campaign._id}_${Date.now()}`;
+      }
+    } catch (error) {
+      console.warn("Queue service unavailable, using fallback jobId:", error);
+      jobId = `job_${campaign._id}_${Date.now()}`;
+    }
+
+    return { campaign: updated, jobId };
   }
 
   async getCampaigns(userId: string, filters?: CampaignFilters): Promise<CampaignDoc[]> {
