@@ -11,6 +11,7 @@ export interface SenderEmailModel extends Document{
     verificationExpires?: Date;
     createdAt?: Date;
     updatedAt?: Date;
+    sendgridId?: string;
 }
 
 const SenderEmailSchema: Schema = new Schema<SenderEmailModel>({
@@ -25,5 +26,10 @@ const SenderEmailSchema: Schema = new Schema<SenderEmailModel>({
 {
     timestamps: true
 })
+
+// Optional field to store external SendGrid sender ID when using SendGrid verification
+SenderEmailSchema.add({
+    sendgridId: { type: String, required: false },
+});
 
 export const SenderModel = mongoose.model<SenderEmailModel>("SenderEmail", SenderEmailSchema)

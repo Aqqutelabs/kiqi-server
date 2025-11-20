@@ -33,8 +33,17 @@ app.use((req, res, next) => {
 
 // Middlewares
 app.use(cors()); // Enable CORS for all routes
-app.use(express.json()); // Parse JSON bodies
-app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+// Capture raw body for debugging (available as req.rawBody)
+app.use(express.json({
+  verify: (req: any, _res, buf: Buffer, encoding: string) => {
+    try {
+      req.rawBody = buf.toString(encoding || 'utf8');
+    } catch (e) {
+      req.rawBody = undefined;
+    }
+  }
+})); // Parse JSON bodies
+app.use(express.urlencoded({ extended: true, verify: (req: any, _res, buf: Buffer, encoding: string) => { try { req.rawBody = buf.toString(encoding || 'utf8'); } catch (e) { } } })); // Parse URL-encoded bodies
 
 // Serve uploaded files statically
 app.use(`/${config.uploadDir}`, express.static(config.uploadDir));
