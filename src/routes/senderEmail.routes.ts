@@ -11,8 +11,11 @@ senderRouter.get("/:id", isAuthenticated, controller.getSenderEmailById);
 senderRouter.put("/:id", isAuthenticated, controller.updateSenderEmail);
 senderRouter.delete("/:id", isAuthenticated, controller.deleteSenderEmail);
 // OTP verification endpoints
-senderRouter.post('/request-verification', isAuthenticated, controller.requestVerificationOtp);
-senderRouter.post('/verify-otp', isAuthenticated, controller.verifyOtp);
+// OTP verification flow removed — SendGrid verification endpoints are used instead
+// SendGrid verified sender endpoints
+senderRouter.post('/sendgrid/request-verification', isAuthenticated, controller.requestSendGridVerification);
+senderRouter.post('/sendgrid/confirm-verification', isAuthenticated, controller.confirmSendGridVerification);
+senderRouter.get('/sendgrid/verified-sender', isAuthenticated, controller.getUserVerifiedSender);
 
 // senderRouter.post("/verify", isAuthenticated, controller.verifySender);
 

@@ -6,14 +6,15 @@ export interface CreateCampaignDto {
     user_id: string;
     campaignName: string;
     subjectLine: string;
-    campaignType: CampaignType;
-    sender: SenderConfig;
-    audience: {
-        emailLists: string[];
+    senderId?: string;
+    campaignType?: CampaignType;
+    sender?: SenderConfig;
+    audience?: {
+        emailLists?: string[];
         excludeLists?: string[];
         manualEmails?: string[];
     };
-    content: {
+    content?: {
         htmlContent: string;
         plainText: string;
     };
@@ -71,6 +72,7 @@ export interface DashboardMetrics {
 export interface CampaignService {
     // Core CRUD
     createCampaign(data: CreateCampaignDto): Promise<CampaignDoc>;
+    createAndScheduleCampaign(data: CreateCampaignDto, scheduledDate: Date): Promise<{ campaign: CampaignDoc; jobId: string }>;
     getCampaigns(userId: string, filters?: CampaignFilters): Promise<CampaignDoc[]>;
     getCampaignById(id: string, userId: string): Promise<CampaignDoc | null>;
     updateCampaign(id: string, userId: string, data: UpdateCampaignDto): Promise<CampaignDoc>;
