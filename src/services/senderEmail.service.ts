@@ -6,6 +6,9 @@ export interface SenderEmailService{
     getAllSenderEmails(): Promise<SenderEmailModel[]>
     updateSenderEmail(id: String, data: Partial<{senderName: string, type: string, senderEmail: string}>): Promise<SenderEmailModel>
     deleteSenderEmail(id: String): Promise<void>
-    requestVerification(senderName: string, type: string, email: string, userId?: string): Promise<SenderEmailModel>
-    verifyOtp(email: string, code: string, userId?: string): Promise<SenderEmailModel>
+    // OTP-based verification removed. Use SendGrid verification methods below.
+    requestSendGridVerification(nickname: string, senderName: string, email: string, address?: string, city?: string, state?: string, zip?: string, country?: string, userId?: string): Promise<SenderEmailModel>
+    confirmSendGridVerification(localSenderId: string, userId?: string): Promise<SenderEmailModel>
+    confirmSendGridVerificationByToken(token: string, userId?: string): Promise<SenderEmailModel>
+    getUserVerifiedSender(userId: string): Promise<SenderEmailModel | null>
 }
