@@ -32,7 +32,18 @@ app.use((req, res, next) => {
 });
 
 // Middlewares
-app.use(cors()); // Enable CORS for all routes
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://gokiki.app/', // Update with your actual frontend URL
+    process.env.FRONTEND_URL || 'http://localhost:3000'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400
+}));
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
