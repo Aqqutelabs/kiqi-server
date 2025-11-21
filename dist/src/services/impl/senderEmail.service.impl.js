@@ -71,7 +71,7 @@ class SenderEmailServiceImpl {
      */
     requestSendGridVerification(nickname_1, senderName_1, email_1) {
         return __awaiter(this, arguments, void 0, function* (nickname, senderName, email, address = '', city = '', state = '', zip = '', country = 'US', userId) {
-            var _a, _b, _c;
+            var _a, _b, _c, _d, _e, _f;
             const key = process.env.SENDGRID_API_KEY;
             console.log('i am the correct key', key);
             if (!key)
@@ -92,6 +92,21 @@ class SenderEmailServiceImpl {
                 zip: zip || '',
                 country: country || 'US'
             };
+            // Diagnostic: log presence of key (masked) and validate it with a lightweight account call
+            const maskedKey = key ? (key.length > 8 ? `${key.slice(0, 4)}...${key.slice(-4)}` : '****') : 'MISSING';
+            console.log('[SenderService] SendGrid key present:', !!key, 'preview=', maskedKey);
+            try {
+                // Quick validation to detect invalid/unauthorized keys early
+                yield axios_1.default.get('https://api.sendgrid.com/v3/user/account', {
+                    headers: { Authorization: `Bearer ${key}` }
+                });
+            }
+            catch (authErr) {
+                const authBody = ((_a = authErr === null || authErr === void 0 ? void 0 : authErr.response) === null || _a === void 0 ? void 0 : _a.data) || ((_b = authErr === null || authErr === void 0 ? void 0 : authErr.response) === null || _b === void 0 ? void 0 : _b.body) || (authErr === null || authErr === void 0 ? void 0 : authErr.message);
+                console.error('[SenderService] SendGrid key validation failed:', JSON.stringify(authBody));
+                // Surface a clear error so operator can fix the key in env
+                throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR, `SendGrid API key unauthorized: ${JSON.stringify(authBody)}`);
+            }
             try {
                 const resp = yield axios_1.default.post('https://api.sendgrid.com/v3/verified_senders', payload, {
                     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
@@ -113,16 +128,21 @@ class SenderEmailServiceImpl {
                 return sender;
             }
             catch (err) {
-                // Log full SendGrid error body for debugging
+                // Log full SendGrid error body for debugging (but never log the API key)
                 try {
-                    const body = ((_a = err === null || err === void 0 ? void 0 : err.response) === null || _a === void 0 ? void 0 : _a.data) || ((_b = err === null || err === void 0 ? void 0 : err.response) === null || _b === void 0 ? void 0 : _b.body);
+                    const body = ((_c = err === null || err === void 0 ? void 0 : err.response) === null || _c === void 0 ? void 0 : _c.data) || ((_d = err === null || err === void 0 ? void 0 : err.response) === null || _d === void 0 ? void 0 : _d.body);
                     if (body)
                         console.error('[SenderService] SendGrid create sender error body:', JSON.stringify(body));
                 }
                 catch (logErr) {
                     console.error('[SenderService] Failed to log SendGrid error body:', logErr);
                 }
-                const msg = ((_c = err === null || err === void 0 ? void 0 : err.response) === null || _c === void 0 ? void 0 : _c.data) || err.message || 'SendGrid request failed';
+                const status = (_e = err === null || err === void 0 ? void 0 : err.response) === null || _e === void 0 ? void 0 : _e.status;
+                const msg = ((_f = err === null || err === void 0 ? void 0 : err.response) === null || _f === void 0 ? void 0 : _f.data) || err.message || 'SendGrid request failed';
+                // Map authorization errors to a clearer status
+                if (status === 401 || status === 403) {
+                    throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.UNAUTHORIZED, `SendGrid API unauthorized: ${JSON.stringify(msg)}`);
+                }
                 throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR, `SendGrid create sender failed: ${JSON.stringify(msg)}`);
             }
         });

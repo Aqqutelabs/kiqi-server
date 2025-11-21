@@ -84,6 +84,22 @@ export class SenderEmailServiceImpl implements SenderEmailService{
       country: country || 'US'
     };
 
+    // Diagnostic: log presence of key (masked) and validate it with a lightweight account call
+    const maskedKey = key ? (key.length > 8 ? `${key.slice(0,4)}...${key.slice(-4)}` : '****') : 'MISSING';
+    console.log('[SenderService] SendGrid key present:', !!key, 'preview=', maskedKey);
+
+    try {
+      // Quick validation to detect invalid/unauthorized keys early
+      await axios.get('https://api.sendgrid.com/v3/user/account', {
+        headers: { Authorization: `Bearer ${key}` }
+      });
+    } catch (authErr: any) {
+      const authBody = authErr?.response?.data || authErr?.response?.body || authErr?.message;
+      console.error('[SenderService] SendGrid key validation failed:', JSON.stringify(authBody));
+      // Surface a clear error so operator can fix the key in env
+      throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, `SendGrid API key unauthorized: ${JSON.stringify(authBody)}`);
+    }
+
     try {
       const resp = await axios.post('https://api.sendgrid.com/v3/verified_senders', payload, {
         headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
@@ -106,14 +122,21 @@ export class SenderEmailServiceImpl implements SenderEmailService{
 
       return sender;
     } catch (err: any) {
-      // Log full SendGrid error body for debugging
+      // Log full SendGrid error body for debugging (but never log the API key)
       try {
         const body = err?.response?.data || err?.response?.body;
         if (body) console.error('[SenderService] SendGrid create sender error body:', JSON.stringify(body));
       } catch (logErr) {
         console.error('[SenderService] Failed to log SendGrid error body:', logErr);
       }
+
+      const status = err?.response?.status;
       const msg = err?.response?.data || err.message || 'SendGrid request failed';
+      // Map authorization errors to a clearer status
+      if (status === 401 || status === 403) {
+        throw new ApiError(StatusCodes.UNAUTHORIZED, `SendGrid API unauthorized: ${JSON.stringify(msg)}`);
+      }
+
       throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, `SendGrid create sender failed: ${JSON.stringify(msg)}`);
     }
   }

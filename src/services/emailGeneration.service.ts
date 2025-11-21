@@ -5,9 +5,9 @@ import { Types } from 'mongoose';
 
 export interface IEmailGenerationService {
   generateEmail(userId: string, data: {
-    recipient: string;
     context: string;
-    tone: string;
+    tone?: string;
+    continueThread?: boolean;
   }): Promise<IAIEmail>;
   regenerateEmail(userId: string, emailId: string, instructions: string): Promise<IAIEmail>;
 }
@@ -20,20 +20,74 @@ export class EmailGenerationService implements IEmailGenerationService {
   }
 
   async generateEmail(userId: string, data: {
-    recipient: string;
     context: string;
-    tone: string;
+    tone?: string;
+    continueThread?: boolean;
   }): Promise<IAIEmail> {
     try {
-      const prompt = this.constructPrompt(data);
+      // If continueThread is true, fetch the most recent email thread for this user
+      let existingEmail: IAIEmail | null = null;
+      if (data.continueThread) {
+        existingEmail = await AIEmail.findOne({ userId: new Types.ObjectId(userId) }).sort({ updatedAt: -1 }).exec();
+        if (!existingEmail) {
+          // No thread to continue; treat as new email rather than error
+          existingEmail = null;
+        }
+      }
+
+      const prompt = this.constructPrompt({ context: data.context, tone: data.tone || 'Professional' }, existingEmail ?? undefined);
       const response = await this.googleAI.generateEmail(prompt);
 
-      const email = new AIEmail({
-        ...data,
-        content: response.result,
-        userId: new Types.ObjectId(userId),
-      });
+      // Try to parse the AI response as JSON { subject, body }
+      let subject = '';
+      let body = '';
+      try {
+        const parsed = JSON.parse(String(response.result));
+        subject = parsed.subject || '';
+        body = parsed.body || parsed.content || '';
+      } catch (e) {
+        // Fallback: try to split by a Subject: line
+        const text = String(response.result || '');
+        const subjMatch = text.match(/Subject:\s*(.*)/i);
+        if (subjMatch) {
+          subject = subjMatch[1].trim();
+          body = text.replace(subjMatch[0], '').trim();
+        } else {
+          // If no subject line, take first line as subject and rest as body
+          const lines = text.split(/\r?\n/).filter(Boolean);
+          if (lines.length > 0) {
+            subject = lines[0].trim();
+            body = lines.slice(1).join('\n').trim();
+          } else {
+            body = text;
+          }
+        }
+      }
 
+      const emailPayload: any = {
+        context: data.context,
+        tone: data.tone || 'Professional',
+        // Store structured content as JSON string for consistency
+        content: JSON.stringify({ subject, body }),
+        userId: new Types.ObjectId(userId),
+      };
+
+      // If continuing a conversation, update the existing email by appending the new content
+      if (existingEmail) {
+        // Append continued reply as structured JSON content: merge previous and new
+        try {
+          const prev = JSON.parse(String(existingEmail.content || '{}'));
+          const newContent = { subject: subject || prev.subject || '', body: `${prev.body || ''}\n\n--- Reply continued ---\n\n${body}` };
+          existingEmail.content = JSON.stringify(newContent);
+        } catch (e) {
+          existingEmail.content = `${existingEmail.content}\n\n--- Reply continued ---\n\n${response.result}`;
+        }
+        existingEmail.updatedAt = new Date();
+        await existingEmail.save();
+        return existingEmail;
+      }
+
+      const email = new AIEmail(emailPayload);
       await email.save();
       return email;
     } catch (error) {
@@ -66,13 +120,17 @@ export class EmailGenerationService implements IEmailGenerationService {
     }
   }
 
-  private constructPrompt(data: { recipient: string; context: string; tone: string }): string {
-    return `Write an email with the following specifications:
-      - To: ${data.recipient}
-      - Context: ${data.context}
-      - Tone: ${data.tone}
-      
-      The email should be professional and well-structured. Include a clear subject line and proper email formatting.`;
+  private constructPrompt(data: { context: string; tone: string }, existingEmail?: IAIEmail): string {
+    // System instruction: set role and quality expectations
+    const system = `You are a professional email copywriter for an email campaign application. Produce clear, well-structured, high-quality email copy suitable for real-world campaigns. Use a professional tone, a concise but descriptive subject line, and a body that reads naturally. Keep length moderate (not verbose), use good grammar, and avoid placeholders like [Your Name].`;
+
+    let prompt = `${system}\n\nContext: ${data.context}\nTone: ${data.tone}\n\nPlease return only the subject and the body. Do not include any recipient lines or metadata.`;
+
+    if (existingEmail) {
+      prompt = `${system}\n\nThis is a continuation of the following email thread. Use the original content as context and continue the conversation, keeping the same professional quality.\n\nOriginal email:\n${existingEmail.content}\n\nNew context/instructions: ${data.context}\n\nPlease return only the subject and the body for the continued message.`;
+    }
+
+    return prompt;
   }
 
   private constructRegenerationPrompt(email: IAIEmail, instructions: string): string {
