@@ -13,30 +13,47 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendEmail = void 0;
-const nodemailer_1 = __importDefault(require("nodemailer"));
-const transporter = nodemailer_1.default.createTransport({
-    service: process.env.EMAIL_SERVICE || 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
+const mail_1 = __importDefault(require("@sendgrid/mail"));
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+if (!SENDGRID_API_KEY) {
+    console.error('[Email] SENDGRID_API_KEY is not set. Email sending is disabled.');
+}
+// Initialize SendGrid with API key
+if (SENDGRID_API_KEY) {
+    mail_1.default.setApiKey(SENDGRID_API_KEY);
+}
 const sendEmail = (options) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const mailOptions = {
-            from: options.from || process.env.EMAIL_FROM || 'no-reply@yourapp.com',
-            to: options.to,
-            subject: options.subject,
-            html: options.html,
-            text: options.text,
-            replyTo: options.replyTo,
-        };
-        yield transporter.sendMail(mailOptions);
-        console.log(`[Email] Successfully sent to: ${options.to}`);
+    var _a, _b;
+    if (!SENDGRID_API_KEY) {
+        throw new Error('SendGrid client not configured. Set SENDGRID_API_KEY in environment.');
     }
-    catch (error) {
-        console.error('[Email] Error sending email:', error);
-        throw error;
+    const fromAddress = options.from || process.env.EMAIL_FROM || 'no-reply@yourapp.com';
+    try {
+        const msg = {
+            to: options.to,
+            from: fromAddress,
+            subject: options.subject,
+            text: options.text || '',
+            html: options.html || options.text || '',
+        };
+        if (options.replyTo) {
+            msg.replyTo = options.replyTo;
+        }
+        yield mail_1.default.send(msg);
+        console.log(`[Email][SendGrid] Successfully sent to: ${options.to}`);
+    }
+    catch (err) {
+        // Log detailed SendGrid response for debugging (dev only)
+        try {
+            const body = ((_a = err === null || err === void 0 ? void 0 : err.response) === null || _a === void 0 ? void 0 : _a.body) || ((_b = err === null || err === void 0 ? void 0 : err.response) === null || _b === void 0 ? void 0 : _b.data);
+            if (body)
+                console.error('[Email][SendGrid] Error response body:', JSON.stringify(body));
+        }
+        catch (loggingErr) {
+            console.error('[Email][SendGrid] Failed to extract error body:', loggingErr);
+        }
+        console.error('[Email][SendGrid] Error sending email:', err);
+        throw err;
     }
 });
 exports.sendEmail = sendEmail;

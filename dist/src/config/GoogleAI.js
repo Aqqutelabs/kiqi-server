@@ -10,15 +10,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GoogleAI = void 0;
+const genai_1 = require("@google/genai");
 // Google AI temporarily disabled due to quota exceeded
-// const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
+const ai = new genai_1.GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const GoogleAI = () => __awaiter(void 0, void 0, void 0, function* () {
-    // Disabled: Quota exceeded
-    // const response = await ai.models.generateContent({
-    //     model: "gemini-2.5-flash",
-    //     contents: "Explain how AI works in a few words",
-    // })
-    // console.log(response.text)
-    console.warn("Google AI API temporarily disabled due to quota limits.");
+    const response = yield ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: "Explain how AI works in a few words",
+    });
+    console.log(response.text);
 });
 exports.GoogleAI = GoogleAI;

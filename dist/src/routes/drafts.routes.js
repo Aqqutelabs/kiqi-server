@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const sms_controller_1 = require("../controllers/sms.controller");
+const Auth_middlewares_1 = require("../middlewares/Auth.middlewares");
+const router = (0, express_1.Router)();
+const controller = new sms_controller_1.SmsController();
+router.post('/', Auth_middlewares_1.isAuthenticated, controller.createDraft);
+router.get('/', Auth_middlewares_1.isAuthenticated, controller.getDrafts);
+router.get('/:id', Auth_middlewares_1.isAuthenticated, controller.getDraftById);
+router.patch('/:id', Auth_middlewares_1.isAuthenticated, controller.updateDraft);
+router.delete('/:id', Auth_middlewares_1.isAuthenticated, controller.deleteDraft);
+router.post('/:id/send', Auth_middlewares_1.isAuthenticated, controller.sendDraft);
+exports.default = router;
