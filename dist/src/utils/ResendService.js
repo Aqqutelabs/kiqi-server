@@ -13,6 +13,9 @@ exports.sendEmail = void 0;
 const resend_1 = require("resend");
 const ApiError_1 = require("./ApiError");
 const http_status_codes_1 = require("http-status-codes");
+if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is not defined in environment variables');
+}
 const resend = new resend_1.Resend(process.env.RESEND_API_KEY);
 const sendEmail = (options) => __awaiter(void 0, void 0, void 0, function* () {
     try {

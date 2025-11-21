@@ -1,52 +1,4 @@
-// Types for campaign-related Redux logic
-
-export interface ApiError {
-  message: string;
-  code?: number;
-  [key: string]: any;
-}
-
-export interface SenderEmail {
-  id: string;
-  email: string;
-  sender: string;
-  type: 'smtp' | 'service' | string;
-  verified?: boolean;
-}
-
-export interface EmailList {
-  id: string;
-  name: string;
-  count: number;
-  createdAt: string;
-}
-
-export interface EmailListDetails extends EmailList {
-  emails: string[];
-  description?: string;
-}
-
-export interface Campaign {
-  id: string;
-  name: string;
-  subject: string;
-  content: string;
-  status: 'draft' | 'scheduled' | 'sent' | string;
-  senderId: string;
-  listId: string;
-  createdAt: string;
-  scheduledAt?: string;
-}
-
-export interface CreateCampaignPayload {
-  name: string;
-  subject: string;
-  content: string;
-  senderId: string;
-  listId: string;
-  scheduledAt?: string;
-}
-
+// Consolidated shared types used by server services
 
 export interface User {
     _id: string;
@@ -84,7 +36,7 @@ export class ApiError extends Error {
     }
 }
 
-// --- Domain Models/Interfaces ---
+// Shared domain types
 export interface Audience {
     emailLists?: string[];
     excludeLists?: string[];
@@ -93,13 +45,27 @@ export interface Audience {
 
 export interface Campaign {
     _id: string;
-    campaignName: string;
-    subjectLine: string;
-    senderId: string;
-    user_id: string;
-    status: 'Draft' | 'Scheduled' | 'Sent';
+    campaignName?: string;
+    subjectLine?: string;
+    subject?: string;
+    senderId?: string;
+    user_id?: string;
+    status: 'Draft' | 'Scheduled' | 'Sent' | string;
     audience: Audience;
-    createdAt: Date;
+    createdAt: Date | string;
+    // Optional fields used by various services
+    content?: {
+        htmlContent?: string;
+        plainText?: string;
+        emailSubject?: string;
+        metadata?: Record<string, any>;
+    } | any;
+    sender?: {
+        senderEmail?: string;
+        replyToEmail?: string;
+    } | any;
+    priority?: number;
+    analytics?: Record<string, number> | any;
 }
 
 export interface CampaignData {

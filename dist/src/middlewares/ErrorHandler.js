@@ -8,6 +8,16 @@ const AppError_1 = __importDefault(require("../utils/AppError"));
 const ApiError_1 = require("../utils/ApiError");
 const errorHandler = (err, req, res, next) => {
     console.error('💥 ERROR 💥', err);
+    // If body parsing failed, log raw body if available to aid debugging
+    try {
+        const anyReq = req;
+        if (anyReq && anyReq.rawBody) {
+            console.error('💥 Raw request body (captured):', anyReq.rawBody);
+        }
+    }
+    catch (e) {
+        // ignore logging errors
+    }
     if (err instanceof ApiError_1.ApiError) {
         // Handle Google API quota/rate limit errors (status 429)
         if (err.statusCode === 429) {

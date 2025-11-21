@@ -92,9 +92,10 @@ export class CampaignServiceImpl {
                         }
                         return local;
                     }
-                } catch (err) {
+                    } catch (err) {
                     // ignore SendGrid lookup errors here; caller will handle absence
-                    console.error('[CampaignService] SendGrid lookup failed for id:', identifier, err?.response?.data || err.message);
+                    const e: any = err;
+                    console.error('[CampaignService] SendGrid lookup failed for id:', identifier, e?.response?.data || e?.message || e);
                 }
             }
 
@@ -220,8 +221,9 @@ export class CampaignServiceImpl {
                         }
                     }
                 }
-            } catch (err: any) {
-                console.error('[CampaignService] Pre-send SendGrid verification failed:', err?.response?.data || err?.message || err);
+            } catch (err: unknown) {
+                const e: any = err;
+                console.error('[CampaignService] Pre-send SendGrid verification failed:', e?.response?.data || e?.message || e);
                 throw err;
             }
 
@@ -239,8 +241,8 @@ export class CampaignServiceImpl {
                     await sendEmail({
                         to: recipient,
                         subject: campaign.subjectLine,
-                        html: campaign.content?.htmlContent || "<p>Email content</p>",
-                        text: campaign.content?.plainText || "Email content",
+                        html: (campaign as any).content?.htmlContent || "<p>Email content</p>",
+                        text: (campaign as any).content?.plainText || "Email content",
                         from: fromObject,
                         replyTo: replyToAddress
                     });
@@ -250,10 +252,26 @@ export class CampaignServiceImpl {
             }
 
             console.log(`Campaign ${campaign._id} sent successfully`);
-        } catch (err) {
-            console.error(`Error in sendCampaignEmails:`, err);
+        } catch (err: unknown) {
+            const e: any = err;
+            console.error(`Error in sendCampaignEmails:`, e?.message || e);
             throw err;
         }
+    }
+
+    /**
+     * Update simple campaign analytics counters (deliveries, bounces).
+     * This is a lightweight in-memory implementation for the mock service used in tests and local runs.
+     */
+    public async updateCampaignAnalytics(campaignId: string, metric: 'deliveries' | 'bounces' | string, delta = 1): Promise<void> {
+        const idx = mockCampaigns.findIndex(c => String(c._id) === String(campaignId));
+        if (idx === -1) return;
+        const c = mockCampaigns[idx] as any;
+        c.analytics = c.analytics || { deliveries: 0, bounces: 0 };
+        const key = metric as 'deliveries' | 'bounces' | string;
+        if (typeof c.analytics[key] !== 'number') c.analytics[key] = 0;
+        c.analytics[key] += delta;
+        mockCampaigns[idx] = c;
     }
 
     /**
