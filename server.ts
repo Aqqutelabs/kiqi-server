@@ -77,7 +77,12 @@ app.put('/api/v1/sender', verifyJWT, (req: Request, res: Response, next: NextFun
 app.use("/api/v1/auth", authRoutes);
 
 // Then other specific routes
+// Mount sender router. Keep the original mount for backward compatibility
 app.use("/api/v1/senderEmail", senderRouter);
+// Also mount hyphenated and plural aliases so deployed clients using
+// `/api/v1/sender-emails` or `/api/v1/senders` continue to work.
+app.use("/api/v1/sender-emails", senderRouter);
+app.use("/api/v1/senders", senderRouter);
 app.use("/api/v1/templates", templateRouter);
 app.use("/api/v1/ai", googleAIrouter);
 app.use("/api/v1/campaigns", campaignRoute);
