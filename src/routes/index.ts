@@ -15,6 +15,8 @@ import settingsRouter from './settings.routes';
 
 const router = Router();
 
+
+
 router.use('/onboarding', onboardingRouter);
 router.use('/campaigns', campaignRoute);
 router.use('/senders', senderRouter);
