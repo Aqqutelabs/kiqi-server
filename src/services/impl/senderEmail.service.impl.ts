@@ -62,7 +62,8 @@ export class SenderEmailServiceImpl implements SenderEmailService{
    * which triggers SendGrid to email a verification link to the address.
    */
   async requestSendGridVerification(nickname: string, senderName: string, email: string, address = '', city = '', state = '', zip = '', country = 'US', userId?: string): Promise<SenderEmailModel> {
-    const key = "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";
+    const key = process.env.SENDGRID_API_KEY;
+    console.log('i am the correct key', key);
     if (!key) throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'SendGrid API key not configured');
 
     const existing = await SenderModel.findOne({ senderEmail: email });
@@ -172,7 +173,7 @@ export class SenderEmailServiceImpl implements SenderEmailService{
    * it will try to find the local sender by SendGrid id or by email and mark it verified.
    */
   async confirmSendGridVerificationByToken(token: string, userId?: string): Promise<SenderEmailModel> {
-    const key = "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";
+    const key = process.env.SENDGRID_API_KEY;
     if (!key) throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'SendGrid API key not configured');
 
     if (!token) throw new ApiError(StatusCodes.BAD_REQUEST, 'token is required');

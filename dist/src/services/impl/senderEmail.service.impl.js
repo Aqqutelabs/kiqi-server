@@ -72,7 +72,8 @@ class SenderEmailServiceImpl {
     requestSendGridVerification(nickname_1, senderName_1, email_1) {
         return __awaiter(this, arguments, void 0, function* (nickname, senderName, email, address = '', city = '', state = '', zip = '', country = 'US', userId) {
             var _a, _b, _c;
-            const key = "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";
+            const key = process.env.SENDGRID_API_KEY;
+            console.log('i am the correct key', key);
             if (!key)
                 throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR, 'SendGrid API key not configured');
             const existing = yield SenderEmail_1.SenderModel.findOne({ senderEmail: email });
@@ -184,7 +185,7 @@ class SenderEmailServiceImpl {
     confirmSendGridVerificationByToken(token, userId) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a, _b, _c, _d, _e;
-            const key = "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";
+            const key = process.env.SENDGRID_API_KEY;
             if (!key)
                 throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR, 'SendGrid API key not configured');
             if (!token)
