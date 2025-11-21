@@ -19,7 +19,7 @@ const router = Router();
 
 router.use('/onboarding', onboardingRouter);
 router.use('/campaigns', campaignRoute);
-router.use('/senders', senderRouter);
+// router.use('/senders', senderRouter);
 router.use('/sms', smsRouter);
 router.use('/sms-templates', templateRouter);
 router.use('/drafts', draftsRouter);
