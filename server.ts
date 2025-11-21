@@ -63,14 +63,14 @@ app.get('/health', (req: Request, res: Response) => {
 const authController = new AuthController();
 
 // Direct sender route for testing
-app.put('/api/v1/sender', verifyJWT, (req: Request, res: Response, next: NextFunction) => {
-  console.log('Sender route hit');
-  console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
-  console.log('User from JWT:', req.user);
+// app.put('/api/v1/sender', verifyJWT, (req: Request, res: Response, next: NextFunction) => {
+//   console.log('Sender route hit');
+//   console.log('Headers:', req.headers);
+//   console.log('Body:', req.body);
+//   console.log('User from JWT:', req.user);
   
-  authController.updateSenderEmail(req, res, next);
-});
+//   authController.updateSenderEmail(req, res, next);
+// });
 
 
 // Mount all routes under /api/v1
@@ -78,10 +78,10 @@ app.use("/api/v1/auth", authRoutes);
 
 // Then other specific routes
 // Mount sender router. Keep the original mount for backward compatibility
-app.use("/api/v1/senderEmail", senderRouter);
+// app.use("/api/v1/senderEmail", senderRouter);
 // Also mount hyphenated and plural aliases so deployed clients using
 // `/api/v1/sender-emails` or `/api/v1/senders` continue to work.
-app.use("/api/v1/sender-emails", senderRouter);
+// app.use("/api/v1/sender-emails", senderRouter);
 app.use("/api/v1/senders", senderRouter);
 app.use("/api/v1/templates", templateRouter);
 app.use("/api/v1/ai", googleAIrouter);
