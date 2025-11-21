@@ -31,19 +31,7 @@ app.use((req, res, next) => {
     console.log(`${req.method} ${req.url}`);
     next();
 });
-// Middlewares
-// Enable permissive CORS to accept requests from any origin.
-// Note: allowing any origin with credentials can be a security risk. This sets origin to true
-// which reflects the request Origin header back in Access-Control-Allow-Origin.
-app.use((0, cors_1.default)({
-    origin: true,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    maxAge: 86400
-}));
-// Ensure preflight requests are handled for all routes
-app.options('*', (0, cors_1.default)({ origin: true, credentials: true }));
+app.use((0, cors_1.default)());
 app.use(express_1.default.json()); // Parse JSON bodies
 app.use(express_1.default.urlencoded({ extended: true })); // Parse URL-encoded bodies
 // Serve uploaded files statically

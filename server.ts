@@ -31,20 +31,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Middlewares
-// Enable permissive CORS to accept requests from any origin.
-// Note: allowing any origin with credentials can be a security risk. This sets origin to true
-// which reflects the request Origin header back in Access-Control-Allow-Origin.
-app.use(cors({
-  origin: true,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  maxAge: 86400
-}));
-
-// Ensure preflight requests are handled for all routes
-app.options('*', cors({ origin: true, credentials: true }));
+app.use(cors());
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
