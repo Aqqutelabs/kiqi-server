@@ -44,6 +44,7 @@ export interface Audience {
 }
 
 export interface Campaign {
+    content: any;
     _id: string;
     campaignName: string;
     subjectLine: string;
@@ -62,11 +63,25 @@ export interface CampaignData {
     audience: Audience;
     emailListIds?: string[];
     senderEmail?: string;
+    // Optional structured content for the campaign (HTML/plain text)
+    content?: {
+        htmlContent?: string;
+        plainText?: string;
+        emailSubject?: string;
+        metadata?: Record<string, any>;
+    } | any;
 }
 
 export interface CampaignUpdate {
     campaignName?: string;
     subjectLine?: string;
+    // Allow updating the campaign content/body
+    content?: {
+        htmlContent?: string;
+        plainText?: string;
+        emailSubject?: string;
+        metadata?: Record<string, any>;
+    } | any;
 }
 
 export interface EmailList {

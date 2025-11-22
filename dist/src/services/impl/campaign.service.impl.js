@@ -362,7 +362,23 @@ class CampaignServiceImpl {
     sendBulkEmail(emails, subject, body, replyTo) {
         return __awaiter(this, void 0, void 0, function* () {
             console.log(`Sending ${emails.length} emails with subject: "${subject}" (Reply-To: ${replyTo})`);
-            // Mock successful email sending
+            if (!emails || emails.length === 0)
+                return;
+            const unique = [...new Set(emails)];
+            for (const to of unique) {
+                try {
+                    yield (0, EmailService_1.sendEmail)({
+                        to,
+                        subject,
+                        html: body || undefined,
+                        text: body || undefined,
+                        replyTo: replyTo || undefined
+                    });
+                }
+                catch (err) {
+                    console.error(`[CampaignService] sendBulkEmail failed for ${to}:`, (err === null || err === void 0 ? void 0 : err.message) || err);
+                }
+            }
         });
     }
     /**

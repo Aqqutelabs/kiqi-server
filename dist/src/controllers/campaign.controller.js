@@ -22,7 +22,7 @@ class CampaignController {
         this.createCampaign = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
             var _a;
             try {
-                const { campaignName, subjectLine, senderId, autoStart, scheduledAt, audience } = req.body;
+                const { campaignName, subjectLine, senderId, body, autoStart, scheduledAt, audience } = req.body;
                 const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
                 if (!userId) {
                     throw new Error("User not authenticated");
@@ -54,6 +54,7 @@ class CampaignController {
                 const campaignData = {
                     campaignName,
                     subjectLine,
+                    content: body ? { htmlContent: body, plainText: body } : undefined,
                     senderId,
                     user_id: userId,
                     audience: audience || { emailLists: [], excludeLists: [], manualEmails: [] }
@@ -129,11 +130,9 @@ class CampaignController {
                 if (!userId) {
                     throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.UNAUTHORIZED, "User not authenticated");
                 }
-                const { campaignName, subjectLine } = req.body;
-                const updated = yield this.campaignService.updateCampaign(id, userId, {
-                    campaignName,
-                    subjectLine
-                });
+                const { campaignName, subjectLine, body } = req.body;
+                const updated = yield this.campaignService.updateCampaign(id, userId, Object.assign({ campaignName,
+                    subjectLine }, (body ? { content: { htmlContent: body, plainText: body } } : {})));
                 res.status(http_status_codes_1.StatusCodes.OK).json({
                     error: false,
                     message: "Campaign has been updated.",
@@ -205,6 +204,7 @@ class CampaignController {
                 const campaign = yield this.campaignService.createCampaign({
                     campaignName,
                     subjectLine: subject,
+                    content: body ? { htmlContent: body, plainText: body } : undefined,
                     senderId: process.env.EMAIL_FROM || 'noreply@data.widernetfarms.org', // Using senderId as a proxy for sender email
                     user_id: userId,
                     audience: { emailLists: [emailListId], excludeLists: [], manualEmails: [] }

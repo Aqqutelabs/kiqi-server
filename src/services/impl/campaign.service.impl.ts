@@ -381,7 +381,21 @@ export class CampaignServiceImpl {
      */
     public async sendBulkEmail(emails: string[], subject: string, body: string, replyTo: string): Promise<void> {
         console.log(`Sending ${emails.length} emails with subject: "${subject}" (Reply-To: ${replyTo})`);
-        // Mock successful email sending
+        if (!emails || emails.length === 0) return;
+        const unique = [...new Set(emails)];
+        for (const to of unique) {
+            try {
+                await sendEmail({
+                    to,
+                    subject,
+                    html: body || undefined,
+                    text: body || undefined,
+                    replyTo: replyTo || undefined
+                });
+            } catch (err) {
+                console.error(`[CampaignService] sendBulkEmail failed for ${to}:`, (err as any)?.message || err);
+            }
+        }
     }
 
     /**

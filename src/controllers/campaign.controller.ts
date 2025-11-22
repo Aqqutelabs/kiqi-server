@@ -24,6 +24,7 @@ export class CampaignController {
                 campaignName,
                 subjectLine,
                 senderId,
+                body,
                 autoStart,
                 scheduledAt,
                 audience
@@ -65,6 +66,7 @@ export class CampaignController {
             const campaignData: any = {
                 campaignName,
                 subjectLine,
+                content: body ? { htmlContent: body, plainText: body } : undefined,
                 senderId,
                 user_id: userId,
                 audience: audience || { emailLists: [], excludeLists: [], manualEmails: [] }
@@ -157,11 +159,12 @@ export class CampaignController {
                 throw new ApiError(StatusCodes.UNAUTHORIZED, "User not authenticated");
             }
 
-            const { campaignName, subjectLine } = req.body;
-            const updated = await this.campaignService.updateCampaign(id, userId, {
-                campaignName,
-                subjectLine
-            });
+            const { campaignName, subjectLine, body } = req.body;
+            const updated = await this.campaignService.updateCampaign(id, userId, {
+                campaignName,
+                subjectLine,
+                ...(body ? { content: { htmlContent: body, plainText: body } } : {})
+            });
 
             res.status(StatusCodes.OK).json({
                 error: false,
@@ -243,6 +246,7 @@ export class CampaignController {
             const campaign = await this.campaignService.createCampaign({
                 campaignName,
                 subjectLine: subject,
+                content: body ? { htmlContent: body, plainText: body } : undefined,
                 senderId: process.env.EMAIL_FROM || 'noreply@data.widernetfarms.org', // Using senderId as a proxy for sender email
                 user_id: userId,
                 audience: { emailLists: [emailListId], excludeLists: [], manualEmails: [] }
