@@ -12,6 +12,7 @@ import subscriptionRouter from './subscription.routes';
 import walletRouter from './wallet.routes';
 import cardRouter from './card.routes';
 import settingsRouter from './settings.routes';
+import conversionRouter from './conversion.routes';
 
 const router = Router();
 
@@ -30,5 +31,6 @@ router.use('/subscriptions', subscriptionRouter);
 router.use('/wallets', walletRouter);
 router.use('/cards', cardRouter);
 router.use('/settings', settingsRouter);
+router.use('/conversions', conversionRouter);
 
 export default router;
