@@ -14,6 +14,7 @@ router.get('/senders', Auth_middlewares_1.isAuthenticated, controller.getSenders
 router.put('/sender/:id', Auth_middlewares_1.isAuthenticated, controller.updateSender);
 router.delete('/sender/:id', Auth_middlewares_1.isAuthenticated, controller.deleteSender);
 router.post('/send', Auth_middlewares_1.isAuthenticated, controller.sendMessage);
+router.post('/mtn/send', Auth_middlewares_1.isAuthenticated, controller.sendMtnSms);
 router.post('/templates', Auth_middlewares_1.isAuthenticated, controller.createTemplate);
 router.get('/templates', Auth_middlewares_1.isAuthenticated, controller.getTemplates);
 router.get('/templates/:id', Auth_middlewares_1.isAuthenticated, controller.getTemplateById);

@@ -8,8 +8,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SmsController = void 0;
+const axios_1 = __importDefault(require("axios"));
 const sms_service_impl_1 = require("../services/impl/sms.service.impl");
 const http_status_codes_1 = require("http-status-codes");
 class ApiError extends Error {
@@ -244,6 +248,34 @@ class SmsController {
                 const from = senderId || undefined; // use provided senderId or configured Twilio from
                 const result = yield this.smsService.sendBulkSms(targets, tpl.message, from);
                 res.status(http_status_codes_1.StatusCodes.OK).json({ error: false, data: result });
+            }
+            catch (err) {
+                next(err);
+            }
+        });
+        this.sendMtnSms = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { to, body: message, from, notificationURL, clientId } = req.body;
+                if (!to || !Array.isArray(to) || to.length === 0) {
+                    return res.status(http_status_codes_1.StatusCodes.BAD_REQUEST).json({ error: true, message: 'Field "to" must be a non-empty array of phone numbers' });
+                }
+                if (!message) {
+                    return res.status(http_status_codes_1.StatusCodes.BAD_REQUEST).json({ error: true, message: 'Field "body" is required' });
+                }
+                const options = {
+                    method: 'POST',
+                    url: 'https://api.mtn.com/v1/messages/sms',
+                    headers: { 'Content-Type': 'application/json' },
+                    data: {
+                        to,
+                        body: message,
+                        from: from || '34001',
+                        notificationURL: notificationURL || undefined,
+                        clientId: clientId || 'My_SMS_APP'
+                    }
+                };
+                const resp = yield axios_1.default.request(options);
+                res.status(http_status_codes_1.StatusCodes.OK).json({ error: false, data: resp.data });
             }
             catch (err) {
                 next(err);

@@ -90,7 +90,7 @@ exports.createPressRelease = (0, AsyncHandler_1.asyncHandler)((req, res) => __aw
     const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
     if (!userId)
         throw new ApiError_1.ApiError(401, 'Unauthorized');
-    const { campaign_id, campaign, pr_content, status } = req.body;
+    const { campaign_id, campaign, pr_content, status, title, distribution, performance_views } = req.body;
     let imageUrl = '';
     // Handle image upload to Cloudinary
     if (req.file) {
@@ -107,10 +107,13 @@ exports.createPressRelease = (0, AsyncHandler_1.asyncHandler)((req, res) => __aw
         }
     }
     const pressRelease = yield PressRelease_1.PressRelease.create({
-        campaign_id: new mongoose_1.default.Types.ObjectId(campaign_id),
-        campaign, // Add the campaign name
+        campaign_id: campaign_id ? new mongoose_1.default.Types.ObjectId(campaign_id) : undefined,
+        campaign: campaign || title || '', // prefer explicit campaign, fallback to title
+        title: title || '',
         content: pr_content,
         status,
+        distribution: distribution || '',
+        performance_views: performance_views || '0',
         image: imageUrl, // Store the Cloudinary image URL
         user_id: userId, // userId is already checked above
         date_created: new Date().toISOString(),

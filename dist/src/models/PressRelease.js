@@ -43,6 +43,9 @@ const PressReleaseSchema = new mongoose_1.Schema({
     },
     distribution: { type: String },
     performance_views: { type: String },
+    title: { type: String },
+    campaign: { type: String },
+    user_id: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' },
     date_created: { type: String, required: true },
     metrics: {
         total_views: { type: Number, default: 0 },
@@ -76,4 +79,5 @@ const PressReleaseSchema = new mongoose_1.Schema({
 PressReleaseSchema.index({ campaign_id: 1 });
 PressReleaseSchema.index({ status: 1 });
 PressReleaseSchema.index({ title: 'text' });
+PressReleaseSchema.index({ user_id: 1 });
 exports.PressRelease = mongoose_1.default.model('PressRelease', PressReleaseSchema);
