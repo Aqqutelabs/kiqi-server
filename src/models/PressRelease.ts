@@ -6,6 +6,7 @@ interface PressReleaseDocument extends Document, PressReleaseListItem {
     distribution_report: DistributionReportItem[];
     content: string;  // Rich text content
     campaign_id: Schema.Types.ObjectId;
+    user_id: Schema.Types.ObjectId;
     image?: string;
 }
 
@@ -17,6 +18,9 @@ const PressReleaseSchema = new Schema<PressReleaseDocument>({
     },
     distribution: { type: String },
     performance_views: { type: String },
+    title: { type: String },
+    campaign: { type: String },
+    user_id: { type: Schema.Types.ObjectId, ref: 'User' },
     date_created: { type: String, required: true },
     metrics: {
         total_views: { type: Number, default: 0 },
@@ -51,5 +55,6 @@ const PressReleaseSchema = new Schema<PressReleaseDocument>({
 PressReleaseSchema.index({ campaign_id: 1 });
 PressReleaseSchema.index({ status: 1 });
 PressReleaseSchema.index({ title: 'text' });
+PressReleaseSchema.index({ user_id: 1 });
 
 export const PressRelease = mongoose.model<PressReleaseDocument>('PressRelease', PressReleaseSchema);
