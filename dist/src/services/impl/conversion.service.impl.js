@@ -17,6 +17,7 @@ const Conversion_1 = require("../../models/Conversion");
 const Wallet_1 = require("../../models/Wallet");
 const Transaction_1 = require("../../models/Transaction");
 const mongoose_1 = __importDefault(require("mongoose"));
+<<<<<<< HEAD
 const ApiError_1 = require("../../utils/ApiError");
 const http_status_codes_1 = require("http-status-codes");
 class ConversionService {
@@ -43,6 +44,16 @@ class ConversionService {
             }
             if ((wallet.go_credits || 0) < amount)
                 throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Insufficient go credits');
+=======
+class ConversionService {
+    createRequest(userId, amount, solanaWallet) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const wallet = yield Wallet_1.Wallet.findOne({ user_id: userId });
+            if (!wallet)
+                throw new Error('Wallet not found');
+            if (wallet.go_credits < amount)
+                throw new Error('Insufficient go credits');
+>>>>>>> 84efefb7f747ca707d27caf124b83dbfefb4f8bd
             const conversion = yield Conversion_1.Conversion.create({
                 user_id: new mongoose_1.default.Types.ObjectId(userId),
                 amount,
@@ -79,9 +90,15 @@ class ConversionService {
             // Deduct credits and add coins according to user's multiplier
             const wallet = yield Wallet_1.Wallet.findOne({ user_id: conversion.user_id });
             if (!wallet)
+<<<<<<< HEAD
                 throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, 'User wallet not found');
             if (wallet.go_credits < conversion.amount)
                 throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Insufficient credits');
+=======
+                throw new Error('User wallet not found');
+            if (wallet.go_credits < conversion.amount)
+                throw new Error('Insufficient credits');
+>>>>>>> 84efefb7f747ca707d27caf124b83dbfefb4f8bd
             // Determine multiplier (if subscription model exists elsewhere, keep simple 1:1 for now)
             let multiplier = 1;
             // Try to read subscription multiplier if available
