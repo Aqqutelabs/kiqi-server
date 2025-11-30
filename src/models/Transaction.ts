@@ -69,9 +69,10 @@ const TransactionSchema = new Schema<TransactionDocument>({
         index: true 
     },
     transactionId: { 
-        type: String, 
-        required: false, 
+        type: String,
+        required: false,
         unique: true,
+        default: () => new mongoose.Types.ObjectId().toHexString(),
         validate: {
             validator: function(v: string) {
                 return /^[A-Za-z0-9-]+$/.test(v);
@@ -189,6 +190,9 @@ const TransactionSchema = new Schema<TransactionDocument>({
 // Indexes for efficient queries
 TransactionSchema.index({ user_id: 1, dateCreated: -1 });
 TransactionSchema.index({ status: 1, dateCreated: -1 });
+// Keep a unique index on transactionId. We auto-generate a value by default so it
+// will not be null; if you prefer to allow missing transactionId for some records
+// use `sparse: true` or `partialFilterExpression` instead.
 TransactionSchema.index({ transactionId: 1 }, { unique: true });
 
 // Define static method types

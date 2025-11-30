@@ -15,4 +15,7 @@ authRoutes.use((req, res, next) => {
 });
 authRoutes.post("/login", authController.login);
 authRoutes.post("/register", authController.createUser);
+authRoutes.post('/google', authController.googleSignIn);
+authRoutes.post('/google/callback', auth_controller_1.getGoogleTokens);
+authRoutes.get('/google/callback', auth_controller_1.getGoogleTokens);
 exports.default = authRoutes;

@@ -17,14 +17,32 @@ const Conversion_1 = require("../../models/Conversion");
 const Wallet_1 = require("../../models/Wallet");
 const Transaction_1 = require("../../models/Transaction");
 const mongoose_1 = __importDefault(require("mongoose"));
+const ApiError_1 = require("../../utils/ApiError");
+const http_status_codes_1 = require("http-status-codes");
 class ConversionService {
     createRequest(userId, amount, solanaWallet) {
         return __awaiter(this, void 0, void 0, function* () {
-            const wallet = yield Wallet_1.Wallet.findOne({ user_id: userId });
-            if (!wallet)
-                throw new Error('Wallet not found');
-            if (wallet.go_credits < amount)
-                throw new Error('Insufficient go credits');
+            // Fetch only the go_credits field from the user's wallet — do NOT fetch any Solana wallet info
+            // Ensure userId is an ObjectId for the query (handles string or ObjectId inputs)
+            const userObjectId = typeof userId === 'string' ? new mongoose_1.default.Types.ObjectId(userId) : userId;
+            // Try to find the user's wallet. If none exists, create a default wallet so users
+            // always have a wallet (prevents forcing users to call an `addWallet` endpoint).
+            let wallet = yield Wallet_1.Wallet.findOne({ user_id: userObjectId }).select('go_credits');
+            if (!wallet) {
+                // Auto-create a wallet with zero balances and default limits
+                wallet = yield Wallet_1.Wallet.create({
+                    user_id: userObjectId,
+                    go_credits: 10000,
+                    go_coins: 0,
+                    monthly_limit: 5000,
+                    total_spent: 0,
+                    total_earned_coins: 0,
+                    avg_monthly_spend: 0,
+                    status: 'Active'
+                });
+            }
+            if ((wallet.go_credits || 0) < amount)
+                throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Insufficient go credits');
             const conversion = yield Conversion_1.Conversion.create({
                 user_id: new mongoose_1.default.Types.ObjectId(userId),
                 amount,
@@ -61,9 +79,9 @@ class ConversionService {
             // Deduct credits and add coins according to user's multiplier
             const wallet = yield Wallet_1.Wallet.findOne({ user_id: conversion.user_id });
             if (!wallet)
-                throw new Error('User wallet not found');
+                throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, 'User wallet not found');
             if (wallet.go_credits < conversion.amount)
-                throw new Error('Insufficient credits');
+                throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Insufficient credits');
             // Determine multiplier (if subscription model exists elsewhere, keep simple 1:1 for now)
             let multiplier = 1;
             // Try to read subscription multiplier if available
