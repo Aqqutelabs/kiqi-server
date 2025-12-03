@@ -17,6 +17,7 @@ router
 // Balance and transaction routes
 router.get('/balance', walletController.getWalletBalance);
 router.get('/transactions', walletController.getTransactionHistory);
+router.get('/usage/overview', walletController.getUsageOverview);
 
 // Credit operations
 router.post('/credits/add', validateRequest(walletOperationsSchema.addCredits), walletController.addCredits);

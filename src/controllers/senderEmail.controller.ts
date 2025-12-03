@@ -63,7 +63,8 @@ export class SenderEmailController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const senders = await this.senderEmailService.getAllSenderEmails();
+      const userId = (req as any).user?._id;
+      const senders = await this.senderEmailService.getAllSenderEmails(userId);
       res.status(StatusCodes.OK).json({
         error: false,
         data: senders,

@@ -51,8 +51,10 @@ class SenderEmailController {
             }
         });
         this.getAllSenderEmails = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
-                const senders = yield this.senderEmailService.getAllSenderEmails();
+                const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+                const senders = yield this.senderEmailService.getAllSenderEmails(userId);
                 res.status(http_status_codes_1.StatusCodes.OK).json({
                     error: false,
                     data: senders,

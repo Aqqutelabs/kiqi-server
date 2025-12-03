@@ -17,5 +17,6 @@ authRoutes.post("/register", authController.createUser);
 authRoutes.post('/google', authController.googleSignIn);
 authRoutes.post('/google/callback', getGoogleTokens);
 authRoutes.get('/google/callback', getGoogleTokens);
+authRoutes.post('/wallet/signup', authController.walletSignup);
 
 export default authRoutes;

@@ -18,33 +18,40 @@ class EmailGenerationController {
         this.emailGenerationService = emailGenerationService;
         this.generateEmail = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(this, void 0, void 0, function* () {
             var _a;
-            const { context, tone, continueThread } = req.body;
+            const { context, tone } = req.body;
             const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
             if (!userId) {
                 throw new ApiError_1.ApiError(401, 'User not authenticated');
             }
-            if (!context) {
-                throw new ApiError_1.ApiError(400, 'Missing required field: context');
+            // Validation
+            if (!context || typeof context !== 'string') {
+                throw new ApiError_1.ApiError(400, 'Context is required and must be a string');
+            }
+            if (context.trim().length === 0) {
+                throw new ApiError_1.ApiError(400, 'Context cannot be empty');
+            }
+            if (context.trim().length > 5000) {
+                throw new ApiError_1.ApiError(400, 'Context is too long (max 5000 characters)');
             }
             const email = yield this.emailGenerationService.generateEmail(userId.toString(), {
-                context,
+                context: context.trim(),
                 tone: tone || 'Professional',
-                continueThread: !!continueThread,
             });
             // Remove recipient from response payload (we use userId for ownership)
             const toReturn = email.toObject ? email.toObject() : Object.assign({}, email);
             if (toReturn.recipient)
                 delete toReturn.recipient;
-            // If content is stored as JSON string, parse it into subject/body
-            try {
-                if (typeof toReturn.content === 'string') {
+            // Parse content into subject/body if stored as JSON string
+            if (typeof toReturn.content === 'string') {
+                try {
                     const parsed = JSON.parse(toReturn.content);
-                    toReturn.subject = parsed.subject;
-                    toReturn.body = parsed.body;
+                    toReturn.subject = parsed.subject || '';
+                    toReturn.body = parsed.body || '';
                 }
-            }
-            catch (e) {
-                // ignore parsing error and leave raw content
+                catch (e) {
+                    console.error('Failed to parse email content:', e);
+                    toReturn.body = toReturn.content;
+                }
             }
             res.status(201).json(new ApiResponse_1.ApiResponse(201, toReturn, 'Email generated successfully'));
         }));
@@ -55,11 +62,37 @@ class EmailGenerationController {
             if (!userId) {
                 throw new ApiError_1.ApiError(401, 'User not authenticated');
             }
-            if (!emailId || !instructions) {
-                throw new ApiError_1.ApiError(400, 'Missing required fields');
+            // Validation
+            if (!emailId || typeof emailId !== 'string') {
+                throw new ApiError_1.ApiError(400, 'Email ID is required and must be a string');
             }
-            const email = yield this.emailGenerationService.regenerateEmail(userId.toString(), emailId, instructions);
-            res.status(200).json(new ApiResponse_1.ApiResponse(200, email, 'Email regenerated successfully'));
+            if (!instructions || typeof instructions !== 'string') {
+                throw new ApiError_1.ApiError(400, 'Instructions are required and must be a string');
+            }
+            if (instructions.trim().length === 0) {
+                throw new ApiError_1.ApiError(400, 'Instructions cannot be empty');
+            }
+            if (instructions.trim().length > 2000) {
+                throw new ApiError_1.ApiError(400, 'Instructions are too long (max 2000 characters)');
+            }
+            const email = yield this.emailGenerationService.regenerateEmail(userId.toString(), emailId, instructions.trim());
+            // Remove recipient from response payload
+            const toReturn = email.toObject ? email.toObject() : Object.assign({}, email);
+            if (toReturn.recipient)
+                delete toReturn.recipient;
+            // Parse content into subject/body if stored as JSON string
+            if (typeof toReturn.content === 'string') {
+                try {
+                    const parsed = JSON.parse(toReturn.content);
+                    toReturn.subject = parsed.subject || '';
+                    toReturn.body = parsed.body || '';
+                }
+                catch (e) {
+                    console.error('Failed to parse regenerated email content:', e);
+                    toReturn.body = toReturn.content;
+                }
+            }
+            res.status(200).json(new ApiResponse_1.ApiResponse(200, toReturn, 'Email regenerated successfully'));
         }));
     }
 }

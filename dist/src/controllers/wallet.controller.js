@@ -261,6 +261,135 @@ class WalletController {
                 .status(200)
                 .json(new ApiResponse_1.ApiResponse(200, null, "Wallet deleted successfully"));
         }));
+        // Get usage overview with monthly analytics
+        this.getUsageOverview = authHandler((req, res) => __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
+            const { months = 12 } = req.query;
+            const monthsToFetch = Number(months) || 12;
+            // Calculate date range
+            const endDate = new Date();
+            endDate.setHours(23, 59, 59, 999);
+            const startDate = new Date();
+            startDate.setMonth(startDate.getMonth() - monthsToFetch + 1);
+            startDate.setDate(1);
+            startDate.setHours(0, 0, 0, 0);
+            // Aggregate transaction data by month
+            const monthlyData = yield Transaction_1.Transaction.aggregate([
+                {
+                    $match: {
+                        user_id: req.user._id,
+                        dateCreated: {
+                            $gte: startDate,
+                            $lte: endDate
+                        }
+                    }
+                },
+                {
+                    $group: {
+                        _id: {
+                            year: { $year: '$dateCreated' },
+                            month: { $month: '$dateCreated' }
+                        },
+                        creditsSpent: {
+                            $sum: {
+                                $cond: [
+                                    { $eq: ['$currencyType', 'go_credits'] },
+                                    '$amount',
+                                    0
+                                ]
+                            }
+                        },
+                        coinsEarned: {
+                            $sum: {
+                                $cond: [
+                                    { $eq: ['$currencyType', 'go_coins'] },
+                                    '$amount',
+                                    0
+                                ]
+                            }
+                        }
+                    }
+                },
+                {
+                    $sort: { '_id.year': 1, '_id.month': 1 }
+                }
+            ]);
+            // Get wallet summary metrics
+            const wallet = yield Wallet_1.Wallet.findOne({ user_id: req.user._id });
+            if (!wallet) {
+                throw new ApiError_1.ApiError(404, "Wallet not found");
+            }
+            // Get all-time totals
+            const totalStats = yield Transaction_1.Transaction.aggregate([
+                {
+                    $match: {
+                        user_id: req.user._id
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        totalCreditsSpent: {
+                            $sum: {
+                                $cond: [
+                                    { $eq: ['$currencyType', 'go_credits'] },
+                                    '$amount',
+                                    0
+                                ]
+                            }
+                        },
+                        totalCoinsEarned: {
+                            $sum: {
+                                $cond: [
+                                    { $eq: ['$currencyType', 'go_coins'] },
+                                    '$amount',
+                                    0
+                                ]
+                            }
+                        }
+                    }
+                }
+            ]);
+            const monthlyAverage = monthlyData.length > 0
+                ? Math.round(monthlyData.reduce((sum, m) => sum + m.creditsSpent, 0) / monthlyData.length)
+                : 0;
+            // Format month names
+            const monthNames = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+            const formattedData = monthlyData.map(item => ({
+                month: monthNames[item._id.month - 1],
+                monthNumber: item._id.month,
+                year: item._id.year,
+                creditsSpent: item.creditsSpent,
+                coinsEarned: item.coinsEarned
+            }));
+            const response = {
+                chartData: {
+                    months: formattedData.map(d => `${d.month} ${d.year}`),
+                    creditsSpent: formattedData.map(d => d.creditsSpent),
+                    coinsEarned: formattedData.map(d => d.coinsEarned),
+                    monthlyDetails: formattedData
+                },
+                summary: {
+                    totalSpent: ((_a = totalStats[0]) === null || _a === void 0 ? void 0 : _a.totalCreditsSpent) || wallet.total_spent || 0,
+                    totalEarned: ((_b = totalStats[0]) === null || _b === void 0 ? void 0 : _b.totalCoinsEarned) || wallet.total_earned_coins || 0,
+                    avgMonthly: monthlyAverage || wallet.avg_monthly_spend || 0,
+                    currentBalance: {
+                        credits: wallet.go_credits,
+                        coins: wallet.go_coins
+                    },
+                    monthlyLimit: wallet.monthly_limit
+                },
+                timeRange: {
+                    startDate,
+                    endDate,
+                    months: monthsToFetch
+                }
+            };
+            return res.json(new ApiResponse_1.ApiResponse(200, response, "Usage overview retrieved successfully"));
+        }));
     }
 }
 exports.walletController = new WalletController();

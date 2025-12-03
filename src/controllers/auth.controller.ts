@@ -162,6 +162,43 @@ export class AuthController {
       next(err);
     }
   }
+
+  public walletSignup = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { walletAddress, signature, message } = req.body;
+
+      if (!walletAddress || !signature || !message) {
+        res.status(StatusCodes.BAD_REQUEST).json({
+          error: true,
+          message: 'walletAddress, signature, and message are required'
+        });
+        return;
+      }
+
+      const { user, accessToken, refreshToken } = await this.authService.createUserWithWallet(
+        walletAddress,
+        signature,
+        message
+      );
+
+      const userObj = (user as any).toObject ? (user as any).toObject() : user;
+      if (userObj.password) delete userObj.password;
+
+      res.status(StatusCodes.CREATED).json({
+        error: false,
+        message: 'Wallet signup successful',
+        accessToken,
+        refreshToken,
+        user: userObj
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 // Google OAuth2 client + helpers

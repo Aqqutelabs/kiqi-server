@@ -31,7 +31,7 @@ const sendSms = (to, body, from) => __awaiter(void 0, void 0, void 0, function* 
         const msg = yield client.messages.create({
             body,
             to,
-            from: from || twilioFrom,
+            from: from
         });
         return msg;
     }

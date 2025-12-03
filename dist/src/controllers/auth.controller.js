@@ -180,6 +180,32 @@ class AuthController {
                 next(err);
             }
         });
+        this.walletSignup = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { walletAddress, signature, message } = req.body;
+                if (!walletAddress || !signature || !message) {
+                    res.status(http_status_codes_1.StatusCodes.BAD_REQUEST).json({
+                        error: true,
+                        message: 'walletAddress, signature, and message are required'
+                    });
+                    return;
+                }
+                const { user, accessToken, refreshToken } = yield this.authService.createUserWithWallet(walletAddress, signature, message);
+                const userObj = user.toObject ? user.toObject() : user;
+                if (userObj.password)
+                    delete userObj.password;
+                res.status(http_status_codes_1.StatusCodes.CREATED).json({
+                    error: false,
+                    message: 'Wallet signup successful',
+                    accessToken,
+                    refreshToken,
+                    user: userObj
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
         this.authService = new auth_service_impl_1.AuthServiceImpl();
     }
 }

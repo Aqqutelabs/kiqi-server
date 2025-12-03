@@ -15,5 +15,6 @@ emailListRoute.get("/:id", Auth_middlewares_1.isAuthenticated, emailListControll
 emailListRoute.post("/:id/contacts", Auth_middlewares_1.isAuthenticated, emailListController.addEmailListContacts);
 emailListRoute.get("/contacts", Auth_middlewares_1.isAuthenticated, emailListController.getAllContacts);
 emailListRoute.delete("/:id/contacts/:contactId/delete", Auth_middlewares_1.isAuthenticated, emailListController.deleteEmailListContact);
+emailListRoute.delete("/:id", Auth_middlewares_1.isAuthenticated, emailListController.deleteEmailList);
 emailListRoute.get("/user/me", Auth_middlewares_1.isAuthenticated, emailListController.getEmailListsByUser);
 exports.default = emailListRoute;

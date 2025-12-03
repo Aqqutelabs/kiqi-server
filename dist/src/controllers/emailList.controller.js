@@ -130,6 +130,19 @@ class EmailListController {
                 next(error);
             }
         });
+        this.deleteEmailList = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const id = req.params.id;
+                yield this.emailListService.deleteEmailList(id);
+                res.status(http_status_codes_1.StatusCodes.OK).json({
+                    error: false,
+                    message: "Email list has been deleted successfully."
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
         this.emailListService = new emailList_service_impl_1.EmailistServiceImpl();
     }
 }

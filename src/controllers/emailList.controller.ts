@@ -167,4 +167,22 @@ export class EmailListController {
             next(error)
         }
     }
+
+    public deleteEmailList = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try{
+            const id = req.params.id;
+            await this.emailListService.deleteEmailList(id);
+
+            res.status(StatusCodes.OK).json({
+                error: false,
+                message: "Email list has been deleted successfully."
+            })
+        } catch(error){
+            next(error)
+        }
+    }
 }

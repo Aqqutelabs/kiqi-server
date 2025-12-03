@@ -31,7 +31,10 @@ export class SenderEmailServiceImpl implements SenderEmailService{
     async getSenderEmailById(id: String): Promise<SenderEmailModel | null> {
         return SenderModel.findById(id);
     }
-    getAllSenderEmails(): Promise<SenderEmailModel[]> {
+    getAllSenderEmails(userId?: string): Promise<SenderEmailModel[]> {
+        if (userId) {
+            return SenderModel.find({ user_id: userId });
+        }
         return SenderModel.find();
     }
     async updateSenderEmail(

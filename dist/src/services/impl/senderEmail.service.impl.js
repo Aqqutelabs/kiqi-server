@@ -43,7 +43,10 @@ class SenderEmailServiceImpl {
             return SenderEmail_1.SenderModel.findById(id);
         });
     }
-    getAllSenderEmails() {
+    getAllSenderEmails(userId) {
+        if (userId) {
+            return SenderEmail_1.SenderModel.find({ user_id: userId });
+        }
         return SenderEmail_1.SenderModel.find();
     }
     updateSenderEmail(id, data) {
