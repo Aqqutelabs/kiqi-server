@@ -25,9 +25,10 @@ export const getPressReleasesList = asyncHandler(async (req: AuthRequest, res: R
     
     const pressReleases = await PressRelease.find({ user_id: userId })
         .sort({ createdAt: -1 })
-        .select('title status distribution campaign performance_views date_created');
+        .select('_id title status distribution campaign performance_views date_created');
 
     const pr_list = pressReleases.map(pr => ({
+        _id: pr._id,
         title: pr.title,
         status: pr.status,
         distribution: pr.distribution,
@@ -80,7 +81,13 @@ export const getPressReleaseDetails = asyncHandler(async (req: AuthRequest, res:
         throw new ApiError(404, 'Press release not found');
     }
 
-    return res.json(new ApiResponse(200, pressRelease));
+    // Ensure response includes all fields including title
+    const responseData = {
+        ...pressRelease.toObject(),
+        title: pressRelease.title
+    };
+
+    return res.json(new ApiResponse(200, responseData));
 });
 
 export const createPressRelease = asyncHandler(async (req: AuthRequest, res: Response) => {

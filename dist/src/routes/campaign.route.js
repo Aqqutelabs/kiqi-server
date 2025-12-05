@@ -6,6 +6,7 @@ const Auth_middlewares_1 = require("../middlewares/Auth.middlewares");
 const campaignRoute = (0, express_1.Router)();
 const CampController = new campaign_controller_1.CampaignController();
 campaignRoute.post("/", Auth_middlewares_1.isAuthenticated, CampController.createCampaign);
+campaignRoute.get("/search", Auth_middlewares_1.isAuthenticated, CampController.searchCampaigns);
 campaignRoute.get("/", Auth_middlewares_1.isAuthenticated, CampController.getAllCampaigns);
 campaignRoute.get("/:id", Auth_middlewares_1.isAuthenticated, CampController.getCampaignById);
 campaignRoute.put("/:id", Auth_middlewares_1.isAuthenticated, CampController.updateCampaign);

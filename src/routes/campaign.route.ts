@@ -6,6 +6,7 @@ const campaignRoute = Router()
 const CampController = new CampaignController()
 
 campaignRoute.post("/", isAuthenticated, CampController.createCampaign);
+campaignRoute.get("/search", isAuthenticated, CampController.searchCampaigns);
 campaignRoute.get("/", isAuthenticated, CampController.getAllCampaigns);
 campaignRoute.get("/:id", isAuthenticated, CampController.getCampaignById);
 campaignRoute.put("/:id", isAuthenticated, CampController.updateCampaign);

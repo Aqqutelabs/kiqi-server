@@ -425,5 +425,41 @@ class CampaignServiceImpl {
             return { campaign, emailListDetails: emailList };
         });
     }
+    searchCampaigns(userId, query, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const limit = (options === null || options === void 0 ? void 0 : options.limit) || 10;
+            const page = (options === null || options === void 0 ? void 0 : options.page) || 1;
+            const skip = (page - 1) * limit;
+            // Search in MongoDB using text search and filtering
+            const searchQuery = {
+                user_id: userId,
+                $or: [
+                    { campaignName: { $regex: query, $options: 'i' } },
+                    { subjectLine: { $regex: query, $options: 'i' } },
+                    { category: { $regex: query, $options: 'i' } }
+                ]
+            };
+            // Add status filter if provided
+            if (options === null || options === void 0 ? void 0 : options.status) {
+                searchQuery.status = options.status;
+            }
+            try {
+                const Campaign = require('../../models/Campaign').Campaign;
+                const campaigns = yield Campaign.find(searchQuery)
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit);
+                const total = yield Campaign.countDocuments(searchQuery);
+                return {
+                    results: campaigns,
+                    total
+                };
+            }
+            catch (error) {
+                console.error('Search campaigns error:', error);
+                throw new types_1.ApiError(types_1.StatusCodes.NOT_FOUND, "Error searching campaigns");
+            }
+        });
+    }
 }
 exports.CampaignServiceImpl = CampaignServiceImpl;

@@ -445,4 +445,48 @@ export class CampaignServiceImpl {
 
         return { campaign, emailListDetails: emailList };
     }
+
+    public async searchCampaigns(
+        userId: string,
+        query: string,
+        options?: { status?: string; limit?: number; page?: number }
+    ): Promise<{ results: any[]; total: number }> {
+        const limit = options?.limit || 10;
+        const page = options?.page || 1;
+        const skip = (page - 1) * limit;
+
+        // Search in MongoDB using text search and filtering
+        const searchQuery: any = {
+            user_id: userId,
+            $or: [
+                { campaignName: { $regex: query, $options: 'i' } },
+                { subjectLine: { $regex: query, $options: 'i' } },
+                { category: { $regex: query, $options: 'i' } }
+            ]
+        };
+
+        // Add status filter if provided
+        if (options?.status) {
+            searchQuery.status = options.status;
+        }
+
+        try {
+            const Campaign = require('../../models/Campaign').Campaign;
+            
+            const campaigns = await Campaign.find(searchQuery)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit);
+
+            const total = await Campaign.countDocuments(searchQuery);
+
+            return {
+                results: campaigns,
+                total
+            };
+        } catch (error) {
+            console.error('Search campaigns error:', error);
+            throw new ApiError(StatusCodes.NOT_FOUND, "Error searching campaigns");
+        }
+    }
 }

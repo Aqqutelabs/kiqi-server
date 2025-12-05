@@ -17,6 +17,7 @@ const templates_route_1 = __importDefault(require("./src/routes/templates.route"
 const googeAi_route_1 = __importDefault(require("./src/routes/googeAi.route"));
 const campaign_route_1 = __importDefault(require("./src/routes/campaign.route"));
 const emailList_route_1 = __importDefault(require("./src/routes/emailList.route"));
+const inbox_route_1 = __importDefault(require("./src/routes/inbox.route"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const auth_controller_1 = require("./src/controllers/auth.controller");
 // import errorHandler from './middlewares/errorHandler.middleware';
@@ -65,6 +66,7 @@ app.use("/api/v1/templates", templates_route_1.default);
 app.use("/api/v1/ai", googeAi_route_1.default);
 app.use("/api/v1/campaigns", campaign_route_1.default);
 app.use("/api/v1/email-lists", emailList_route_1.default);
+app.use("/api/v1/inbox", inbox_route_1.default);
 // Then the main router last for any remaining routes
 app.use('/api/v1', index_2.default);
 // app.use("/api/settings")

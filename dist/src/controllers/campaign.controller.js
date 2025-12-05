@@ -272,6 +272,37 @@ class CampaignController {
                 next(error);
             }
         });
+        // Search campaigns by name, subject, or category
+        this.searchCampaigns = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            try {
+                const { q, status, limit, page } = req.query;
+                if (!q || typeof q !== 'string') {
+                    throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, "Search query (q) is required");
+                }
+                const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+                if (!userId) {
+                    throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.UNAUTHORIZED, "User not authenticated");
+                }
+                const { results, total } = yield this.campaignService.searchCampaigns(userId, q, {
+                    status: status,
+                    limit: Number(limit) || 20,
+                    page: Number(page) || 1
+                });
+                res.status(http_status_codes_1.StatusCodes.OK).json({
+                    error: false,
+                    data: {
+                        campaigns: results,
+                        total,
+                        limit: Number(limit) || 20,
+                        page: Number(page) || 1
+                    }
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
         this.campaignService = new campaign_service_impl_1.CampaignServiceImpl();
     }
 }
