@@ -247,7 +247,7 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) 
     // Generate unique reference for Paystack
     const reference = `ORDER-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
 
-    // Create the order
+    // Create the order with 'Pending' status
     const order = await Order.create({
         user_id: userId,
         items: cart.items,
@@ -263,13 +263,7 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) 
         created_at: new Date()
     });
 
-    // Clear the cart after creating order
-    await Cart.findOneAndUpdate(
-        { user_id: userId },
-        { $set: { items: [] } }
-    );
-
-    // Initialize Paystack payment
+    // Initialize Paystack payment (cart will be cleared only after payment verification)
     const paystackResponse = await initializePaystackPayment({
         amount: total_amount * 100, // Paystack expects amount in kobo
         email: userEmail,
@@ -279,7 +273,8 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) 
 
     return res.json(new ApiResponse(201, {
         order,
-        payment: paystackResponse
+        payment: paystackResponse,
+        message: 'Proceed to complete payment. Cart will be cleared after successful payment verification.'
     }));
 });
 
@@ -378,4 +373,45 @@ export const getOrderDetails = asyncHandler(async (req: AuthRequest, res: Respon
     }
 
     return res.json(new ApiResponse(200, order));
+});
+
+export const verifyPayment = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user || !req.user._id) {
+        throw new ApiError(401, 'Unauthorized');
+    }
+
+    const { reference } = req.query;
+
+    if (!reference || typeof reference !== 'string') {
+        throw new ApiError(400, 'Payment reference is required');
+    }
+
+    // Verify payment with Paystack
+    const paymentData = await verifyPaystackPayment(reference);
+
+    if (!paymentData || paymentData.status !== 'success') {
+        throw new ApiError(400, 'Payment verification failed or payment was not successful');
+    }
+
+    // Update order status to 'Completed'
+    const order = await Order.findOneAndUpdate(
+        { reference, user_id: req.user._id },
+        { $set: { status: 'Completed' } },
+        { new: true }
+    );
+
+    if (!order) {
+        throw new ApiError(404, 'Order not found');
+    }
+
+    // Clear the cart after successful payment verification
+    await Cart.findOneAndUpdate(
+        { user_id: req.user._id },
+        { $set: { items: [] } }
+    );
+
+    return res.json(new ApiResponse(200, {
+        order,
+        message: 'Payment verified successfully. Cart has been cleared.'
+    }));
 });

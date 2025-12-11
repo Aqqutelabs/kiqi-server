@@ -112,8 +112,7 @@ export class InboxServiceImpl {
         })
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(limit)
-            .populate('attachmentIds');
+            .limit(limit);
 
         return { messages, total };
     }
@@ -144,8 +143,7 @@ export class InboxServiceImpl {
         })
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(limit)
-            .populate('attachmentIds');
+            .limit(limit);
 
         return { messages, total };
     }
@@ -162,8 +160,7 @@ export class InboxServiceImpl {
             user_id: new mongoose.Types.ObjectId(userId),
             threadId: new mongoose.Types.ObjectId(threadId)
         })
-            .sort({ createdAt: 1 })
-            .populate('attachmentIds');
+            .sort({ createdAt: 1 });
 
         return messages;
     }
@@ -222,7 +219,7 @@ export class InboxServiceImpl {
                 }
             },
             { new: true }
-        ).populate('attachmentIds');
+        );
 
         if (!message) {
             throw new ApiError(StatusCodes.NOT_FOUND, "Message not found");

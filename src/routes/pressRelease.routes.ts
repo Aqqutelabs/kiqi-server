@@ -12,6 +12,7 @@ import {
     getPublisherDetails,
     createOrder,
     getOrderDetails,
+    verifyPayment,
     createPublisher,
     addToCart,
     getCart,
@@ -56,6 +57,7 @@ router.post('/publishers', createPublisher);
 
 // Order routes (these need to be before the generic routes)
 router.post('/orders/checkout', createOrder);
+router.get('/orders/verify-payment', verifyPayment);
 router.get('/orders/:id', getOrderDetails);
 
 // Press Release CRUD (generic routes should be last)

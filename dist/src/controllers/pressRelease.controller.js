@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getOrderDetails = exports.removeFromCart = exports.updateCartItem = exports.createPublisher = exports.createOrder = exports.getCart = exports.addToCart = exports.getPublisherDetails = exports.getPublishers = exports.deletePressRelease = exports.updatePressRelease = exports.createPressRelease = exports.getPressReleaseDetails = exports.getDashboardMetrics = exports.getPressReleasesList = void 0;
+exports.verifyPayment = exports.getOrderDetails = exports.removeFromCart = exports.updateCartItem = exports.createPublisher = exports.createOrder = exports.getCart = exports.addToCart = exports.getPublisherDetails = exports.getPublishers = exports.deletePressRelease = exports.updatePressRelease = exports.createPressRelease = exports.getPressReleaseDetails = exports.getDashboardMetrics = exports.getPressReleasesList = void 0;
 const ApiResponse_1 = require("../utils/ApiResponse");
 const AsyncHandler_1 = require("../utils/AsyncHandler");
 const ApiError_1 = require("../utils/ApiError");
@@ -210,7 +210,7 @@ exports.createOrder = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(v
     const total_amount = subtotal + vat_amount;
     // Generate unique reference for Paystack
     const reference = `ORDER-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
-    // Create the order
+    // Create the order with 'Pending' status
     const order = yield Order_1.Order.create({
         user_id: userId,
         items: cart.items,
@@ -225,9 +225,7 @@ exports.createOrder = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(v
         reference,
         created_at: new Date()
     });
-    // Clear the cart after creating order
-    yield Cart_1.Cart.findOneAndUpdate({ user_id: userId }, { $set: { items: [] } });
-    // Initialize Paystack payment
+    // Initialize Paystack payment (cart will be cleared only after payment verification)
     const paystackResponse = yield (0, paystack_1.initializePaystackPayment)({
         amount: total_amount * 100, // Paystack expects amount in kobo
         email: userEmail,
@@ -236,7 +234,8 @@ exports.createOrder = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(v
     });
     return res.json(new ApiResponse_1.ApiResponse(201, {
         order,
-        payment: paystackResponse
+        payment: paystackResponse,
+        message: 'Proceed to complete payment. Cart will be cleared after successful payment verification.'
     }));
 }));
 exports.createPublisher = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -314,4 +313,29 @@ exports.getOrderDetails = (0, AsyncHandler_1.asyncHandler)((req, res) => __await
         throw new ApiError_1.ApiError(404, 'Order not found');
     }
     return res.json(new ApiResponse_1.ApiResponse(200, order));
+}));
+exports.verifyPayment = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    if (!req.user || !req.user._id) {
+        throw new ApiError_1.ApiError(401, 'Unauthorized');
+    }
+    const { reference } = req.query;
+    if (!reference || typeof reference !== 'string') {
+        throw new ApiError_1.ApiError(400, 'Payment reference is required');
+    }
+    // Verify payment with Paystack
+    const paymentData = yield (0, paystack_1.verifyPaystackPayment)(reference);
+    if (!paymentData || paymentData.status !== 'success') {
+        throw new ApiError_1.ApiError(400, 'Payment verification failed or payment was not successful');
+    }
+    // Update order status to 'Completed'
+    const order = yield Order_1.Order.findOneAndUpdate({ reference, user_id: req.user._id }, { $set: { status: 'Completed' } }, { new: true });
+    if (!order) {
+        throw new ApiError_1.ApiError(404, 'Order not found');
+    }
+    // Clear the cart after successful payment verification
+    yield Cart_1.Cart.findOneAndUpdate({ user_id: req.user._id }, { $set: { items: [] } });
+    return res.json(new ApiResponse_1.ApiResponse(200, {
+        order,
+        message: 'Payment verified successfully. Cart has been cleared.'
+    }));
 }));

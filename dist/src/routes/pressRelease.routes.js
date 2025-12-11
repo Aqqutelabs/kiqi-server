@@ -27,6 +27,7 @@ router.get('/publishers/:id', pressRelease_controller_1.getPublisherDetails);
 router.post('/publishers', pressRelease_controller_1.createPublisher);
 // Order routes (these need to be before the generic routes)
 router.post('/orders/checkout', pressRelease_controller_1.createOrder);
+router.get('/orders/verify-payment', pressRelease_controller_1.verifyPayment);
 router.get('/orders/:id', pressRelease_controller_1.getOrderDetails);
 // Press Release CRUD (generic routes should be last)
 router.post('/create', Upload_1.default.single('image'), (0, zod_validation_middleware_1.validateRequest)(pressRelease_validation_1.createPressReleaseSchema), pressRelease_controller_1.createPressRelease);

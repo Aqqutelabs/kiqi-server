@@ -88,8 +88,7 @@ class InboxServiceImpl {
             })
                 .sort({ createdAt: -1 })
                 .skip(skip)
-                .limit(limit)
-                .populate('attachmentIds');
+                .limit(limit);
             return { messages, total };
         });
     }
@@ -114,8 +113,7 @@ class InboxServiceImpl {
             })
                 .sort({ createdAt: -1 })
                 .skip(skip)
-                .limit(limit)
-                .populate('attachmentIds');
+                .limit(limit);
             return { messages, total };
         });
     }
@@ -131,8 +129,7 @@ class InboxServiceImpl {
                 user_id: new mongoose_1.default.Types.ObjectId(userId),
                 threadId: new mongoose_1.default.Types.ObjectId(threadId)
             })
-                .sort({ createdAt: 1 })
-                .populate('attachmentIds');
+                .sort({ createdAt: 1 });
             return messages;
         });
     }
@@ -172,7 +169,7 @@ class InboxServiceImpl {
                 user_id: new mongoose_1.default.Types.ObjectId(userId)
             }, {
                 $set: Object.assign(Object.assign(Object.assign({}, (input.isRead !== undefined && { isRead: input.isRead })), (input.isStarred !== undefined && { isStarred: input.isStarred })), (input.folder && { folder: input.folder }))
-            }, { new: true }).populate('attachmentIds');
+            }, { new: true });
             if (!message) {
                 throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, "Message not found");
             }
