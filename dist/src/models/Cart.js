@@ -49,6 +49,8 @@ const CartSchema = new mongoose_1.Schema({
         unique: true // One cart per user
     },
     items: [CartItemSchema],
+    audience: { type: String, required: false },
+    location: { type: String, required: false },
     created_at: { type: Date, default: Date.now },
     updated_at: { type: Date, default: Date.now }
 });

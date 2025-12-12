@@ -6,12 +6,16 @@ interface CartItem {
     name: string;
     price: string;
     selected: boolean;
+    region_reach?: string[];
+    audience_reach?: string;
 }
 
 // Cart document interface
 interface CartDocument extends Document {
     user_id: mongoose.Types.ObjectId;
     items: CartItem[];
+    audience?: string;
+    location?: string;
     created_at: Date;
     updated_at: Date;
 }
@@ -31,6 +35,8 @@ const CartSchema = new Schema<CartDocument>({
         unique: true // One cart per user
     },
     items: [CartItemSchema],
+    audience: { type: String, required: false },
+    location: { type: String, required: false },
     created_at: { type: Date, default: Date.now },
     updated_at: { type: Date, default: Date.now }
 });

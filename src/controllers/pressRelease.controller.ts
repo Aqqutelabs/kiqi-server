@@ -189,11 +189,13 @@ export const addToCart = asyncHandler(async (req: AuthRequest, res: Response) =>
         throw new ApiError(404, 'Publisher not found');
     }
 
-    // Add or update cart item
+    // Add or update cart item with all publisher details
     const cartItem = {
         publisherId: publisher.publisherId,
         name: publisher.name,
         price: publisher.price,
+        region_reach: publisher.region_reach || [],
+        audience_reach: publisher.audience_reach,
         selected: true
     };
 
@@ -218,7 +220,59 @@ export const getCart = asyncHandler(async (req: AuthRequest, res: Response) => {
     const userId = req.user._id;
 
     const cart = await Cart.findOne({ user_id: userId });
-    return res.json(new ApiResponse(200, cart || { items: [] }));
+    
+    let cartResponse;
+    if (cart && cart.items.length > 0) {
+        // Fetch publisher data for each item to get the latest region_reach and audience_reach
+        const enrichedItems = await Promise.all(
+            cart.items.map(async (item) => {
+                try {
+                    const publisher = await Publisher.findOne({ publisherId: item.publisherId });
+
+                    if (!publisher) {
+                        console.warn(`Publisher not found for publisherId: ${item.publisherId}`);
+                    }
+
+                    return {
+                        publisherId: item.publisherId,
+                        name: item.name,
+                        price: item.price,
+                        selected: item.selected,
+                        region_reach: publisher?.region_reach || item.region_reach || [],
+                        audience_reach: publisher?.audience_reach || item.audience_reach || 'N/A'
+                    };
+                } catch (error) {
+                    console.error(`Error fetching publisher data for publisherId: ${item.publisherId}`, error);
+                    return {
+                        publisherId: item.publisherId,
+                        name: item.name,
+                        price: item.price,
+                        selected: item.selected,
+                        region_reach: item.region_reach || [],
+                        audience_reach: item.audience_reach || 'N/A'
+                    };
+                }
+            })
+        );
+
+        cartResponse = {
+            _id: cart._id,
+            user_id: cart.user_id,
+            items: enrichedItems,
+            audience: cart.audience || null,
+            location: cart.location || null,
+            created_at: cart.created_at,
+            updated_at: cart.updated_at
+        };
+    } else {
+        cartResponse = {
+            items: [],
+            audience: null,
+            location: null
+        };
+    }
+    
+    return res.json(new ApiResponse(200, cartResponse));
 });
 
 
@@ -284,26 +338,40 @@ export const createPublisher = asyncHandler(async (req: AuthRequest, res: Respon
     if (!userId) throw new ApiError(401, 'Unauthorized');
 
     console.log('Create Publisher - Request Body:', req.body);
-    const { name, description, website, turnaroundTime, industryFocus, region, audienceReach, price, isPopular, isSelected } = req.body;
+    const { 
+        name, 
+        description, 
+        website, 
+        turnaroundTime, 
+        industry_focus, 
+        region_reach, 
+        audienceReach, 
+        price, 
+        isPopular, 
+        isSelected,
+        avg_publish_time,
+        key_features,
+        metrics
+    } = req.body;
 
     const publisher = await Publisher.create({
-        publisherId: `PUB${Date.now()}`, // Generate a unique publisher ID
+        publisherId: `PUB${Date.now()}`, // Always generate unique ID, ignore any provided ID
         name,
         description,
         website,
-        avg_publish_time: turnaroundTime,
-        industry_focus: industryFocus,
-        region_reach: region,
+        avg_publish_time: avg_publish_time || turnaroundTime,
+        industry_focus: industry_focus || [],
+        region_reach: region_reach || [],
         audience_reach: audienceReach,
         price,
         isPopular: isPopular || false,
         isSelected: isSelected || false,
-        key_features: [], // Add default empty array or get from req.body
-        metrics: {
-            social_signals: req.body.metrics?.social_signals || 0,
-            avg_traffic: req.body.metrics?.avg_traffic || 0,
-            trust_score: req.body.metrics?.trust_score || 0,
-            domain_authority: req.body.metrics?.domain_authority || 0
+        key_features: key_features || [],
+        metrics: metrics || {
+            domain_authority: 0,
+            trust_score: 0,
+            avg_traffic: 0,
+            social_signals: 0
         },
         created_by: userId,
         created_at: new Date().toISOString()

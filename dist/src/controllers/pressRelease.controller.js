@@ -167,11 +167,13 @@ exports.addToCart = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(voi
     if (!publisher) {
         throw new ApiError_1.ApiError(404, 'Publisher not found');
     }
-    // Add or update cart item
+    // Add or update cart item with all publisher details
     const cartItem = {
         publisherId: publisher.publisherId,
         name: publisher.name,
         price: publisher.price,
+        region_reach: publisher.region_reach || [],
+        audience_reach: publisher.audience_reach,
         selected: true
     };
     // Find existing cart or create new one
@@ -188,7 +190,54 @@ exports.getCart = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 
     }
     const userId = req.user._id;
     const cart = yield Cart_1.Cart.findOne({ user_id: userId });
-    return res.json(new ApiResponse_1.ApiResponse(200, cart || { items: [] }));
+    let cartResponse;
+    if (cart && cart.items.length > 0) {
+        // Fetch publisher data for each item to get the latest region_reach and audience_reach
+        const enrichedItems = yield Promise.all(cart.items.map((item) => __awaiter(void 0, void 0, void 0, function* () {
+            try {
+                const publisher = yield Publisher_1.Publisher.findOne({ publisherId: item.publisherId });
+                if (!publisher) {
+                    console.warn(`Publisher not found for publisherId: ${item.publisherId}`);
+                }
+                return {
+                    publisherId: item.publisherId,
+                    name: item.name,
+                    price: item.price,
+                    selected: item.selected,
+                    region_reach: (publisher === null || publisher === void 0 ? void 0 : publisher.region_reach) || item.region_reach || [],
+                    audience_reach: (publisher === null || publisher === void 0 ? void 0 : publisher.audience_reach) || item.audience_reach || 'N/A'
+                };
+            }
+            catch (error) {
+                console.error(`Error fetching publisher data for publisherId: ${item.publisherId}`, error);
+                return {
+                    publisherId: item.publisherId,
+                    name: item.name,
+                    price: item.price,
+                    selected: item.selected,
+                    region_reach: item.region_reach || [],
+                    audience_reach: item.audience_reach || 'N/A'
+                };
+            }
+        })));
+        cartResponse = {
+            _id: cart._id,
+            user_id: cart.user_id,
+            items: enrichedItems,
+            audience: cart.audience || null,
+            location: cart.location || null,
+            created_at: cart.created_at,
+            updated_at: cart.updated_at
+        };
+    }
+    else {
+        cartResponse = {
+            items: [],
+            audience: null,
+            location: null
+        };
+    }
+    return res.json(new ApiResponse_1.ApiResponse(200, cartResponse));
 }));
 exports.createOrder = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     if (!req.user || !req.user._id || !req.user.email) {
@@ -240,30 +289,30 @@ exports.createOrder = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(v
     }));
 }));
 exports.createPublisher = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d, _e;
+    var _a;
     const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
     if (!userId)
         throw new ApiError_1.ApiError(401, 'Unauthorized');
     console.log('Create Publisher - Request Body:', req.body);
-    const { name, description, website, turnaroundTime, industryFocus, region, audienceReach, price, isPopular, isSelected } = req.body;
+    const { name, description, website, turnaroundTime, industry_focus, region_reach, audienceReach, price, isPopular, isSelected, avg_publish_time, key_features, metrics } = req.body;
     const publisher = yield Publisher_1.Publisher.create({
-        publisherId: `PUB${Date.now()}`, // Generate a unique publisher ID
+        publisherId: `PUB${Date.now()}`, // Always generate unique ID, ignore any provided ID
         name,
         description,
         website,
-        avg_publish_time: turnaroundTime,
-        industry_focus: industryFocus,
-        region_reach: region,
+        avg_publish_time: avg_publish_time || turnaroundTime,
+        industry_focus: industry_focus || [],
+        region_reach: region_reach || [],
         audience_reach: audienceReach,
         price,
         isPopular: isPopular || false,
         isSelected: isSelected || false,
-        key_features: [], // Add default empty array or get from req.body
-        metrics: {
-            social_signals: ((_b = req.body.metrics) === null || _b === void 0 ? void 0 : _b.social_signals) || 0,
-            avg_traffic: ((_c = req.body.metrics) === null || _c === void 0 ? void 0 : _c.avg_traffic) || 0,
-            trust_score: ((_d = req.body.metrics) === null || _d === void 0 ? void 0 : _d.trust_score) || 0,
-            domain_authority: ((_e = req.body.metrics) === null || _e === void 0 ? void 0 : _e.domain_authority) || 0
+        key_features: key_features || [],
+        metrics: metrics || {
+            domain_authority: 0,
+            trust_score: 0,
+            avg_traffic: 0,
+            social_signals: 0
         },
         created_by: userId,
         created_at: new Date().toISOString()
