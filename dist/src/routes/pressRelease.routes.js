@@ -11,7 +11,9 @@ const pressRelease_validation_1 = require("../validation/pressRelease.validation
 const cart_validation_1 = require("../validation/cart.validation");
 const Upload_1 = __importDefault(require("../middlewares/Upload"));
 const router = (0, express_1.Router)();
-// All routes require authentication
+// Paystack Webhook - PUBLIC endpoint (no authentication required)
+router.post('/webhooks/paystack', pressRelease_controller_1.paystackWebhook);
+// All routes below require authentication
 router.use(Auth_middlewares_1.isAuthenticated);
 // Dashboard routes
 router.get('/dashboard', pressRelease_controller_1.getDashboardMetrics);

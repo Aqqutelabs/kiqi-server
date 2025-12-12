@@ -13,6 +13,7 @@ import {
     createOrder,
     getOrderDetails,
     verifyPayment,
+    paystackWebhook,
     createPublisher,
     addToCart,
     getCart,
@@ -37,7 +38,10 @@ import upload from '../middlewares/Upload';
 
 const router = Router();
 
-// All routes require authentication
+// Paystack Webhook - PUBLIC endpoint (no authentication required)
+router.post('/webhooks/paystack', paystackWebhook);
+
+// All routes below require authentication
 router.use(isAuthenticated);
 
 // Dashboard routes

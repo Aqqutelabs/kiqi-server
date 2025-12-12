@@ -41,10 +41,11 @@ const OrderSchema = new mongoose_1.Schema({
         ref: 'User',
         required: true
     },
-    publications: [{
+    items: [{
+            publisherId: { type: String, required: true },
             name: { type: String, required: true },
             price: { type: String, required: true },
-            details: { type: String, required: true }
+            selected: { type: Boolean, default: true }
         }],
     order_summary: {
         subtotal: { type: String, required: true },
@@ -52,9 +53,20 @@ const OrderSchema = new mongoose_1.Schema({
         vat_amount: { type: String, required: true },
         total_amount: { type: String, required: true }
     },
+    reference: {
+        type: String,
+        required: true,
+        unique: true,
+        index: true
+    },
     status: {
         type: String,
         enum: ['Pending', 'Completed', 'Failed'],
+        default: 'Pending'
+    },
+    payment_status: {
+        type: String,
+        enum: ['Pending', 'Successful', 'Failed'],
         default: 'Pending'
     },
     payment_method: {

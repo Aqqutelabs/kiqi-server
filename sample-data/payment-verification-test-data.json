@@ -1,0 +1,238 @@
+{
+  "payment_verification": {
+    "description": "Test payment verification endpoint after Paystack payment completes",
+    "endpoint": "GET /api/v1/press-releases/orders/verify-payment",
+    "authentication": {
+      "type": "Bearer Token",
+      "header": "Authorization: Bearer YOUR_JWT_TOKEN"
+    },
+    "test_scenarios": [
+      {
+        "scenario": 1,
+        "title": "Successful Payment Verification",
+        "description": "Payment was completed successfully on Paystack and cart should be cleared",
+        "method": "GET",
+        "url": "http://localhost:8000/api/v1/press-releases/orders/verify-payment?reference=ORDER-1702134589-456789",
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        },
+        "expectedResponse": {
+          "statusCode": 200,
+          "data": {
+            "order": {
+              "_id": "507f1f77bcf86cd799439011",
+              "user_id": "507f1f77bcf86cd799439012",
+              "reference": "ORDER-1702134589-456789",
+              "status": "Completed",
+              "payment_status": "Successful",
+              "items": [
+                {
+                  "publisherId": "PUB1765461705168",
+                  "name": "TechCrunch",
+                  "price": "₦50,000",
+                  "selected": true
+                },
+                {
+                  "publisherId": "PUB1765461705169",
+                  "name": "VentureBeat",
+                  "price": "₦75,000",
+                  "selected": true
+                }
+              ],
+              "order_summary": {
+                "subtotal": "₦125,000",
+                "vat_percentage": "7.5%",
+                "vat_amount": "₦9,375",
+                "total_amount": "₦134,375"
+              },
+              "payment_method": "Paystack",
+              "createdAt": "2025-12-12T10:00:00.000Z",
+              "updatedAt": "2025-12-12T10:05:00.000Z"
+            },
+            "message": "Payment verified successfully. Cart has been cleared."
+          },
+          "message": "Success",
+          "success": true
+        }
+      },
+      {
+        "scenario": 2,
+        "title": "Missing Reference Parameter",
+        "description": "User forgot to include reference in query string",
+        "method": "GET",
+        "url": "http://localhost:8000/api/v1/press-releases/orders/verify-payment",
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        },
+        "expectedResponse": {
+          "statusCode": 400,
+          "message": "Payment reference is required",
+          "success": false
+        }
+      },
+      {
+        "scenario": 3,
+        "title": "Invalid Reference (Order Not Found)",
+        "description": "Reference doesn't match any order in database",
+        "method": "GET",
+        "url": "http://localhost:8000/api/v1/press-releases/orders/verify-payment?reference=ORDER-INVALID-12345",
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        },
+        "expectedResponse": {
+          "statusCode": 400,
+          "message": "Payment verification failed or payment was not successful",
+          "success": false
+        }
+      },
+      {
+        "scenario": 4,
+        "title": "Unauthorized (No JWT Token)",
+        "description": "User not authenticated",
+        "method": "GET",
+        "url": "http://localhost:8000/api/v1/press-releases/orders/verify-payment?reference=ORDER-1702134589-456789",
+        "headers": {},
+        "expectedResponse": {
+          "statusCode": 401,
+          "message": "Unauthorized",
+          "success": false
+        }
+      },
+      {
+        "scenario": 5,
+        "title": "Order Already Verified",
+        "description": "Payment already verified once, calling again should return success (idempotent)",
+        "method": "GET",
+        "url": "http://localhost:8000/api/v1/press-releases/orders/verify-payment?reference=ORDER-1702134589-456789",
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        },
+        "expectedResponse": {
+          "statusCode": 200,
+          "data": {
+            "order": {
+              "status": "Completed",
+              "payment_status": "Successful"
+            },
+            "message": "Payment verified successfully. Cart has been cleared."
+          }
+        }
+      }
+    ],
+    "workflow_for_postman": [
+      {
+        "step": 1,
+        "action": "Complete Checkout",
+        "method": "POST",
+        "url": "http://localhost:8000/api/v1/press-releases/orders/checkout",
+        "description": "Create order and get Paystack payment link",
+        "saveVariable": "reference",
+        "variable_path": "data.order.reference"
+      },
+      {
+        "step": 2,
+        "action": "Open Paystack Payment Link",
+        "description": "Visit the authorization_url returned in step 1 and complete payment",
+        "paymentLink": "{{data.payment.data.authorization_url}}"
+      },
+      {
+        "step": 3,
+        "action": "Verify Payment",
+        "method": "GET",
+        "url": "http://localhost:8000/api/v1/press-releases/orders/verify-payment?reference={{reference}}",
+        "headers": {
+          "Authorization": "Bearer {{jwt_token}}"
+        },
+        "description": "Verify payment was successful and cart was cleared"
+      }
+    ],
+    "environment_setup_in_postman": {
+      "variables": [
+        {
+          "key": "base_url",
+          "value": "http://localhost:8000/api/v1",
+          "type": "string"
+        },
+        {
+          "key": "jwt_token",
+          "value": "YOUR_JWT_TOKEN_HERE",
+          "type": "string"
+        },
+        {
+          "key": "reference",
+          "value": "",
+          "type": "string",
+          "description": "Will be saved from checkout response"
+        }
+      ],
+      "pre_request_scripts": {
+        "extract_reference": "const jsonData = pm.response.json();\npm.environment.set('reference', jsonData.data.order.reference);"
+      }
+    },
+    "curl_examples": [
+      {
+        "description": "Success case",
+        "command": "curl -X GET 'http://localhost:8000/api/v1/press-releases/orders/verify-payment?reference=ORDER-1702134589-456789' \\\n  -H 'Authorization: Bearer YOUR_JWT_TOKEN' \\\n  -H 'Content-Type: application/json'"
+      },
+      {
+        "description": "Missing reference",
+        "command": "curl -X GET 'http://localhost:8000/api/v1/press-releases/orders/verify-payment' \\\n  -H 'Authorization: Bearer YOUR_JWT_TOKEN' \\\n  -H 'Content-Type: application/json'"
+      }
+    ],
+    "what_happens_when_verified": [
+      {
+        "step": 1,
+        "action": "Reference validated",
+        "details": "Extracts reference from query parameter"
+      },
+      {
+        "step": 2,
+        "action": "Paystack verification",
+        "details": "Calls Paystack API to verify payment status is 'success'"
+      },
+      {
+        "step": 3,
+        "action": "Order updated",
+        "details": "Updates order status from 'Pending' to 'Completed'"
+      },
+      {
+        "step": 4,
+        "action": "Cart cleared",
+        "details": "Removes all items from user's cart"
+      },
+      {
+        "step": 5,
+        "action": "Response sent",
+        "details": "Returns updated order and success message"
+      }
+    ],
+    "important_notes": [
+      "Reference must match an order created via /orders/checkout",
+      "JWT token must be valid and belong to the order's user",
+      "Payment must have been successfully completed on Paystack",
+      "This endpoint is idempotent - calling multiple times won't cause issues",
+      "Cart is cleared only on first successful verification",
+      "Webhook also clears cart automatically (for redundancy)"
+    ],
+    "testing_flow": {
+      "manual": [
+        "1. Get your JWT token from login",
+        "2. Add publishers to cart via POST /cart/add",
+        "3. Hit checkout POST /orders/checkout and save the reference",
+        "4. Open the Paystack authorization_url in browser",
+        "5. Complete payment with test card: 4084084084084081",
+        "6. Call verify endpoint with the reference",
+        "7. Check order status is 'Completed' and cart is cleared"
+      ],
+      "automated": [
+        "Use Postman pre-request scripts to extract reference",
+        "Use Tests tab to validate response",
+        "Use workflows to chain requests"
+      ]
+    },
+    "postman_test_script": {
+      "description": "Add this to Tests tab for automatic validation",
+      "script": "pm.test('Status code is 200', function () {\n    pm.response.to.have.status(200);\n});\n\npm.test('Response has order data', function () {\n    const jsonData = pm.response.json();\n    pm.expect(jsonData.data.order).to.exist;\n    pm.expect(jsonData.data.order.status).to.equal('Completed');\n    pm.expect(jsonData.data.order.payment_status).to.equal('Successful');\n});\n\npm.test('Message contains success', function () {\n    const jsonData = pm.response.json();\n    pm.expect(jsonData.data.message).to.include('successfully');\n});"
+    }
+  }
+}

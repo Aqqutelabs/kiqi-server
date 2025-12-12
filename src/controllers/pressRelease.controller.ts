@@ -11,6 +11,7 @@ import mongoose from 'mongoose';
 import { AuthRequest } from '../middlewares/Auth.middlewares';
 import { CheckoutPublicationItem } from '../types/pressRelease.types';
 import { v2 as cloudinary } from 'cloudinary';
+import { createHmac } from 'crypto';
 
 // Configure Cloudinary
 cloudinary.config({ 
@@ -268,7 +269,7 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) 
         amount: total_amount * 100, // Paystack expects amount in kobo
         email: userEmail,
         reference,
-        callback_url: `${process.env.FRONTEND_URL}/payment/callback`
+        callback_url: `${process.env.FRONTEND_URL}/pr/payment/callback`
     });
 
     return res.json(new ApiResponse(201, {
@@ -414,4 +415,87 @@ export const verifyPayment = asyncHandler(async (req: AuthRequest, res: Response
         order,
         message: 'Payment verified successfully. Cart has been cleared.'
     }));
+});
+
+/**
+ * Paystack Webhook - Called by Paystack server when payment is completed
+ * This endpoint is PUBLIC but secured by Paystack signature verification
+ * 
+ * Setup: Configure in Paystack dashboard:
+ * - URL: https://yourdomain.com/api/v1/press-releases/webhooks/paystack
+ * - Events: charge.success
+ */
+export const paystackWebhook = asyncHandler(async (req: Request, res: Response) => {
+    const signature = req.headers['x-paystack-signature'] as string;
+    const body = req.body;
+
+    // Verify Paystack signature for security
+    if (!process.env.PAYSTACK_SECRET_KEY) {
+        console.error('PAYSTACK_SECRET_KEY not configured');
+        return res.status(500).json(new ApiResponse(500, null, 'Webhook not configured'));
+    }
+
+    const hash = createHmac('sha512', process.env.PAYSTACK_SECRET_KEY)
+        .update(JSON.stringify(body))
+        .digest('hex');
+
+    if (hash !== signature) {
+        console.warn('Invalid Paystack signature attempt');
+        return res.status(401).json(new ApiResponse(401, null, 'Invalid signature'));
+    }
+
+    // Only process successful charges
+    if (body.event !== 'charge.success') {
+        return res.json(new ApiResponse(200, { message: 'Event ignored', event: body.event }));
+    }
+
+    const reference = body.data?.reference;
+    
+    if (!reference) {
+        console.warn('No reference in webhook payload');
+        return res.status(400).json(new ApiResponse(400, null, 'No reference provided'));
+    }
+
+    try {
+        // Find order by reference
+        const order = await Order.findOne({ reference });
+
+        if (!order) {
+            console.warn(`Order not found for reference: ${reference}`);
+            // Still return 200 OK to acknowledge webhook (Paystack will stop retrying)
+            return res.json(new ApiResponse(200, { message: 'Order not found', reference }));
+        }
+
+        // Check if already processed (idempotency)
+        if (order.status === 'Completed') {
+            console.log(`Order ${reference} already completed, skipping duplicate webhook`);
+            return res.json(new ApiResponse(200, { message: 'Order already completed', reference }));
+        }
+
+        // Update order status to 'Completed'
+        order.status = 'Completed';
+        order.payment_status = 'Successful';
+        await order.save();
+
+        // Clear the user's cart
+        const cartUpdate = await Cart.findOneAndUpdate(
+            { user_id: order.user_id },
+            { $set: { items: [] } },
+            { new: true }
+        );
+
+        console.log(`✅ Payment verified via webhook for order: ${reference}`);
+        console.log(`   User: ${order.user_id}, Cart cleared, Items: ${order.items.length}`);
+
+        return res.json(new ApiResponse(200, {
+            message: 'Webhook processed successfully',
+            reference,
+            order_id: order._id,
+            timestamp: new Date()
+        }));
+    } catch (error) {
+        console.error(`❌ Webhook processing error for ${reference}:`, error);
+        // Return 200 to acknowledge we received it, but log the error
+        return res.json(new ApiResponse(500, null, 'Webhook processing failed'));
+    }
 });

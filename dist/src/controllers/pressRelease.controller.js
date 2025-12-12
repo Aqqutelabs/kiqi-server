@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyPayment = exports.getOrderDetails = exports.removeFromCart = exports.updateCartItem = exports.createPublisher = exports.createOrder = exports.getCart = exports.addToCart = exports.getPublisherDetails = exports.getPublishers = exports.deletePressRelease = exports.updatePressRelease = exports.createPressRelease = exports.getPressReleaseDetails = exports.getDashboardMetrics = exports.getPressReleasesList = void 0;
+exports.paystackWebhook = exports.verifyPayment = exports.getOrderDetails = exports.removeFromCart = exports.updateCartItem = exports.createPublisher = exports.createOrder = exports.getCart = exports.addToCart = exports.getPublisherDetails = exports.getPublishers = exports.deletePressRelease = exports.updatePressRelease = exports.createPressRelease = exports.getPressReleaseDetails = exports.getDashboardMetrics = exports.getPressReleasesList = void 0;
 const ApiResponse_1 = require("../utils/ApiResponse");
 const AsyncHandler_1 = require("../utils/AsyncHandler");
 const ApiError_1 = require("../utils/ApiError");
@@ -23,6 +23,7 @@ const Cart_1 = require("../models/Cart");
 const paystack_1 = require("../utils/paystack");
 const mongoose_1 = __importDefault(require("mongoose"));
 const cloudinary_1 = require("cloudinary");
+const crypto_1 = require("crypto");
 // Configure Cloudinary
 cloudinary_1.v2.config({
     cloud_name: 'dphdvbdwg',
@@ -230,7 +231,7 @@ exports.createOrder = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(v
         amount: total_amount * 100, // Paystack expects amount in kobo
         email: userEmail,
         reference,
-        callback_url: `${process.env.FRONTEND_URL}/payment/callback`
+        callback_url: `${process.env.FRONTEND_URL}/pr/payment/callback`
     });
     return res.json(new ApiResponse_1.ApiResponse(201, {
         order,
@@ -338,4 +339,71 @@ exports.verifyPayment = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter
         order,
         message: 'Payment verified successfully. Cart has been cleared.'
     }));
+}));
+/**
+ * Paystack Webhook - Called by Paystack server when payment is completed
+ * This endpoint is PUBLIC but secured by Paystack signature verification
+ *
+ * Setup: Configure in Paystack dashboard:
+ * - URL: https://yourdomain.com/api/v1/press-releases/webhooks/paystack
+ * - Events: charge.success
+ */
+exports.paystackWebhook = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const signature = req.headers['x-paystack-signature'];
+    const body = req.body;
+    // Verify Paystack signature for security
+    if (!process.env.PAYSTACK_SECRET_KEY) {
+        console.error('PAYSTACK_SECRET_KEY not configured');
+        return res.status(500).json(new ApiResponse_1.ApiResponse(500, null, 'Webhook not configured'));
+    }
+    const hash = (0, crypto_1.createHmac)('sha512', process.env.PAYSTACK_SECRET_KEY)
+        .update(JSON.stringify(body))
+        .digest('hex');
+    if (hash !== signature) {
+        console.warn('Invalid Paystack signature attempt');
+        return res.status(401).json(new ApiResponse_1.ApiResponse(401, null, 'Invalid signature'));
+    }
+    // Only process successful charges
+    if (body.event !== 'charge.success') {
+        return res.json(new ApiResponse_1.ApiResponse(200, { message: 'Event ignored', event: body.event }));
+    }
+    const reference = (_a = body.data) === null || _a === void 0 ? void 0 : _a.reference;
+    if (!reference) {
+        console.warn('No reference in webhook payload');
+        return res.status(400).json(new ApiResponse_1.ApiResponse(400, null, 'No reference provided'));
+    }
+    try {
+        // Find order by reference
+        const order = yield Order_1.Order.findOne({ reference });
+        if (!order) {
+            console.warn(`Order not found for reference: ${reference}`);
+            // Still return 200 OK to acknowledge webhook (Paystack will stop retrying)
+            return res.json(new ApiResponse_1.ApiResponse(200, { message: 'Order not found', reference }));
+        }
+        // Check if already processed (idempotency)
+        if (order.status === 'Completed') {
+            console.log(`Order ${reference} already completed, skipping duplicate webhook`);
+            return res.json(new ApiResponse_1.ApiResponse(200, { message: 'Order already completed', reference }));
+        }
+        // Update order status to 'Completed'
+        order.status = 'Completed';
+        order.payment_status = 'Successful';
+        yield order.save();
+        // Clear the user's cart
+        const cartUpdate = yield Cart_1.Cart.findOneAndUpdate({ user_id: order.user_id }, { $set: { items: [] } }, { new: true });
+        console.log(`✅ Payment verified via webhook for order: ${reference}`);
+        console.log(`   User: ${order.user_id}, Cart cleared, Items: ${order.items.length}`);
+        return res.json(new ApiResponse_1.ApiResponse(200, {
+            message: 'Webhook processed successfully',
+            reference,
+            order_id: order._id,
+            timestamp: new Date()
+        }));
+    }
+    catch (error) {
+        console.error(`❌ Webhook processing error for ${reference}:`, error);
+        // Return 200 to acknowledge we received it, but log the error
+        return res.json(new ApiResponse_1.ApiResponse(500, null, 'Webhook processing failed'));
+    }
 }));
