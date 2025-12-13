@@ -17,7 +17,7 @@ const PressReleaseSchema = new Schema<PressReleaseDocument>({
     },
     distribution: { type: String },
     performance_views: { type: String },
-    title: { type: String },
+    title: { type: String, required: true },
     campaign: { type: String },
     user_id: { type: Schema.Types.ObjectId, ref: 'User' },
     date_created: { type: String, required: true },

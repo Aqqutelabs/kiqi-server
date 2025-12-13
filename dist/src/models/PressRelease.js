@@ -43,7 +43,7 @@ const PressReleaseSchema = new mongoose_1.Schema({
     },
     distribution: { type: String },
     performance_views: { type: String },
-    title: { type: String },
+    title: { type: String, required: true },
     campaign: { type: String },
     user_id: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' },
     date_created: { type: String, required: true },

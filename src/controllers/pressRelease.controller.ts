@@ -82,6 +82,10 @@ export const getPressReleaseDetails = asyncHandler(async (req: AuthRequest, res:
         throw new ApiError(404, 'Press release not found');
     }
 
+    if (!pressRelease.title) {
+        console.warn(`Press release with ID ${req.params.id} is missing the title field.`);
+    }
+
     // Ensure response includes all fields including title
     const responseData = {
         ...pressRelease.toObject(),
@@ -96,6 +100,11 @@ export const createPressRelease = asyncHandler(async (req: AuthRequest, res: Res
     const userId = req.user?._id;
     if (!userId) throw new ApiError(401, 'Unauthorized');
     const { campaign, pr_content, status, title, distribution, performance_views } = req.body;
+
+    // Validate title
+    if (!title) {
+        throw new ApiError(400, 'Title is required');
+    }
 
     let imageUrl = '';
 

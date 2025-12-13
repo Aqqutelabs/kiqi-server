@@ -80,6 +80,9 @@ exports.getPressReleaseDetails = (0, AsyncHandler_1.asyncHandler)((req, res) => 
     if (!pressRelease) {
         throw new ApiError_1.ApiError(404, 'Press release not found');
     }
+    if (!pressRelease.title) {
+        console.warn(`Press release with ID ${req.params.id} is missing the title field.`);
+    }
     // Ensure response includes all fields including title
     const responseData = Object.assign(Object.assign({}, pressRelease.toObject()), { title: pressRelease.title });
     return res.json(new ApiResponse_1.ApiResponse(200, responseData));
@@ -91,6 +94,10 @@ exports.createPressRelease = (0, AsyncHandler_1.asyncHandler)((req, res) => __aw
     if (!userId)
         throw new ApiError_1.ApiError(401, 'Unauthorized');
     const { campaign, pr_content, status, title, distribution, performance_views } = req.body;
+    // Validate title
+    if (!title) {
+        throw new ApiError_1.ApiError(400, 'Title is required');
+    }
     let imageUrl = '';
     // Handle image upload to Cloudinary
     if (req.file) {
