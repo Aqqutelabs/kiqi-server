@@ -5,7 +5,6 @@ interface PressReleaseDocument extends Document, PressReleaseListItem {
     metrics: PressReleaseMetrics;
     distribution_report: DistributionReportItem[];
     content: string;  // Rich text content
-    campaign_id: Schema.Types.ObjectId;
     user_id: Schema.Types.ObjectId;
     image?: string;
 }
@@ -41,18 +40,12 @@ const PressReleaseSchema = new Schema<PressReleaseDocument>({
         publication_date: { type: String }
     }],
     content: { type: String, required: true },
-    campaign_id: { 
-        type: Schema.Types.ObjectId, 
-        ref: 'Campaign',
-        required: true 
-    },
     image: { type: String } // Added optional image field
 }, {
     timestamps: true
 });
 
 // Indexes for efficient queries
-PressReleaseSchema.index({ campaign_id: 1 });
 PressReleaseSchema.index({ status: 1 });
 PressReleaseSchema.index({ title: 'text' });
 PressReleaseSchema.index({ user_id: 1 });

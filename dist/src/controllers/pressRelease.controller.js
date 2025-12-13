@@ -8,9 +8,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.paystackWebhook = exports.verifyPayment = exports.getOrderDetails = exports.removeFromCart = exports.updateCartItem = exports.createPublisher = exports.createOrder = exports.getCart = exports.addToCart = exports.getPublisherDetails = exports.getPublishers = exports.deletePressRelease = exports.updatePressRelease = exports.createPressRelease = exports.getPressReleaseDetails = exports.getDashboardMetrics = exports.getPressReleasesList = void 0;
 const ApiResponse_1 = require("../utils/ApiResponse");
@@ -21,7 +18,6 @@ const Publisher_1 = require("../models/Publisher");
 const Order_1 = require("../models/Order");
 const Cart_1 = require("../models/Cart");
 const paystack_1 = require("../utils/paystack");
-const mongoose_1 = __importDefault(require("mongoose"));
 const cloudinary_1 = require("cloudinary");
 const crypto_1 = require("crypto");
 // Configure Cloudinary
@@ -94,7 +90,7 @@ exports.createPressRelease = (0, AsyncHandler_1.asyncHandler)((req, res) => __aw
     const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
     if (!userId)
         throw new ApiError_1.ApiError(401, 'Unauthorized');
-    const { campaign_id, campaign, pr_content, status, title, distribution, performance_views } = req.body;
+    const { campaign, pr_content, status, title, distribution, performance_views } = req.body;
     let imageUrl = '';
     // Handle image upload to Cloudinary
     if (req.file) {
@@ -111,7 +107,6 @@ exports.createPressRelease = (0, AsyncHandler_1.asyncHandler)((req, res) => __aw
         }
     }
     const pressRelease = yield PressRelease_1.PressRelease.create({
-        campaign_id: campaign_id ? new mongoose_1.default.Types.ObjectId(campaign_id) : undefined,
         campaign: campaign || title || '', // prefer explicit campaign, fallback to title
         title: title || '',
         content: pr_content,

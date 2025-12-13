@@ -4,7 +4,6 @@ exports.createPublisherSchema = exports.createOrderSchema = exports.updatePressR
 const zod_1 = require("zod");
 exports.createPressReleaseSchema = zod_1.z.object({
     body: zod_1.z.object({
-        campaign_id: zod_1.z.string().nonempty('Campaign ID is required'),
         pr_content: zod_1.z.string().nonempty('Press release content is required'),
         status: zod_1.z.enum(['Draft', 'Published', 'Scheduled'])
     })
@@ -13,8 +12,7 @@ exports.updatePressReleaseSchema = zod_1.z.object({
     body: zod_1.z.object({
         title: zod_1.z.string().optional(),
         pr_content: zod_1.z.string().optional(),
-        status: zod_1.z.enum(['Draft', 'Published', 'Scheduled']).optional(),
-        campaign_id: zod_1.z.string().optional()
+        status: zod_1.z.enum(['Draft', 'Published', 'Scheduled']).optional()
     })
 });
 exports.createOrderSchema = zod_1.z.object({

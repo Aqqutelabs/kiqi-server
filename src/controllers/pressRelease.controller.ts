@@ -95,7 +95,7 @@ export const createPressRelease = asyncHandler(async (req: AuthRequest, res: Res
     console.log('Request body:', req.body);
     const userId = req.user?._id;
     if (!userId) throw new ApiError(401, 'Unauthorized');
-    const { campaign_id, campaign, pr_content, status, title, distribution, performance_views } = req.body;
+    const { campaign, pr_content, status, title, distribution, performance_views } = req.body;
 
     let imageUrl = '';
 
@@ -114,7 +114,6 @@ export const createPressRelease = asyncHandler(async (req: AuthRequest, res: Res
     }
 
     const pressRelease = await PressRelease.create({
-        campaign_id: campaign_id ? new mongoose.Types.ObjectId(campaign_id) : undefined,
         campaign: campaign || title || '',  // prefer explicit campaign, fallback to title
         title: title || '',
         content: pr_content,

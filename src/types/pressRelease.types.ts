@@ -72,7 +72,6 @@ export interface CheckoutOrder {
 }
 
 export interface CreatePressRelease {
-    campaign_id: string;
     pr_content: string;  // Rich text content
     status: 'Draft' | 'Published' | 'Scheduled';
     image?: string; // Optional image field

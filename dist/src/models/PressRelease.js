@@ -66,17 +66,11 @@ const PressReleaseSchema = new mongoose_1.Schema({
             publication_date: { type: String }
         }],
     content: { type: String, required: true },
-    campaign_id: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'Campaign',
-        required: true
-    },
     image: { type: String } // Added optional image field
 }, {
     timestamps: true
 });
 // Indexes for efficient queries
-PressReleaseSchema.index({ campaign_id: 1 });
 PressReleaseSchema.index({ status: 1 });
 PressReleaseSchema.index({ title: 'text' });
 PressReleaseSchema.index({ user_id: 1 });
