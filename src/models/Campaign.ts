@@ -60,6 +60,35 @@ export interface CampaignAnalytics {
     lastUpdated: Date;
 }
 
+export interface AdvancedEmailSettings {
+    excludeLists: {
+        unsubscribed: boolean;
+        bounced: boolean;
+        inactive: boolean;
+    };
+    recipientEmailAddress: string;
+    resendSettings: {
+        resendToUnopened: boolean;
+        dontResend: boolean;
+        waitTimeDays: number | null;
+    };
+    fallbacks: {
+        alternativeText: string;
+        useIfPersonalizationFails: boolean;
+        sendOncePerContact: boolean;
+    };
+    dailySendLimit: number;
+    batchSending: {
+        emailsPerBatch: number;
+        intervalMinutes: number;
+    };
+    emailCompliance: {
+        includeUnsubscribeLink: boolean;
+        includePermissionReminder: boolean;
+        permissionReminderText: string;
+    };
+}
+
 export interface CampaignDoc extends Document {
     userId: any;
     priority: number;
@@ -101,6 +130,7 @@ export interface CampaignDoc extends Document {
         templateId?: string;
         tags?: string[];
     };
+    advancedSettings?: AdvancedEmailSettings;
     
     createdAt: Date;
     updatedAt: Date;
@@ -128,7 +158,7 @@ const CampaignSchema = new Schema<CampaignDoc>({
     campaignType: { 
         type: String,
         enum: CampaignTypes,
-        required: true 
+        default: 'Newsletter'
     },
     status: {
         type: String,
@@ -146,18 +176,15 @@ const CampaignSchema = new Schema<CampaignDoc>({
     sender: {
         senderName: {
             type: String,
-            required: true,
             trim: true
         },
         senderEmail: {
             type: String,
-            required: true,
             trim: true,
             lowercase: true
         },
         replyToEmail: {
             type: String,
-            required: true,
             trim: true,
             lowercase: true
         }
@@ -184,11 +211,11 @@ const CampaignSchema = new Schema<CampaignDoc>({
     content: {
         htmlContent: {
             type: String,
-            required: true
+            default: ''
         },
         plainText: {
             type: String,
-            required: true
+            default: ''
         }
     },
     resendSettings: {
@@ -311,6 +338,82 @@ const CampaignSchema = new Schema<CampaignDoc>({
         aiGenerated: Boolean,
         templateId: String,
         tags: [String]
+    },
+    advancedSettings: {
+        excludeLists: {
+            unsubscribed: {
+                type: Boolean,
+                default: true
+            },
+            bounced: {
+                type: Boolean,
+                default: true
+            },
+            inactive: {
+                type: Boolean,
+                default: false
+            }
+        },
+        recipientEmailAddress: {
+            type: String,
+            default: ""
+        },
+        resendSettings: {
+            resendToUnopened: {
+                type: Boolean,
+                default: false
+            },
+            dontResend: {
+                type: Boolean,
+                default: true
+            },
+            waitTimeDays: {
+                type: Number,
+                default: null
+            }
+        },
+        fallbacks: {
+            alternativeText: {
+                type: String,
+                default: ""
+            },
+            useIfPersonalizationFails: {
+                type: Boolean,
+                default: false
+            },
+            sendOncePerContact: {
+                type: Boolean,
+                default: true
+            }
+        },
+        dailySendLimit: {
+            type: Number,
+            default: 5000
+        },
+        batchSending: {
+            emailsPerBatch: {
+                type: Number,
+                default: 500
+            },
+            intervalMinutes: {
+                type: Number,
+                default: 10
+            }
+        },
+        emailCompliance: {
+            includeUnsubscribeLink: {
+                type: Boolean,
+                default: true
+            },
+            includePermissionReminder: {
+                type: Boolean,
+                default: true
+            },
+            permissionReminderText: {
+                type: String,
+                default: "You are receiving this email because you signed up for our newsletter."
+            }
+        }
     }
 }, {
     timestamps: true

@@ -70,7 +70,7 @@ const CampaignSchema = new mongoose_1.Schema({
     campaignType: {
         type: String,
         enum: exports.CampaignTypes,
-        required: true
+        default: 'Newsletter'
     },
     status: {
         type: String,
@@ -87,18 +87,15 @@ const CampaignSchema = new mongoose_1.Schema({
     sender: {
         senderName: {
             type: String,
-            required: true,
             trim: true
         },
         senderEmail: {
             type: String,
-            required: true,
             trim: true,
             lowercase: true
         },
         replyToEmail: {
             type: String,
-            required: true,
             trim: true,
             lowercase: true
         }
@@ -125,11 +122,11 @@ const CampaignSchema = new mongoose_1.Schema({
     content: {
         htmlContent: {
             type: String,
-            required: true
+            default: ''
         },
         plainText: {
             type: String,
-            required: true
+            default: ''
         }
     },
     resendSettings: {
@@ -252,6 +249,82 @@ const CampaignSchema = new mongoose_1.Schema({
         aiGenerated: Boolean,
         templateId: String,
         tags: [String]
+    },
+    advancedSettings: {
+        excludeLists: {
+            unsubscribed: {
+                type: Boolean,
+                default: true
+            },
+            bounced: {
+                type: Boolean,
+                default: true
+            },
+            inactive: {
+                type: Boolean,
+                default: false
+            }
+        },
+        recipientEmailAddress: {
+            type: String,
+            default: ""
+        },
+        resendSettings: {
+            resendToUnopened: {
+                type: Boolean,
+                default: false
+            },
+            dontResend: {
+                type: Boolean,
+                default: true
+            },
+            waitTimeDays: {
+                type: Number,
+                default: null
+            }
+        },
+        fallbacks: {
+            alternativeText: {
+                type: String,
+                default: ""
+            },
+            useIfPersonalizationFails: {
+                type: Boolean,
+                default: false
+            },
+            sendOncePerContact: {
+                type: Boolean,
+                default: true
+            }
+        },
+        dailySendLimit: {
+            type: Number,
+            default: 5000
+        },
+        batchSending: {
+            emailsPerBatch: {
+                type: Number,
+                default: 500
+            },
+            intervalMinutes: {
+                type: Number,
+                default: 10
+            }
+        },
+        emailCompliance: {
+            includeUnsubscribeLink: {
+                type: Boolean,
+                default: true
+            },
+            includePermissionReminder: {
+                type: Boolean,
+                default: true
+            },
+            permissionReminderText: {
+                type: String,
+                default: "You are receiving this email because you signed up for our newsletter."
+            }
+        }
     }
 }, {
     timestamps: true

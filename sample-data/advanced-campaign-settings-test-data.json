@@ -1,0 +1,386 @@
+{
+  "advanced-campaign-settings-test-data": {
+    "defaults": {
+      "excludeLists": {
+        "unsubscribed": true,
+        "bounced": true,
+        "inactive": false
+      },
+      "recipientEmailAddress": "",
+      "resendSettings": {
+        "resendToUnopened": false,
+        "dontResend": true,
+        "waitTimeDays": null
+      },
+      "fallbacks": {
+        "alternativeText": "",
+        "useIfPersonalizationFails": false,
+        "sendOncePerContact": true
+      },
+      "dailySendLimit": 5000,
+      "batchSending": {
+        "emailsPerBatch": 500,
+        "intervalMinutes": 10
+      },
+      "emailCompliance": {
+        "includeUnsubscribeLink": true,
+        "includePermissionReminder": true,
+        "permissionReminderText": "You are receiving this email because you signed up for our newsletter."
+      }
+    },
+    "aggressive-settings": {
+      "excludeLists": {
+        "unsubscribed": true,
+        "bounced": true,
+        "inactive": true
+      },
+      "recipientEmailAddress": "Innovaro Global Services",
+      "resendSettings": {
+        "resendToUnopened": true,
+        "dontResend": false,
+        "waitTimeDays": 3
+      },
+      "fallbacks": {
+        "alternativeText": "Special Offer Waiting",
+        "useIfPersonalizationFails": true,
+        "sendOncePerContact": true
+      },
+      "dailySendLimit": 10000,
+      "batchSending": {
+        "emailsPerBatch": 1000,
+        "intervalMinutes": 5
+      },
+      "emailCompliance": {
+        "includeUnsubscribeLink": true,
+        "includePermissionReminder": true,
+        "permissionReminderText": "You are receiving this promotional email because you are a valued customer."
+      }
+    },
+    "conservative-settings": {
+      "excludeLists": {
+        "unsubscribed": true,
+        "bounced": true,
+        "inactive": true
+      },
+      "recipientEmailAddress": "Customer Support",
+      "resendSettings": {
+        "resendToUnopened": false,
+        "dontResend": true,
+        "waitTimeDays": null
+      },
+      "fallbacks": {
+        "alternativeText": "Important Update",
+        "useIfPersonalizationFails": false,
+        "sendOncePerContact": true
+      },
+      "dailySendLimit": 1000,
+      "batchSending": {
+        "emailsPerBatch": 100,
+        "intervalMinutes": 30
+      },
+      "emailCompliance": {
+        "includeUnsubscribeLink": true,
+        "includePermissionReminder": true,
+        "permissionReminderText": "This is a critical update. You can manage your communication preferences in your account settings."
+      }
+    },
+    "newsletter-settings": {
+      "excludeLists": {
+        "unsubscribed": true,
+        "bounced": true,
+        "inactive": false
+      },
+      "recipientEmailAddress": "Newsletter Team",
+      "resendSettings": {
+        "resendToUnopened": true,
+        "dontResend": false,
+        "waitTimeDays": 7
+      },
+      "fallbacks": {
+        "alternativeText": "Latest News & Updates",
+        "useIfPersonalizationFails": true,
+        "sendOncePerContact": true
+      },
+      "dailySendLimit": 5000,
+      "batchSending": {
+        "emailsPerBatch": 500,
+        "intervalMinutes": 10
+      },
+      "emailCompliance": {
+        "includeUnsubscribeLink": true,
+        "includePermissionReminder": true,
+        "permissionReminderText": "You are subscribed to our weekly newsletter. Unsubscribe anytime."
+      }
+    },
+    "promotional-settings": {
+      "excludeLists": {
+        "unsubscribed": true,
+        "bounced": true,
+        "inactive": true
+      },
+      "recipientEmailAddress": "Marketing Department",
+      "resendSettings": {
+        "resendToUnopened": true,
+        "dontResend": false,
+        "waitTimeDays": 2
+      },
+      "fallbacks": {
+        "alternativeText": "Don't Miss Out - Limited Time Offer",
+        "useIfPersonalizationFails": true,
+        "sendOncePerContact": true
+      },
+      "dailySendLimit": 8000,
+      "batchSending": {
+        "emailsPerBatch": 800,
+        "intervalMinutes": 8
+      },
+      "emailCompliance": {
+        "includeUnsubscribeLink": true,
+        "includePermissionReminder": true,
+        "permissionReminderText": "This promotional offer is exclusive to our subscribers."
+      }
+    },
+    "validation-test-cases": {
+      "valid-resend-unopened": {
+        "resendSettings": {
+          "resendToUnopened": true,
+          "dontResend": false,
+          "waitTimeDays": 2
+        },
+        "expectedValid": true
+      },
+      "valid-dont-resend": {
+        "resendSettings": {
+          "resendToUnopened": false,
+          "dontResend": true,
+          "waitTimeDays": null
+        },
+        "expectedValid": true
+      },
+      "invalid-both-true": {
+        "resendSettings": {
+          "resendToUnopened": true,
+          "dontResend": true,
+          "waitTimeDays": 2
+        },
+        "expectedValid": false,
+        "expectedError": "resendToUnopened and dontResend are mutually exclusive"
+      },
+      "invalid-missing-wait-time": {
+        "resendSettings": {
+          "resendToUnopened": true,
+          "dontResend": false,
+          "waitTimeDays": null
+        },
+        "expectedValid": false,
+        "expectedError": "waitTimeDays is required when resendToUnopened is true"
+      },
+      "invalid-negative-wait-time": {
+        "resendSettings": {
+          "resendToUnopened": true,
+          "dontResend": false,
+          "waitTimeDays": -1
+        },
+        "expectedValid": false,
+        "expectedError": "waitTimeDays must be a positive number"
+      },
+      "invalid-batch-size": {
+        "batchSending": {
+          "emailsPerBatch": -100,
+          "intervalMinutes": 10
+        },
+        "expectedValid": false,
+        "expectedError": "emailsPerBatch must be a positive number"
+      },
+      "invalid-batch-interval": {
+        "batchSending": {
+          "emailsPerBatch": 500,
+          "intervalMinutes": 0
+        },
+        "expectedValid": false,
+        "expectedError": "intervalMinutes must be a positive number"
+      }
+    },
+    "batch-sending-scenarios": {
+      "small-batch": {
+        "totalRecipients": 500,
+        "emailsPerBatch": 500,
+        "intervalMinutes": 10,
+        "dailyLimit": 5000,
+        "expectedFeasible": true,
+        "expectedBatches": 1,
+        "expectedTimeMinutes": 0
+      },
+      "large-batch-feasible": {
+        "totalRecipients": 5000,
+        "emailsPerBatch": 500,
+        "intervalMinutes": 10,
+        "dailyLimit": 5000,
+        "expectedFeasible": true,
+        "expectedBatches": 10,
+        "expectedTimeMinutes": 90
+      },
+      "large-batch-exceeds-limit": {
+        "totalRecipients": 10000,
+        "emailsPerBatch": 500,
+        "intervalMinutes": 10,
+        "dailyLimit": 5000,
+        "expectedFeasible": false,
+        "expectedBatches": 20,
+        "expectedIssue": "Total recipients exceed daily limit"
+      },
+      "batch-exceeds-24-hours": {
+        "totalRecipients": 100000,
+        "emailsPerBatch": 100,
+        "intervalMinutes": 30,
+        "dailyLimit": 100000,
+        "expectedFeasible": false,
+        "expectedBatches": 1000,
+        "expectedTimeMinutes": 29700,
+        "expectedIssue": "Estimated sending time exceeds 24 hours"
+      }
+    },
+    "compliance-test-cases": {
+      "full-compliance": {
+        "emailCompliance": {
+          "includeUnsubscribeLink": true,
+          "includePermissionReminder": true,
+          "permissionReminderText": "You are receiving this because you subscribed."
+        },
+        "expectedValid": true
+      },
+      "minimal-compliance": {
+        "emailCompliance": {
+          "includeUnsubscribeLink": false,
+          "includePermissionReminder": false,
+          "permissionReminderText": ""
+        },
+        "expectedValid": true
+      },
+      "invalid-non-boolean": {
+        "emailCompliance": {
+          "includeUnsubscribeLink": "yes",
+          "includePermissionReminder": true,
+          "permissionReminderText": "You subscribed."
+        },
+        "expectedValid": false
+      },
+      "text-too-long": {
+        "emailCompliance": {
+          "includeUnsubscribeLink": true,
+          "includePermissionReminder": true,
+          "permissionReminderText": "Lorem ipsum dolor sit amet... [1001+ characters]"
+        },
+        "expectedValid": false,
+        "expectedError": "permissionReminderText cannot exceed 1000 characters"
+      }
+    },
+    "integration-scenarios": {
+      "newsletter-campaign": {
+        "campaignName": "Monthly Newsletter - December",
+        "subjectLine": "December Updates & Exclusive Offers",
+        "advancedSettings": {
+          "excludeLists": {
+            "unsubscribed": true,
+            "bounced": true,
+            "inactive": false
+          },
+          "recipientEmailAddress": "Newsletter Team",
+          "resendSettings": {
+            "resendToUnopened": true,
+            "dontResend": false,
+            "waitTimeDays": 5
+          },
+          "fallbacks": {
+            "alternativeText": "December Newsletter",
+            "useIfPersonalizationFails": true,
+            "sendOncePerContact": true
+          },
+          "dailySendLimit": 10000,
+          "batchSending": {
+            "emailsPerBatch": 1000,
+            "intervalMinutes": 5
+          },
+          "emailCompliance": {
+            "includeUnsubscribeLink": true,
+            "includePermissionReminder": true,
+            "permissionReminderText": "You receive this because you subscribed to our newsletter. Manage preferences in account settings."
+          }
+        },
+        "expectedRecipients": 50000,
+        "expectedBatches": 50,
+        "expectedTimeHours": 4.17
+      },
+      "transactional-campaign": {
+        "campaignName": "Order Confirmation",
+        "subjectLine": "Order #{orderId} Confirmed",
+        "advancedSettings": {
+          "excludeLists": {
+            "unsubscribed": false,
+            "bounced": true,
+            "inactive": false
+          },
+          "recipientEmailAddress": "Order Support",
+          "resendSettings": {
+            "resendToUnopened": false,
+            "dontResend": true,
+            "waitTimeDays": null
+          },
+          "fallbacks": {
+            "alternativeText": "Your order details",
+            "useIfPersonalizationFails": false,
+            "sendOncePerContact": true
+          },
+          "dailySendLimit": 50000,
+          "batchSending": {
+            "emailsPerBatch": 5000,
+            "intervalMinutes": 1
+          },
+          "emailCompliance": {
+            "includeUnsubscribeLink": false,
+            "includePermissionReminder": false,
+            "permissionReminderText": ""
+          }
+        },
+        "expectedRecipients": 10000,
+        "expectedBatches": 2,
+        "expectedTimeMinutes": 1
+      },
+      "promotional-campaign": {
+        "campaignName": "Black Friday Sale",
+        "subjectLine": "🎉 Biggest Sale of the Year - 50% OFF",
+        "advancedSettings": {
+          "excludeLists": {
+            "unsubscribed": true,
+            "bounced": true,
+            "inactive": true
+          },
+          "recipientEmailAddress": "Sales Team",
+          "resendSettings": {
+            "resendToUnopened": true,
+            "dontResend": false,
+            "waitTimeDays": 3
+          },
+          "fallbacks": {
+            "alternativeText": "50% OFF - Limited Time",
+            "useIfPersonalizationFails": true,
+            "sendOncePerContact": true
+          },
+          "dailySendLimit": 20000,
+          "batchSending": {
+            "emailsPerBatch": 2000,
+            "intervalMinutes": 3
+          },
+          "emailCompliance": {
+            "includeUnsubscribeLink": true,
+            "includePermissionReminder": true,
+            "permissionReminderText": "This special offer is for our newsletter subscribers only."
+          }
+        },
+        "expectedRecipients": 100000,
+        "expectedBatches": 50,
+        "expectedTimeHours": 2.5
+      }
+    }
+  }
+}
