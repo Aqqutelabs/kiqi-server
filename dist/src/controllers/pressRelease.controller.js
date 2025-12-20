@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.paystackWebhook = exports.verifyPayment = exports.getOrderDetails = exports.removeFromCart = exports.updateCartItem = exports.createPublisher = exports.createOrder = exports.getCart = exports.addToCart = exports.getPublisherDetails = exports.getPublishers = exports.deletePressRelease = exports.updatePressRelease = exports.createPressRelease = exports.getPressReleaseDetails = exports.getDashboardMetrics = exports.getPressReleasesList = void 0;
+exports.paystackWebhook = exports.verifyPayment = exports.getOrderDetails = exports.removeFromCart = exports.updateCartItem = exports.createPublisher = exports.createOrder = exports.getCart = exports.addToCart = exports.getPublisherDetails = exports.getPublishers = exports.deletePressRelease = exports.updatePressRelease = exports.createPressRelease = exports.getPressReleaseDetails = exports.getPressReleaseStats = exports.getDashboardMetrics = exports.getPressReleasesList = void 0;
 const ApiResponse_1 = require("../utils/ApiResponse");
 const AsyncHandler_1 = require("../utils/AsyncHandler");
 const ApiError_1 = require("../utils/ApiError");
@@ -73,6 +73,41 @@ exports.getDashboardMetrics = (0, AsyncHandler_1.asyncHandler)((req, res) => __a
         total_spent: `₦${total_spent.toLocaleString()}`,
         total_channels,
         pr_list
+    }));
+}));
+exports.getPressReleaseStats = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+    if (!userId)
+        throw new ApiError_1.ApiError(401, 'Unauthorized');
+    const pressReleases = yield PressRelease_1.PressRelease.find({ user_id: userId });
+    const orders = yield Order_1.Order.find({ user_id: userId });
+    const press_releases_count = pressReleases.length;
+    const press_release_views = pressReleases.reduce((acc, pr) => acc + pr.metrics.total_views, 0);
+    const total_amount_spent = orders.reduce((acc, order) => {
+        const amount = parseFloat(order.order_summary.total_amount.replace(/[^0-9.-]+/g, ''));
+        return acc + amount;
+    }, 0);
+    const media_channels = new Set(pressReleases.flatMap(pr => pr.distribution_report.map(dr => dr.outlet_name))).size;
+    return res.json(new ApiResponse_1.ApiResponse(200, {
+        press_releases: {
+            count: press_releases_count,
+            change: 0,
+            trend: 0
+        },
+        press_release_views: {
+            count: press_release_views,
+            change: 0,
+            trend: 0
+        },
+        total_amount_spent: {
+            amount: `$${(total_amount_spent / 550).toFixed(2)}`, // Convert to USD (assuming 550 NGN = 1 USD approximately)
+            change: 0,
+            trend: 0
+        },
+        media_channels: {
+            count: media_channels
+        }
     }));
 }));
 exports.getPressReleaseDetails = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {

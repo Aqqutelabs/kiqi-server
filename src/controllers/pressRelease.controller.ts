@@ -76,6 +76,47 @@ export const getDashboardMetrics = asyncHandler(async (req: AuthRequest, res: Re
     }));
 });
 
+export const getPressReleaseStats = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user?._id;
+    if (!userId) throw new ApiError(401, 'Unauthorized');
+
+    const pressReleases = await PressRelease.find({ user_id: userId });
+    const orders = await Order.find({ user_id: userId });
+
+    const press_releases_count = pressReleases.length;
+    const press_release_views = pressReleases.reduce((acc, pr) => acc + pr.metrics.total_views, 0);
+    
+    const total_amount_spent = orders.reduce((acc, order) => {
+        const amount = parseFloat(order.order_summary.total_amount.replace(/[^0-9.-]+/g, ''));
+        return acc + amount;
+    }, 0);
+
+    const media_channels = new Set(pressReleases.flatMap(pr => 
+        pr.distribution_report.map(dr => dr.outlet_name)
+    )).size;
+
+    return res.json(new ApiResponse(200, {
+        press_releases: {
+            count: press_releases_count,
+            change: 0,
+            trend: 0
+        },
+        press_release_views: {
+            count: press_release_views,
+            change: 0,
+            trend: 0
+        },
+        total_amount_spent: {
+            amount: `$${(total_amount_spent / 550).toFixed(2)}`, // Convert to USD (assuming 550 NGN = 1 USD approximately)
+            change: 0,
+            trend: 0
+        },
+        media_channels: {
+            count: media_channels
+        }
+    }));
+});
+
 export const getPressReleaseDetails = asyncHandler(async (req: AuthRequest, res: Response) => {
     const pressRelease = await PressRelease.findById(req.params.id);
     if (!pressRelease) {

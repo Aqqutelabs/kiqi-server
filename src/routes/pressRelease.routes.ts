@@ -3,6 +3,7 @@ import { validateRequest } from '../middlewares/zod.validation.middleware';
 import { isAuthenticated } from '../middlewares/Auth.middlewares';
 import { 
     getDashboardMetrics,
+    getPressReleaseStats,
     getPressReleaseDetails,
     createPressRelease,
     getPressReleasesList,
@@ -46,6 +47,7 @@ router.use(isAuthenticated);
 
 // Dashboard routes
 router.get('/dashboard', getDashboardMetrics);
+router.get('/stats', getPressReleaseStats);
 router.get('/list', getPressReleasesList);
 
 // Cart routes (these need to be before the generic routes)
