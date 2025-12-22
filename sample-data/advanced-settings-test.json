@@ -1,0 +1,197 @@
+{
+  "testCases": [
+    {
+      "name": "Save Basic Advanced Settings",
+      "method": "POST",
+      "endpoint": "/api/v1/campaigns/:campaignId/advanced-settings",
+      "query": "?action=save",
+      "body": {
+        "excludeLists": {
+          "excludeUnsubscribed": true,
+          "excludeBounced": true,
+          "excludeInactive": false,
+          "inactivityDays": 90
+        },
+        "recipientEmailAddress": "support@company.com",
+        "resendSettings": {
+          "enableResend": true,
+          "resendToUnopened": true,
+          "dontResend": false,
+          "waitHours": 24
+        },
+        "fallbacks": {
+          "useAlternativeText": true,
+          "personalizationFallback": "there"
+        },
+        "dailySendLimit": 5000,
+        "batchSending": {
+          "enableBatching": true,
+          "emailsPerBatch": 500,
+          "intervalMinutes": 30
+        },
+        "emailCompliance": {
+          "includeUnsubscribeLink": true,
+          "showPermissionReminder": true,
+          "complianceText": "You are receiving this because you subscribed to our list."
+        }
+      }
+    },
+    {
+      "name": "Get Advanced Settings",
+      "method": "POST",
+      "endpoint": "/api/v1/campaigns/:campaignId/advanced-settings",
+      "query": "?action=get",
+      "body": {}
+    },
+    {
+      "name": "Validate Settings",
+      "method": "POST",
+      "endpoint": "/api/v1/campaigns/:campaignId/advanced-settings",
+      "query": "?action=validate",
+      "body": {
+        "excludeLists": {
+          "excludeUnsubscribed": true,
+          "excludeBounced": true,
+          "excludeInactive": false,
+          "inactivityDays": 90
+        },
+        "recipientEmailAddress": "support@company.com",
+        "resendSettings": {
+          "enableResend": true,
+          "resendToUnopened": true,
+          "dontResend": false,
+          "waitHours": 24
+        },
+        "fallbacks": {
+          "useAlternativeText": true,
+          "personalizationFallback": "there"
+        },
+        "dailySendLimit": 5000,
+        "batchSending": {
+          "enableBatching": true,
+          "emailsPerBatch": 500,
+          "intervalMinutes": 30
+        },
+        "emailCompliance": {
+          "includeUnsubscribeLink": true,
+          "showPermissionReminder": true,
+          "complianceText": "You are receiving this because you subscribed to our list."
+        }
+      }
+    },
+    {
+      "name": "Get Default Settings",
+      "method": "POST",
+      "endpoint": "/api/v1/campaigns/:campaignId/advanced-settings",
+      "query": "?action=defaults",
+      "body": {}
+    },
+    {
+      "name": "Check Batch Feasibility",
+      "method": "POST",
+      "endpoint": "/api/v1/campaigns/:campaignId/advanced-settings",
+      "query": "?action=check-batch&totalRecipients=10000",
+      "body": {
+        "totalRecipients": 10000
+      }
+    },
+    {
+      "name": "Get Batch Job Status",
+      "method": "POST",
+      "endpoint": "/api/v1/campaigns/:campaignId/advanced-settings",
+      "query": "?action=batch-status&jobId=batch-job-123",
+      "body": {}
+    },
+    {
+      "name": "Update with Aggressive Batching",
+      "method": "POST",
+      "endpoint": "/api/v1/campaigns/:campaignId/advanced-settings",
+      "query": "?action=save",
+      "body": {
+        "excludeLists": {
+          "excludeUnsubscribed": true,
+          "excludeBounced": true,
+          "excludeInactive": true,
+          "inactivityDays": 60
+        },
+        "recipientEmailAddress": "noreply@company.com",
+        "resendSettings": {
+          "enableResend": false,
+          "resendToUnopened": false,
+          "dontResend": true,
+          "waitHours": 0
+        },
+        "fallbacks": {
+          "useAlternativeText": false,
+          "personalizationFallback": "Valued Customer"
+        },
+        "dailySendLimit": 10000,
+        "batchSending": {
+          "enableBatching": true,
+          "emailsPerBatch": 1000,
+          "intervalMinutes": 15
+        },
+        "emailCompliance": {
+          "includeUnsubscribeLink": true,
+          "showPermissionReminder": false,
+          "complianceText": "Manage your preferences anytime"
+        }
+      }
+    },
+    {
+      "name": "Conservative Settings",
+      "method": "POST",
+      "endpoint": "/api/v1/campaigns/:campaignId/advanced-settings",
+      "query": "?action=save",
+      "body": {
+        "excludeLists": {
+          "excludeUnsubscribed": true,
+          "excludeBounced": true,
+          "excludeInactive": true,
+          "inactivityDays": 180
+        },
+        "recipientEmailAddress": "compliance@company.com",
+        "resendSettings": {
+          "enableResend": true,
+          "resendToUnopened": true,
+          "dontResend": false,
+          "waitHours": 72
+        },
+        "fallbacks": {
+          "useAlternativeText": true,
+          "personalizationFallback": "Friend"
+        },
+        "dailySendLimit": 1000,
+        "batchSending": {
+          "enableBatching": true,
+          "emailsPerBatch": 100,
+          "intervalMinutes": 60
+        },
+        "emailCompliance": {
+          "includeUnsubscribeLink": true,
+          "showPermissionReminder": true,
+          "complianceText": "This is a marketing email. Click here to unsubscribe."
+        }
+      }
+    }
+  ],
+  "headers": {
+    "Authorization": "Bearer YOUR_JWT_TOKEN",
+    "Content-Type": "application/json"
+  },
+  "notes": {
+    "replacements": {
+      ":campaignId": "Replace with actual campaign ID from your database",
+      "YOUR_JWT_TOKEN": "Replace with valid authentication token"
+    },
+    "defaultBehavior": "If no ?action query parameter provided, it defaults to 'save'",
+    "authRequired": {
+      "save": true,
+      "get": true,
+      "validate": false,
+      "defaults": false,
+      "check-batch": true,
+      "batch-status": false
+    }
+  }
+}

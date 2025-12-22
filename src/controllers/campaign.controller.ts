@@ -2,6 +2,8 @@ import { NextFunction, Request, Response } from "express";
 import { CampaignServiceImpl } from "../services/impl/campaign.service.impl";
 import { StatusCodes } from "http-status-codes";
 import { ApiError } from "../utils/ApiError";
+import { AdvancedSettingsValidator, AdvancedSettingsDefaults, AdvancedEmailSettingsDto } from "../dtos/advancedCampaignSettings.dto";
+import { AdvancedCampaignSettingsService } from "../services/advancedCampaignSettings.service";
 
 /**
  * Handles HTTP requests related to email campaigns.
@@ -9,9 +11,11 @@ import { ApiError } from "../utils/ApiError";
  */
 export class CampaignController {
     private campaignService: CampaignServiceImpl;
+    private advancedSettingsService: AdvancedCampaignSettingsService;
 
     constructor(){
         this.campaignService = new CampaignServiceImpl();
+        this.advancedSettingsService = new AdvancedCampaignSettingsService();
     }
 
     public createCampaign = async (
@@ -81,14 +85,24 @@ export class CampaignController {
                     campaignData,
                     scheduledAt ? new Date(scheduledAt) : new Date()
                 );
-                res.status(StatusCodes.CREATED).json({
+                
+                const successMessage = scheduledAt 
+                    ? "Campaign has been created and scheduled for later" 
+                    : "Campaign has been created and scheduled to start immediately";
+                
+                const resBody: any = {
                     error: false,
-                    message: scheduledAt 
-                        ? "Campaign has been created and scheduled for later" 
-                        : "Campaign has been created and scheduled to start immediately",
+                    message: successMessage,
                     data: response.campaign,
                     jobId: response.jobId
-                });
+                };
+
+                // Include sending error if one occurred, to help frontend debug
+                if (response.sendingError) {
+                    resBody.sendingError = response.sendingError;
+                }
+
+                res.status(StatusCodes.CREATED).json(resBody);
             } else {
                 // Just create campaign in Draft status
                 const created = await this.campaignService.createCampaign(campaignData);
@@ -364,4 +378,233 @@ export class CampaignController {
             next(error);
         }
     }
+
+    /**
+     * Unified endpoint for managing advanced email campaign settings
+     * POST /api/v1/campaigns/:campaignId/advanced-settings
+     * 
+     * Supports operations via query parameter:
+     * - POST with body: Save/update settings
+     * - POST with ?action=get: Retrieve settings
+     * - POST with ?action=validate: Validate settings
+     * - POST with ?action=defaults: Get default settings
+     * - POST with ?action=check-batch&totalRecipients=X: Check batch feasibility
+     * - POST with ?action=batch-status&jobId=X: Get batch job status
+     */
+    public manageAdvancedSettings = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const campaignId = req.params.campaignId as string;
+            const userId = req.user?._id as string;
+            const action = (req.query.action as string) || 'save';
+
+            if (!userId && action !== 'defaults' && action !== 'validate') {
+                throw new ApiError(StatusCodes.UNAUTHORIZED, "User not authenticated");
+            }
+
+            switch (action) {
+                case 'save':
+                case 'update':
+                    return this.saveAdvancedSettings(campaignId, userId, req.body, res, next);
+
+                case 'get':
+                    return this.getAdvancedSettings(campaignId, userId, res, next);
+
+                case 'validate':
+                    return this.validateAdvancedSettings(req.body, res, next);
+
+                case 'defaults':
+                    return this.getDefaultAdvancedSettings(res, next);
+
+                case 'check-batch':
+                    return this.validateBatchSending(campaignId, userId, req.body.totalRecipients, res, next);
+
+                case 'batch-status':
+                    return this.getBatchJobStatus(req.query.jobId as string, res, next);
+
+                default:
+                    throw new ApiError(StatusCodes.BAD_REQUEST, `Unknown action: ${action}`);
+            }
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private saveAdvancedSettings = async (
+        campaignId: string,
+        userId: string,
+        body: any,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const advancedSettings: Partial<AdvancedEmailSettingsDto> = body;
+
+            // Merge with defaults
+            const finalSettings = AdvancedSettingsDefaults.mergeWithDefaults(advancedSettings);
+
+            // Validate settings
+            const validation = AdvancedSettingsValidator.validateAdvancedSettings(finalSettings);
+            if (!validation.valid) {
+                throw new ApiError(StatusCodes.BAD_REQUEST, `Validation failed: ${validation.errors.join(", ")}`);
+            }
+
+            // Save settings to campaign
+            const updated = await this.campaignService.updateAdvancedSettings(
+                campaignId,
+                userId,
+                finalSettings
+            );
+
+            res.status(StatusCodes.OK).json({
+                error: false,
+                message: "Advanced settings saved successfully",
+                data: updated.advancedSettings
+            });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private getAdvancedSettings = async (
+        campaignId: string,
+        userId: string,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const campaign = await this.campaignService.getCampaignById(campaignId, userId);
+
+            if (!campaign) {
+                throw new ApiError(StatusCodes.NOT_FOUND, "Campaign not found");
+            }
+
+            const settings = (campaign as any).advancedSettings || AdvancedSettingsDefaults.getDefaults();
+
+            res.status(StatusCodes.OK).json({
+                error: false,
+                data: settings
+            });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private validateAdvancedSettings = async (
+        settings: any,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const validation = AdvancedSettingsValidator.validateAdvancedSettings(settings);
+
+            res.status(StatusCodes.OK).json({
+                error: !validation.valid,
+                valid: validation.valid,
+                errors: validation.errors,
+                data: settings
+            });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private getDefaultAdvancedSettings = async (
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const defaults = AdvancedSettingsDefaults.getDefaults();
+
+            res.status(StatusCodes.OK).json({
+                error: false,
+                data: defaults
+            });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private validateBatchSending = async (
+        campaignId: string,
+        userId: string,
+        totalRecipients: number,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const campaign = await this.campaignService.getCampaignById(campaignId, userId);
+            if (!campaign) {
+                throw new ApiError(StatusCodes.NOT_FOUND, "Campaign not found");
+            }
+
+            const settings = (campaign as any).advancedSettings || AdvancedSettingsDefaults.getDefaults();
+            const recipientCount = totalRecipients || 1000;
+
+            const feasibility = this.advancedSettingsService.validateBatchSendingFeasibility(
+                recipientCount,
+                settings.batchSending.emailsPerBatch,
+                settings.batchSending.intervalMinutes,
+                settings.dailySendLimit
+            );
+
+            const schedule = this.advancedSettingsService.calculateBatchSchedule(
+                recipientCount,
+                settings.batchSending.emailsPerBatch,
+                settings.batchSending.intervalMinutes
+            );
+
+            res.status(StatusCodes.OK).json({
+                error: false,
+                feasible: feasibility.feasible,
+                estimatedTimeMinutes: feasibility.estimatedTime,
+                batchCount: Math.ceil(recipientCount / settings.batchSending.emailsPerBatch),
+                schedule,
+                issues: feasibility.issues,
+                data: {
+                    dailyLimit: settings.dailySendLimit,
+                    emailsPerBatch: settings.batchSending.emailsPerBatch,
+                    intervalMinutes: settings.batchSending.intervalMinutes
+                }
+            });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private getBatchJobStatus = async (
+        jobId: string,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const jobStatus = this.advancedSettingsService.getBatchJobStatus(jobId);
+
+            if (!jobStatus) {
+                throw new ApiError(StatusCodes.NOT_FOUND, "Batch job not found");
+            }
+
+            const progressPercentage = (jobStatus.sentCount / jobStatus.totalRecipients) * 100;
+
+            res.status(StatusCodes.OK).json({
+                error: false,
+                data: {
+                    jobId: jobStatus.jobId,
+                    campaignId: jobStatus.campaignId,
+                    totalRecipients: jobStatus.totalRecipients,
+                    sentCount: jobStatus.sentCount,
+                    remainingCount: jobStatus.totalRecipients - jobStatus.sentCount,
+                    progressPercentage: Math.round(progressPercentage),
+                    currentBatchIndex: jobStatus.currentBatchIndex,
+                    createdAt: jobStatus.createdAt,
+                    lastExecuted: jobStatus.lastExecuted
+                }
+            });
+        } catch (error) {
+            next(error);
+        }
+    };
 }

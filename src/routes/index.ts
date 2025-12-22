@@ -13,7 +13,8 @@ import walletRouter from './wallet.routes';
 import cardRouter from './card.routes';
 import settingsRouter from './settings.routes';
 import conversionRouter from './conversion.routes';
-import inboxRoute from './inbox.route'; 
+import inboxRoute from './inbox.route';
+import adminRoute from './admin.routes';
 
 const router = Router();
 
@@ -34,5 +35,6 @@ router.use('/cards', cardRouter);
 router.use('/settings', settingsRouter);
 router.use('/conversions', conversionRouter);
 router.use('/inbox', inboxRoute);
+router.use('/admin', adminRoute);
 
 export default router;

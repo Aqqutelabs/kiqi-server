@@ -9,30 +9,24 @@ import {
     StatusCodes
 } from "../types";
 import { SenderModel } from "../../models/SenderEmail";
+import { CampaignModel } from "../../models/Campaign";
 import axios from 'axios';
 import { sendEmail } from "../../utils/EmailService";
 import { EmailListModel } from "../../models/EmailList";
-
-// Mock Data Storage for demonstration
-const mockCampaigns: Campaign[] = [];
-const mockEmailLists: EmailList[] = [{
-    _id: "list-123",
-    name: "Mock Subscribers",
-    user_id: "user-456",
-    emails: ["test1@example.com", "test2@example.com"]
-}];
 
 /**
  * CampaignServiceImpl contains the business logic for managing email campaigns.
  * All methods are defined as public to be accessible by the CampaignController.
  */
 export class CampaignServiceImpl {
+    // Track campaign errors for debugging on frontend
+    private campaignErrors: Map<string, { error: string; timestamp: Date }> = new Map();
 
     /**
      * Creates a campaign and schedules it for immediate or future sending.
      * @param campaignData The base data for the campaign.
      * @param scheduledAt The date/time to send the campaign.
-     * @returns The created campaign and the scheduling job ID.
+     * @returns The created campaign and the scheduling job ID, including any sending errors.
      */
     public async createAndScheduleCampaign(
         campaignData: CampaignData,
@@ -114,31 +108,53 @@ export class CampaignServiceImpl {
             // ignore if unable to overwrite
         }
 
-        const newCampaign: Campaign = {
-            _id: `camp-${Date.now()}`,
+        // Create campaign in database with sender details from the resolved sender record
+        const newCampaign = new CampaignModel({
             ...campaignData,
+            sender: {
+                senderName: senderRecord.senderName || '',
+                senderEmail: senderRecord.senderEmail,
+                replyToEmail: senderRecord.senderEmail
+            },
             status: 'Scheduled',
             createdAt: new Date(),
-        } as Campaign;
-        
-        mockCampaigns.push(newCampaign);
+        });
+        const savedCampaign = await newCampaign.save();
+        const campaignDoc = savedCampaign.toObject() as unknown as Campaign;
 
         // Trigger email sending immediately (or queue for later if scheduledAt is in future)
         const isImmediate = scheduledAt <= new Date();
+        let sendingError: string | null = null;
+
         if (isImmediate) {
-            // Send emails now (non-blocking)
-            this.sendCampaignEmails(newCampaign).catch(err => 
-                console.error(`Error sending campaign ${newCampaign._id}:`, err)
-            );
+            // Send emails now (non-blocking but capture errors)
+            try {
+                await this.sendCampaignEmails(campaignDoc);
+            } catch (err: unknown) {
+                const e: any = err;
+                sendingError = e?.message || String(e) || 'Unknown error while sending campaign';
+                console.error(`Error sending campaign ${campaignDoc._id}:`, err);
+            }
         } else {
             // In production, queue this with a job scheduler (e.g., BullMQ)
-            console.log(`Campaign ${newCampaign._id} queued for ${scheduledAt.toISOString()}`);
+            console.log(`Campaign ${campaignDoc._id} queued for ${scheduledAt.toISOString()}`);
         }
 
-        return {
-            campaign: newCampaign,
-            jobId: `job-${newCampaign._id}`
+        const response: any = {
+            campaign: campaignDoc,
+            jobId: `job-${campaignDoc._id}`
         };
+
+        // Include error in response if one occurred
+        if (sendingError) {
+            response.sendingError = sendingError;
+            this.campaignErrors.set(campaignDoc._id, {
+                error: sendingError,
+                timestamp: new Date()
+            });
+        }
+
+        return response;
     }
 
     /**
@@ -264,14 +280,18 @@ export class CampaignServiceImpl {
      * This is a lightweight in-memory implementation for the mock service used in tests and local runs.
      */
     public async updateCampaignAnalytics(campaignId: string, metric: 'deliveries' | 'bounces' | string, delta = 1): Promise<void> {
-        const idx = mockCampaigns.findIndex(c => String(c._id) === String(campaignId));
-        if (idx === -1) return;
-        const c = mockCampaigns[idx] as any;
-        c.analytics = c.analytics || { deliveries: 0, bounces: 0 };
-        const key = metric as 'deliveries' | 'bounces' | string;
-        if (typeof c.analytics[key] !== 'number') c.analytics[key] = 0;
-        c.analytics[key] += delta;
-        mockCampaigns[idx] = c;
+        try {
+            const campaign = await CampaignModel.findById(campaignId);
+            if (!campaign) return;
+            
+            campaign.analytics = campaign.analytics || { deliveries: 0, bounces: 0 };
+            const key = metric as 'deliveries' | 'bounces' | string;
+            if (typeof (campaign.analytics as any)[key] !== 'number') (campaign.analytics as any)[key] = 0;
+            (campaign.analytics as any)[key] += delta;
+            await campaign.save();
+        } catch (error) {
+            console.error(`Error updating campaign analytics: ${error}`);
+        }
     }
 
     /**
@@ -282,15 +302,14 @@ export class CampaignServiceImpl {
     public async createCampaign(campaignData: CampaignData): Promise<Campaign> {
         console.log(`Creating campaign draft: ${campaignData.campaignName}`);
         
-        const newCampaign: Campaign = {
-            _id: `camp-${Date.now()}`,
+        const newCampaign = new CampaignModel({
             ...campaignData,
             status: 'Draft',
             createdAt: new Date(),
-        } as Campaign; // Type assertion needed due to initial interface design
+        });
 
-        mockCampaigns.push(newCampaign);
-        return newCampaign;
+        const savedCampaign = await newCampaign.save();
+        return savedCampaign.toObject() as unknown as Campaign;
     }
 
     /**
@@ -300,8 +319,8 @@ export class CampaignServiceImpl {
      */
     public async getAllCampaigns(userId: string): Promise<Campaign[]> {
         console.log(`Fetching all campaigns for user: ${userId}`);
-        // Mock logic: filter mock campaigns by user ID
-        return mockCampaigns.filter(c => c.user_id === userId);
+        const campaigns = await CampaignModel.find({ user_id: userId });
+        return campaigns.map(c => c.toObject() as unknown as Campaign);
     }
 
     /**
@@ -313,12 +332,12 @@ export class CampaignServiceImpl {
      */
     public async getCampaignById(id: string, userId: string): Promise<Campaign> {
         console.log(`Fetching campaign ID ${id} for user ${userId}`);
-        const campaign = mockCampaigns.find(c => c._id === id);
+        const campaign = await CampaignModel.findById(id);
         
-        if (!campaign || campaign.user_id !== userId) {
+        if (!campaign || campaign.user_id.toString() !== userId) {
             throw new ApiError(StatusCodes.NOT_FOUND, "Campaign not found or unauthorized.");
         }
-        return campaign;
+        return campaign.toObject() as unknown as Campaign;
     }
 
     /**
@@ -331,18 +350,47 @@ export class CampaignServiceImpl {
      */
     public async updateCampaign(id: string, userId: string, updateData: CampaignUpdate): Promise<Campaign> {
         console.log(`Updating campaign ID ${id}`);
-        const index = mockCampaigns.findIndex(c => c._id === id);
+        const campaign = await CampaignModel.findById(id);
 
-        if (index === -1 || mockCampaigns[index].user_id !== userId) {
+        if (!campaign || campaign.user_id.toString() !== userId) {
             throw new ApiError(StatusCodes.NOT_FOUND, "Campaign not found or unauthorized.");
         }
 
-        const updatedCampaign = { 
-            ...mockCampaigns[index], 
-            ...updateData 
-        };
-        mockCampaigns[index] = updatedCampaign;
-        return updatedCampaign;
+        Object.assign(campaign, updateData);
+        const updatedCampaign = await campaign.save();
+        return updatedCampaign.toObject() as unknown as Campaign;
+    }
+
+    /**
+     * Retrieves any error that occurred during campaign sending.
+     * @param campaignId The campaign ID.
+     * @returns The error object if one exists, null otherwise.
+     */
+    public getCampaignError(campaignId: string): { error: string; timestamp: Date } | null {
+        return this.campaignErrors.get(campaignId) || null;
+    }
+
+    /**
+     * Updates advanced email settings for a campaign.
+     * @param campaignId The campaign ID.
+     * @param userId The user ID for authorization.
+     * @param settings The advanced email settings.
+     * @returns The updated campaign.
+     */
+    public async updateAdvancedSettings(
+        campaignId: string,
+        userId: string,
+        settings: any
+    ): Promise<any> {
+        const campaign = await CampaignModel.findById(campaignId);
+        
+        if (!campaign || campaign.user_id.toString() !== userId) {
+            throw new ApiError(StatusCodes.NOT_FOUND, 'Campaign not found');
+        }
+
+        campaign.advancedSettings = settings;
+        const updated = await campaign.save();
+        return updated.toObject();
     }
 
     /**
@@ -353,14 +401,12 @@ export class CampaignServiceImpl {
      */
     public async deleteCampaign(id: string, userId: string): Promise<void> {
         console.log(`Deleting campaign ID ${id}`);
-        const initialLength = mockCampaigns.length;
-        const index = mockCampaigns.findIndex(c => c._id === id && c.user_id === userId);
+        const result = await CampaignModel.deleteOne({ _id: id, user_id: userId });
         
-        if (index === -1) {
+        if (result.deletedCount === 0) {
             throw new ApiError(StatusCodes.NOT_FOUND, "Campaign not found or unauthorized.");
         }
         
-        mockCampaigns.splice(index, 1);
         console.log(`Successfully deleted campaign ID ${id}.`);
     }
 
@@ -372,8 +418,8 @@ export class CampaignServiceImpl {
      */
     public async getEmailListForUser(emailListId: string, userId: string): Promise<EmailList | null> {
         console.log(`Fetching email list ${emailListId} for user ${userId}`);
-        const list = mockEmailLists.find(l => l._id === emailListId && l.user_id === userId);
-        return list || null;
+        const list = await EmailListModel.findOne({ _id: emailListId, user_id: userId });
+        return list ? (list.toObject() as unknown as EmailList) : null;
     }
 
     /**
@@ -408,18 +454,18 @@ export class CampaignServiceImpl {
     public async addEmailListToCampaign(campaignId: string, emailListId: string): Promise<Campaign | null> {
         console.log(`Adding email list ${emailListId} to campaign ${campaignId}`);
         
-        const campaign = mockCampaigns.find(c => c._id === campaignId);
+        const campaign = await CampaignModel.findById(campaignId);
         if (!campaign) {
             return null; // Campaign not found
         }
         
-        // Mock update logic
         campaign.audience.emailLists = campaign.audience.emailLists || [];
-        if (!campaign.audience.emailLists.includes(emailListId)) {
-            campaign.audience.emailLists.push(emailListId);
+        if (!campaign.audience.emailLists.some(id => String(id) === String(emailListId))) {
+            campaign.audience.emailLists.push(emailListId as any);
         }
         
-        return campaign;
+        const updated = await campaign.save();
+        return updated.toObject() as unknown as Campaign;
     }
 
     /**
@@ -429,21 +475,21 @@ export class CampaignServiceImpl {
      */
     public async getCampaignWithEmailList(id: string): Promise<CampaignWithList | null> {
         console.log(`Fetching campaign ${id} with email list data`);
-        const campaign = mockCampaigns.find(c => c._id === id);
+        const campaign = await CampaignModel.findById(id);
         
         if (!campaign || !campaign.audience.emailLists?.[0]) {
             return null;
         }
 
         const emailListId = campaign.audience.emailLists[0];
-        const emailList = mockEmailLists.find(l => l._id === emailListId);
+        const emailList = await EmailListModel.findById(emailListId);
 
         if (!emailList) {
             // Campaign found, but list reference is broken/missing
             return null; 
         }
 
-        return { campaign, emailListDetails: emailList };
+        return { campaign: campaign.toObject() as unknown as Campaign, emailListDetails: emailList.toObject() as unknown as EmailList };
     }
 
     public async searchCampaigns(

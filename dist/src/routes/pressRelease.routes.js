@@ -17,6 +17,7 @@ router.post('/webhooks/paystack', pressRelease_controller_1.paystackWebhook);
 router.use(Auth_middlewares_1.isAuthenticated);
 // Dashboard routes
 router.get('/dashboard', pressRelease_controller_1.getDashboardMetrics);
+router.get('/stats', pressRelease_controller_1.getPressReleaseStats);
 router.get('/list', pressRelease_controller_1.getPressReleasesList);
 // Cart routes (these need to be before the generic routes)
 router.get('/cart', pressRelease_controller_1.getCart);

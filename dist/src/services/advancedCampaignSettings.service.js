@@ -1,0 +1,230 @@
+"use strict";
+/**
+ * Advanced Campaign Settings Service
+ * Handles enforcement of advanced email campaign settings including:
+ * - Recipient exclusions
+ * - Resend rules
+ * - Batch sending
+ * - Compliance requirements
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AdvancedCampaignSettingsService = void 0;
+class AdvancedCampaignSettingsService {
+    constructor() {
+        this.batchJobs = new Map();
+    }
+    /**
+     * Filters recipients based on exclusion rules
+     */
+    filterRecipientsByExclusions(recipients, excludeLists) {
+        return recipients.filter(recipient => {
+            // Exclude unsubscribed
+            if (excludeLists.unsubscribed && recipient.status === 'unsubscribed') {
+                return false;
+            }
+            // Exclude bounced
+            if (excludeLists.bounced && recipient.status === 'bounced') {
+                return false;
+            }
+            // Exclude inactive
+            if (excludeLists.inactive && recipient.status === 'inactive') {
+                return false;
+            }
+            return true;
+        });
+    }
+    /**
+     * Applies resend logic to determine which recipients should receive the email
+     */
+    applyResendRules(recipients, resendSettings, isPreviousSend = false) {
+        // First send - all recipients included
+        if (!isPreviousSend) {
+            return recipients;
+        }
+        // If dontResend is true, exclude all previously sent recipients
+        if (resendSettings.dontResend) {
+            return [];
+        }
+        // If resendToUnopened is true, only include unopened emails
+        if (resendSettings.resendToUnopened) {
+            return recipients.filter(r => !r.opened);
+        }
+        return recipients;
+    }
+    /**
+     * Splits recipients into batches for rate-limited sending
+     */
+    createBatches(recipients, emailsPerBatch) {
+        const batches = [];
+        for (let i = 0; i < recipients.length; i += emailsPerBatch) {
+            batches.push(recipients.slice(i, i + emailsPerBatch));
+        }
+        return batches;
+    }
+    /**
+     * Calculates the next batch execution time based on interval
+     */
+    calculateNextBatchTime(currentIndex, intervalMinutes) {
+        const nextTime = new Date();
+        nextTime.setMinutes(nextTime.getMinutes() + (currentIndex * intervalMinutes));
+        return nextTime;
+    }
+    /**
+     * Checks if batch sending is within daily limits
+     */
+    validateDailyLimit(sentToday, currentBatchSize, dailyLimit) {
+        const totalAfterBatch = sentToday + currentBatchSize;
+        const valid = totalAfterBatch <= dailyLimit;
+        const remainingCapacity = Math.max(0, dailyLimit - sentToday);
+        return { valid, remainingCapacity };
+    }
+    /**
+     * Deduplicates recipients (ensures sendOncePerContact)
+     */
+    deduplicateRecipients(recipients) {
+        const seen = new Set();
+        const deduplicated = [];
+        for (const recipient of recipients) {
+            const emailLower = recipient.email.toLowerCase();
+            if (!seen.has(emailLower)) {
+                seen.add(emailLower);
+                deduplicated.push(recipient);
+            }
+        }
+        return deduplicated;
+    }
+    /**
+     * Applies personalization fallbacks or uses alternative text
+     */
+    applyFallbackText(content, fallbackText, personalizationFailed, useIfPersonalizationFails) {
+        // If personalization failed and fallback is configured
+        if (personalizationFailed && useIfPersonalizationFails) {
+            return fallbackText || content;
+        }
+        return content;
+    }
+    /**
+     * Adds compliance elements to email content
+     */
+    addComplianceElements(htmlContent, includeUnsubscribeLink, includePermissionReminder, permissionReminderText, unsubscribeUrl) {
+        let content = htmlContent;
+        if (includePermissionReminder) {
+            const reminderHtml = `
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">
+                <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                    ${permissionReminderText}
+                </p>
+            `;
+            content += reminderHtml;
+        }
+        if (includeUnsubscribeLink && unsubscribeUrl) {
+            const unsubscribeHtml = `
+                <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                    <a href="${unsubscribeUrl}" style="color: #0066cc; text-decoration: none;">
+                        Unsubscribe from this email list
+                    </a>
+                </p>
+            `;
+            content += unsubscribeHtml;
+        }
+        return content;
+    }
+    /**
+     * Creates a batch job for tracking campaign sending progress
+     */
+    createBatchJob(campaignId, totalRecipients, emailsPerBatch) {
+        const jobId = `batch-${campaignId}-${Date.now()}`;
+        const job = {
+            jobId,
+            campaignId,
+            totalRecipients,
+            sentCount: 0,
+            currentBatchIndex: 0,
+            createdAt: new Date()
+        };
+        this.batchJobs.set(jobId, job);
+        return job;
+    }
+    /**
+     * Gets batch job status
+     */
+    getBatchJobStatus(jobId) {
+        return this.batchJobs.get(jobId) || null;
+    }
+    /**
+     * Updates batch job progress
+     */
+    updateBatchJobProgress(jobId, sentCount, currentBatchIndex) {
+        const job = this.batchJobs.get(jobId);
+        if (job) {
+            job.sentCount = sentCount;
+            job.currentBatchIndex = currentBatchIndex;
+            job.lastExecuted = new Date();
+        }
+    }
+    /**
+     * Completes a batch job
+     */
+    completeBatchJob(jobId) {
+        this.batchJobs.delete(jobId);
+    }
+    /**
+     * Calculates sending schedule for batches
+     * @returns Array of batch execution times
+     */
+    calculateBatchSchedule(recipientCount, emailsPerBatch, intervalMinutes) {
+        const batchCount = Math.ceil(recipientCount / emailsPerBatch);
+        const schedule = [];
+        for (let i = 0; i < batchCount; i++) {
+            const batchTime = new Date();
+            batchTime.setMinutes(batchTime.getMinutes() + (i * intervalMinutes));
+            schedule.push(batchTime);
+        }
+        return schedule;
+    }
+    /**
+     * Validates batch sending won't exceed rate limits
+     */
+    validateBatchSendingFeasibility(totalRecipients, emailsPerBatch, intervalMinutes, dailyLimit) {
+        const issues = [];
+        const batchCount = Math.ceil(totalRecipients / emailsPerBatch);
+        const estimatedTimeMinutes = (batchCount - 1) * intervalMinutes;
+        // Check if daily limit is exceeded
+        if (totalRecipients > dailyLimit) {
+            issues.push(`Total recipients (${totalRecipients}) exceed daily limit (${dailyLimit})`);
+        }
+        // Warn if it takes more than 24 hours
+        const minutesInDay = 24 * 60;
+        if (estimatedTimeMinutes > minutesInDay) {
+            issues.push(`Estimated sending time (${estimatedTimeMinutes} minutes) exceeds 24 hours`);
+        }
+        return {
+            feasible: issues.length === 0,
+            estimatedTime: estimatedTimeMinutes,
+            issues
+        };
+    }
+    /**
+     * Prepares recipient list for sending based on all settings
+     */
+    prepareRecipientsForSending(recipients, settings, isPreviousSend = false) {
+        let finalRecipients = [...recipients];
+        let originalCount = finalRecipients.length;
+        // Step 1: Apply exclusion filters
+        finalRecipients = this.filterRecipientsByExclusions(finalRecipients, settings.excludeLists);
+        const afterExclusion = finalRecipients.length;
+        // Step 2: Apply resend rules
+        finalRecipients = this.applyResendRules(finalRecipients, settings.resendSettings, isPreviousSend);
+        // Step 3: Deduplicate (if configured)
+        if (settings.fallbacks.sendOncePerContact) {
+            finalRecipients = this.deduplicateRecipients(finalRecipients);
+        }
+        const afterDedup = finalRecipients.length;
+        return {
+            finalRecipients,
+            filteredCount: originalCount - afterExclusion,
+            deduplicatedCount: afterExclusion - afterDedup
+        };
+    }
+}
+exports.AdvancedCampaignSettingsService = AdvancedCampaignSettingsService;

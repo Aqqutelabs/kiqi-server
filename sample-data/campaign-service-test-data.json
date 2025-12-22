@@ -1,0 +1,48 @@
+{
+  "createCampaign": {
+    "user_id": "user123",
+    "campaignName": "Holiday Sale",
+    "subjectLine": "Don't Miss Our Holiday Deals!",
+    "senderId": "sender123",
+    "campaignType": "Email",
+    "sender": {
+      "name": "Marketing Team",
+      "email": "marketing@example.com"
+    },
+    "audience": {
+      "emailLists": ["list1", "list2"],
+      "excludeLists": ["excludeList1"],
+      "manualEmails": ["test1@example.com", "test2@example.com"]
+    },
+    "content": {
+      "htmlContent": "<h1>Holiday Sale</h1><p>Save big this season!</p>",
+      "plainText": "Holiday Sale - Save big this season!"
+    },
+    "schedule": {
+      "scheduledDate": "2025-12-20T10:00:00Z",
+      "useRecipientTimezone": true
+    },
+    "metadata": {
+      "aiGenerated": false,
+      "templateId": "template123",
+      "tags": ["holiday", "sale"]
+    }
+  },
+  "deductCredits": {
+    "user_id": "user123",
+    "creditsToDeduct": 50
+  },
+  "sendCampaign": {
+    "id": "campaign123",
+    "userId": "user123"
+  },
+  "getCampaignAnalytics": {
+    "id": "campaign123",
+    "userId": "user123"
+  },
+  "getDashboardMetrics": {
+    "userId": "user123",
+    "startDate": "2025-12-01T00:00:00Z",
+    "endDate": "2025-12-15T23:59:59Z"
+  }
+}
