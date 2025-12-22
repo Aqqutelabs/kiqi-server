@@ -6,6 +6,7 @@ export const adminOnly = (
   next: NextFunction
 ) => {
   if (req.user?.role !== 'admin' && req.user?.role !== 'super_admin') {
+    console.log("REQ.USER:", req.user);
     return res.status(403).json({ message: 'Admins only' });
   }
   next();

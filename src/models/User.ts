@@ -32,7 +32,8 @@ const UserSchema: Schema = new Schema<User>({
         enum: ['user', 'admin'],
         default: 'user',
     },
-})
+},
+{timestamps: true})
 
 export const UserModel = mongoose.model<User>("User", UserSchema)
 

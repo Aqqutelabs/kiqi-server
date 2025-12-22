@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import jwt from "jsonwebtoken";
 import { UserModel } from "../../models/User";
+import { asyncHandler } from "../../utils/AsyncHandler";
 
 export const adminLogin = async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -47,3 +48,14 @@ export const adminLogin = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const adminLogout = asyncHandler(async (req: any, res: Response) => {
+  // Only needed if you store refresh tokens in DB
+  if (req.user?.id) {
+    await UserModel.findByIdAndUpdate(req.user.id, { refreshToken: undefined });
+  }
+
+  res.status(200).json({
+    message: "Admin logged out successfully",
+  });
+});

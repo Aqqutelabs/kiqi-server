@@ -34,7 +34,15 @@ export const createUser = async (req: Request, res: Response) => {
 export const listUsers = async (req: Request, res: Response) => {
   try {
     const users = await UserModel.find().select("-password -refreshToken -walletAddress"); // never send password
-    res.status(StatusCodes.OK).json({ users });
+    const response = users.map((u) => ({
+      _id: u._id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      role: u.role,
+      createdAt: u.createdAt,
+    }));
+    res.status(StatusCodes.OK).json({ users: response });
   } catch (err: any) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: err.message });
   }

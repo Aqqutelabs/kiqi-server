@@ -1,12 +1,14 @@
 import { Router } from "express";
 import { adminOnly } from "../../middlewares/admin.middleware";
-import { adminLogin } from "../../controllers/admin/adminLogin.controller";
 import { isAuthenticated } from "../../middlewares/Auth.middlewares";
 import * as adminUserController from "../../controllers/admin/user.controller";
+import { adminMe } from "../../controllers/admin/adminMe.controller";
 
 const router = Router();
 
 router.use(isAuthenticated, adminOnly);
+
+router.get("/me", adminMe);
 
 // USER ROUTES
 router.get("/users", adminUserController.listUsers);
