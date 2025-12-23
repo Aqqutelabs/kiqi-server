@@ -19,7 +19,15 @@ import {
     addToCart,
     getCart,
     removeFromCart,
-    updateCartItem
+    updateCartItem,
+    getPressReleaseTracker,
+    updatePressReleaseTrackerStatus,
+    getPressReleasesWithTracker,
+    getPressReleaseProgress,
+    updatePressReleaseToUnderReview,
+    approvePressRelease,
+    rejectPressRelease,
+    getAllPressReleasesWithProgress
 } from '../controllers/pressRelease.controller';
 
 import { 
@@ -58,8 +66,8 @@ router.delete('/cart/:publisherId', validateRequest(removeFromCartSchema), remov
 
 // Publisher routes (these need to be before the generic routes)
 router.get('/publishers', getPublishers);
-router.get('/publishers/:id', getPublisherDetails);
 router.post('/publishers', createPublisher);
+router.get('/publishers/:id', getPublisherDetails);
 
 // Order routes (these need to be before the generic routes)
 router.post('/orders/checkout', createOrder);
@@ -71,5 +79,17 @@ router.post('/create', upload.single('image'), validateRequest(createPressReleas
 router.get('/:id', getPressReleaseDetails);
 router.put('/:id', validateRequest(updatePressReleaseSchema), updatePressRelease);
 router.delete('/:id', deletePressRelease);
+
+// Progress Tracker routes
+router.get('/tracker/all', getPressReleasesWithTracker);
+router.get('/tracker/:prId', getPressReleaseTracker);
+router.put('/tracker/:prId/status', updatePressReleaseTrackerStatus);
+
+// Progress Timeline routes
+router.get('/progress/all', getAllPressReleasesWithProgress);
+router.get('/progress/:prId', getPressReleaseProgress);
+router.put('/progress/:prId/under-review', updatePressReleaseToUnderReview);
+router.put('/progress/:prId/approve', approvePressRelease);
+router.put('/progress/:prId/reject', rejectPressRelease);
 
 export default router;

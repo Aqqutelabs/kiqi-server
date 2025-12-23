@@ -66,7 +66,23 @@ const PressReleaseSchema = new mongoose_1.Schema({
             publication_date: { type: String }
         }],
     content: { type: String, required: true },
-    image: { type: String } // Added optional image field
+    image: { type: String }, // Added optional image field
+    tracker: {
+        current_status: {
+            type: String,
+            enum: ['completed', 'pending', 'processing', 'review', 'rejected'],
+            default: 'pending'
+        },
+        status_history: [{
+                status: String,
+                timestamp: { type: Date, default: Date.now },
+                notes: String
+            }],
+        progress_percentage: { type: Number, default: 0 },
+        estimated_completion: Date,
+        actual_completion: Date,
+        reviewers_count: { type: Number, default: 0 }
+    }
 }, {
     timestamps: true
 });
@@ -74,4 +90,5 @@ const PressReleaseSchema = new mongoose_1.Schema({
 PressReleaseSchema.index({ status: 1 });
 PressReleaseSchema.index({ title: 'text' });
 PressReleaseSchema.index({ user_id: 1 });
+PressReleaseSchema.index({ 'tracker.current_status': 1 });
 exports.PressRelease = mongoose_1.default.model('PressRelease', PressReleaseSchema);

@@ -7,6 +7,18 @@ interface PressReleaseDocument extends Document, PressReleaseListItem {
     content: string;  // Rich text content
     user_id: Schema.Types.ObjectId;
     image?: string;
+    tracker?: {
+        current_status: 'completed' | 'pending' | 'processing' | 'review' | 'rejected';
+        status_history: Array<{
+            status: string;
+            timestamp: Date;
+            notes?: string;
+        }>;
+        progress_percentage: number;
+        estimated_completion: Date;
+        actual_completion?: Date;
+        reviewers_count: number;
+    };
 }
 
 const PressReleaseSchema = new Schema<PressReleaseDocument>({
@@ -40,7 +52,23 @@ const PressReleaseSchema = new Schema<PressReleaseDocument>({
         publication_date: { type: String }
     }],
     content: { type: String, required: true },
-    image: { type: String } // Added optional image field
+    image: { type: String }, // Added optional image field
+    tracker: {
+        current_status: {
+            type: String,
+            enum: ['completed', 'pending', 'processing', 'review', 'rejected'],
+            default: 'pending'
+        },
+        status_history: [{
+            status: String,
+            timestamp: { type: Date, default: Date.now },
+            notes: String
+        }],
+        progress_percentage: { type: Number, default: 0 },
+        estimated_completion: Date,
+        actual_completion: Date,
+        reviewers_count: { type: Number, default: 0 }
+    }
 }, {
     timestamps: true
 });
@@ -49,5 +77,6 @@ const PressReleaseSchema = new Schema<PressReleaseDocument>({
 PressReleaseSchema.index({ status: 1 });
 PressReleaseSchema.index({ title: 'text' });
 PressReleaseSchema.index({ user_id: 1 });
+PressReleaseSchema.index({ 'tracker.current_status': 1 });
 
 export const PressRelease = mongoose.model<PressReleaseDocument>('PressRelease', PressReleaseSchema);

@@ -8,16 +8,21 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.paystackWebhook = exports.verifyPayment = exports.getOrderDetails = exports.removeFromCart = exports.updateCartItem = exports.createPublisher = exports.createOrder = exports.getCart = exports.addToCart = exports.getPublisherDetails = exports.getPublishers = exports.deletePressRelease = exports.updatePressRelease = exports.createPressRelease = exports.getPressReleaseDetails = exports.getPressReleaseStats = exports.getDashboardMetrics = exports.getPressReleasesList = void 0;
+exports.getAllPressReleasesWithProgress = exports.rejectPressRelease = exports.approvePressRelease = exports.updatePressReleaseToUnderReview = exports.getPressReleaseProgress = exports.getPressReleasesWithTracker = exports.updatePressReleaseTrackerStatus = exports.getPressReleaseTracker = exports.paystackWebhook = exports.verifyPayment = exports.getOrderDetails = exports.removeFromCart = exports.updateCartItem = exports.createPublisher = exports.createOrder = exports.getCart = exports.addToCart = exports.getPublisherDetails = exports.getPublishers = exports.deletePressRelease = exports.updatePressRelease = exports.createPressRelease = exports.getPressReleaseDetails = exports.getPressReleaseStats = exports.getDashboardMetrics = exports.getPressReleasesList = exports.getProgressTimeline = exports.recordProgressStep = void 0;
 const ApiResponse_1 = require("../utils/ApiResponse");
 const AsyncHandler_1 = require("../utils/AsyncHandler");
 const ApiError_1 = require("../utils/ApiError");
 const PressRelease_1 = require("../models/PressRelease");
+const PressReleaseProgress_1 = require("../models/PressReleaseProgress");
 const Publisher_1 = require("../models/Publisher");
 const Order_1 = require("../models/Order");
 const Cart_1 = require("../models/Cart");
 const paystack_1 = require("../utils/paystack");
+const mongoose_1 = __importDefault(require("mongoose"));
 const cloudinary_1 = require("cloudinary");
 const crypto_1 = require("crypto");
 // Configure Cloudinary
@@ -26,6 +31,111 @@ cloudinary_1.v2.config({
     api_key: '164375779418948',
     api_secret: 'otQq6cFFzqGeQO4umSVrrFumA30' // Replace with your actual API secret
 });
+/**
+ * Helper function to record a progress step for a press release
+ * This creates/updates the tracking record in the database
+ */
+const recordProgressStep = (prId, userId, step, notes, metadata) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        console.log(`📍 Recording progress step: ${step} for PR: ${prId}, User: ${userId}`);
+        let progress = yield PressReleaseProgress_1.PressReleaseProgress.findOne({
+            press_release_id: prId,
+            user_id: userId
+        });
+        if (!progress) {
+            console.log(`📝 Creating new progress record for PR: ${prId}`);
+            // Create new progress record
+            progress = new PressReleaseProgress_1.PressReleaseProgress({
+                press_release_id: prId,
+                user_id: userId,
+                current_step: step,
+                progress_history: [{
+                        step,
+                        timestamp: new Date(),
+                        notes,
+                        metadata
+                    }]
+            });
+        }
+        else {
+            console.log(`🔄 Updating existing progress record for PR: ${prId}`);
+            // Update existing progress record
+            progress.current_step = step;
+            progress.progress_history.push({
+                step,
+                timestamp: new Date(),
+                notes,
+                metadata
+            });
+        }
+        // Update status-specific fields
+        switch (step) {
+            case 'initiated':
+                progress.initiated_at = new Date();
+                break;
+            case 'payment_completed':
+                progress.payment_completed_at = new Date();
+                break;
+            case 'under_review':
+                progress.under_review_at = new Date();
+                break;
+            case 'approved':
+                progress.completed_at = new Date();
+                break;
+            case 'rejected':
+                progress.rejected_at = new Date();
+                progress.rejection_reason = (metadata === null || metadata === void 0 ? void 0 : metadata.rejection_reason) || 'No reason provided';
+                break;
+        }
+        progress.updated_at = new Date();
+        yield progress.save();
+        console.log(`✅ Progress step recorded successfully: ${step} for PR: ${prId}`);
+        return progress;
+    }
+    catch (error) {
+        console.error('❌ Error recording progress step:', error);
+        throw error;
+    }
+});
+exports.recordProgressStep = recordProgressStep;
+/**
+ * Helper function to get the full progress timeline for a press release
+ */
+const getProgressTimeline = (prId, userId) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        console.log(`🔍 Searching for progress timeline: PR=${prId}, User=${userId}`);
+        const progress = yield PressReleaseProgress_1.PressReleaseProgress.findOne({
+            press_release_id: prId,
+            user_id: userId
+        });
+        if (!progress) {
+            console.warn(`⚠️  Progress record NOT found for PR: ${prId}, User: ${userId}`);
+            return null;
+        }
+        console.log(`✅ Progress record found for PR: ${prId}, Current step: ${progress.current_step}`);
+        return {
+            press_release_id: progress.press_release_id,
+            current_step: progress.current_step,
+            initiated_at: progress.initiated_at,
+            payment_completed_at: progress.payment_completed_at,
+            under_review_at: progress.under_review_at,
+            completed_at: progress.completed_at,
+            rejected_at: progress.rejected_at,
+            rejection_reason: progress.rejection_reason,
+            progress_history: progress.progress_history.map(record => ({
+                step: record.step,
+                timestamp: record.timestamp,
+                notes: record.notes,
+                metadata: record.metadata
+            }))
+        };
+    }
+    catch (error) {
+        console.error('❌ Error getting progress timeline:', error);
+        throw error;
+    }
+});
+exports.getProgressTimeline = getProgressTimeline;
 exports.getPressReleasesList = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
@@ -165,6 +275,16 @@ exports.createPressRelease = (0, AsyncHandler_1.asyncHandler)((req, res) => __aw
             avg_time_on_page: '0:00'
         }
     });
+    console.log(`✅ PR created successfully: ${pressRelease._id}`);
+    // Record the initial progress step
+    try {
+        yield (0, exports.recordProgressStep)(pressRelease._id, userId, 'initiated', `Press release "${title}" initiated`, { title, status });
+        console.log(`✅ Progress step recorded for PR: ${pressRelease._id}`);
+    }
+    catch (progressError) {
+        console.error(`❌ Failed to record progress step for PR: ${pressRelease._id}`, progressError);
+        // Don't throw - PR was created successfully, just log the error
+    }
     return res.json(new ApiResponse_1.ApiResponse(201, pressRelease));
 }));
 exports.updatePressRelease = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -312,6 +432,10 @@ exports.createOrder = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(v
         reference,
         created_at: new Date()
     });
+    // Record payment_pending step for each publication in the order
+    for (const item of cart.items) {
+        // Note: We don't have PR ID yet at order stage, so we'll record this when payment completes
+    }
     // Initialize Paystack payment (cart will be cleared only after payment verification)
     const paystackResponse = yield (0, paystack_1.initializePaystackPayment)({
         amount: total_amount * 100, // Paystack expects amount in kobo
@@ -476,6 +600,12 @@ exports.paystackWebhook = (0, AsyncHandler_1.asyncHandler)((req, res) => __await
         order.status = 'Completed';
         order.payment_status = 'Successful';
         yield order.save();
+        // Record payment_completed step for all press releases (if they exist)
+        // Note: In a typical workflow, the press release would be created before payment
+        const pressReleases = yield PressRelease_1.PressRelease.find({ user_id: order.user_id });
+        for (const pr of pressReleases) {
+            yield (0, exports.recordProgressStep)(pr._id, order.user_id, 'payment_completed', `Payment completed for press release distribution`, { payment_reference: reference, order_id: String(order._id) });
+        }
         // Clear the user's cart
         const cartUpdate = yield Cart_1.Cart.findOneAndUpdate({ user_id: order.user_id }, { $set: { items: [] } }, { new: true });
         console.log(`✅ Payment verified via webhook for order: ${reference}`);
@@ -492,4 +622,462 @@ exports.paystackWebhook = (0, AsyncHandler_1.asyncHandler)((req, res) => __await
         // Return 200 to acknowledge we received it, but log the error
         return res.json(new ApiResponse_1.ApiResponse(500, null, 'Webhook processing failed'));
     }
+}));
+// Status configuration for the progress tracker
+const STATUS_CONFIG = {
+    completed: {
+        icon: 'CheckCircle',
+        color: '#10b981',
+        textColor: '#065f46'
+    },
+    pending: {
+        icon: 'Clock',
+        color: '#f59e0b',
+        textColor: '#92400e'
+    },
+    processing: {
+        icon: 'Loader',
+        color: '#3b82f6',
+        textColor: '#1e40af'
+    },
+    review: {
+        icon: 'Eye',
+        color: '#8b5cf6',
+        textColor: '#5b21b6'
+    },
+    rejected: {
+        icon: 'XCircle',
+        color: '#ef4444',
+        textColor: '#991b1b'
+    }
+};
+// Get press release tracker
+exports.getPressReleaseTracker = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+    if (!userId)
+        throw new ApiError_1.ApiError(401, 'Unauthorized');
+    const { prId } = req.params;
+    // Validate ObjectId
+    if (!mongoose_1.default.Types.ObjectId.isValid(prId)) {
+        throw new ApiError_1.ApiError(400, 'Invalid press release ID');
+    }
+    const pressRelease = yield PressRelease_1.PressRelease.findOne({
+        _id: prId,
+        user_id: userId
+    });
+    if (!pressRelease) {
+        throw new ApiError_1.ApiError(404, 'Press release not found');
+    }
+    // Initialize tracker if it doesn't exist
+    if (!pressRelease.tracker) {
+        pressRelease.tracker = {
+            current_status: 'pending',
+            status_history: [{
+                    status: 'pending',
+                    timestamp: new Date(),
+                    notes: 'Press release created'
+                }],
+            progress_percentage: 0,
+            estimated_completion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+            reviewers_count: 0
+        };
+        yield pressRelease.save();
+    }
+    // Build the tracker response with proper typing
+    const estimatedCompletion = pressRelease.tracker.estimated_completion || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const tracker = {
+        _id: String(pressRelease._id),
+        pr_id: String(pressRelease._id),
+        title: pressRelease.title,
+        current_status: pressRelease.tracker.current_status,
+        status_history: pressRelease.tracker.status_history.map((h) => ({
+            status: h.status,
+            timestamp: h.timestamp ? new Date(h.timestamp).toISOString() : new Date().toISOString(),
+            notes: h.notes
+        })),
+        progress_percentage: pressRelease.tracker.progress_percentage,
+        estimated_completion: estimatedCompletion.toISOString(),
+        actual_completion: pressRelease.tracker.actual_completion ? new Date(pressRelease.tracker.actual_completion).toISOString() : undefined,
+        reviewers_count: pressRelease.tracker.reviewers_count,
+        distribution_outlets: pressRelease.distribution_report.length,
+        current_step: Math.floor(pressRelease.tracker.progress_percentage / 20) + 1,
+        total_steps: 5
+    };
+    // Build timeline from status history
+    const timeline = pressRelease.tracker.status_history.map((h) => ({
+        status: h.status,
+        date: (h.timestamp ? new Date(h.timestamp) : new Date()).toISOString().split('T')[0],
+        description: `Status changed to ${h.status}${h.notes ? ': ' + h.notes : ''}`
+    }));
+    const response = {
+        tracker,
+        status_config: STATUS_CONFIG,
+        timeline
+    };
+    return res.json(new ApiResponse_1.ApiResponse(200, response));
+}));
+// Update press release tracker status
+exports.updatePressReleaseTrackerStatus = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+    if (!userId)
+        throw new ApiError_1.ApiError(401, 'Unauthorized');
+    const { prId } = req.params;
+    const { current_status, notes, progress_percentage, reviewers_count } = req.body;
+    // Validate ObjectId
+    if (!mongoose_1.default.Types.ObjectId.isValid(prId)) {
+        throw new ApiError_1.ApiError(400, 'Invalid press release ID');
+    }
+    // Validate status
+    const validStatuses = ['completed', 'pending', 'processing', 'review', 'rejected'];
+    if (!validStatuses.includes(current_status)) {
+        throw new ApiError_1.ApiError(400, 'Invalid status value');
+    }
+    const pressRelease = yield PressRelease_1.PressRelease.findOne({
+        _id: prId,
+        user_id: userId
+    });
+    if (!pressRelease) {
+        throw new ApiError_1.ApiError(404, 'Press release not found');
+    }
+    // Initialize tracker if it doesn't exist
+    if (!pressRelease.tracker) {
+        pressRelease.tracker = {
+            current_status: 'pending',
+            status_history: [],
+            progress_percentage: 0,
+            estimated_completion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            reviewers_count: 0
+        };
+    }
+    // Ensure estimated_completion has a value
+    if (!pressRelease.tracker.estimated_completion) {
+        pressRelease.tracker.estimated_completion = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    }
+    // Update tracker
+    pressRelease.tracker.current_status = current_status;
+    pressRelease.tracker.status_history.push({
+        status: current_status,
+        timestamp: new Date(),
+        notes
+    });
+    if (progress_percentage !== undefined) {
+        pressRelease.tracker.progress_percentage = Math.min(100, Math.max(0, progress_percentage));
+    }
+    if (reviewers_count !== undefined) {
+        pressRelease.tracker.reviewers_count = reviewers_count;
+    }
+    // If status is completed, set actual_completion time
+    if (current_status === 'completed') {
+        pressRelease.tracker.actual_completion = new Date();
+        pressRelease.tracker.progress_percentage = 100;
+    }
+    yield pressRelease.save();
+    // Build response with proper null checks
+    const updatedEstimatedCompletion = pressRelease.tracker.estimated_completion || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const tracker = {
+        _id: String(pressRelease._id),
+        pr_id: String(pressRelease._id),
+        title: pressRelease.title,
+        current_status: pressRelease.tracker.current_status,
+        status_history: pressRelease.tracker.status_history.map((h) => ({
+            status: h.status,
+            timestamp: h.timestamp ? new Date(h.timestamp).toISOString() : new Date().toISOString(),
+            notes: h.notes
+        })),
+        progress_percentage: pressRelease.tracker.progress_percentage,
+        estimated_completion: updatedEstimatedCompletion.toISOString(),
+        actual_completion: pressRelease.tracker.actual_completion ? new Date(pressRelease.tracker.actual_completion).toISOString() : undefined,
+        reviewers_count: pressRelease.tracker.reviewers_count,
+        distribution_outlets: pressRelease.distribution_report.length,
+        current_step: Math.floor(pressRelease.tracker.progress_percentage / 20) + 1,
+        total_steps: 5
+    };
+    return res.json(new ApiResponse_1.ApiResponse(200, {
+        message: 'Tracker updated successfully',
+        tracker
+    }));
+}));
+// Get all press releases with tracker information
+exports.getPressReleasesWithTracker = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+    if (!userId)
+        throw new ApiError_1.ApiError(401, 'Unauthorized');
+    const pressReleases = yield PressRelease_1.PressRelease.find({ user_id: userId })
+        .sort({ createdAt: -1 });
+    const trackerList = pressReleases.map(pr => {
+        const tracker = pr.tracker || {
+            current_status: 'pending',
+            status_history: [],
+            progress_percentage: 0,
+            estimated_completion: new Date(),
+            reviewers_count: 0
+        };
+        return {
+            _id: pr._id,
+            title: pr.title,
+            status: pr.status,
+            tracker_status: tracker.current_status,
+            progress_percentage: tracker.progress_percentage,
+            current_step: Math.floor(tracker.progress_percentage / 20) + 1,
+            total_steps: 5
+        };
+    });
+    return res.json(new ApiResponse_1.ApiResponse(200, {
+        status_config: STATUS_CONFIG,
+        trackers: trackerList
+    }));
+}));
+/**
+ * Get detailed progress timeline for a press release
+ * Shows all steps: initiated, payment_pending, payment_completed, under_review, approved/rejected
+ */
+exports.getPressReleaseProgress = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+    if (!userId)
+        throw new ApiError_1.ApiError(401, 'Unauthorized');
+    const { prId } = req.params;
+    if (!mongoose_1.default.Types.ObjectId.isValid(prId)) {
+        throw new ApiError_1.ApiError(400, 'Invalid press release ID');
+    }
+    // Verify the press release belongs to the user
+    const pressRelease = yield PressRelease_1.PressRelease.findOne({
+        _id: prId,
+        user_id: userId
+    });
+    if (!pressRelease) {
+        throw new ApiError_1.ApiError(404, 'Press release not found');
+    }
+    // Get the progress timeline
+    const progress = yield (0, exports.getProgressTimeline)(new mongoose_1.default.Types.ObjectId(prId), userId);
+    // If no progress record found, create a draft response
+    if (!progress) {
+        console.log(`📋 No progress found for PR: ${prId}. Returning draft status.`);
+        return res.json(new ApiResponse_1.ApiResponse(200, {
+            press_release: {
+                _id: pressRelease._id,
+                title: pressRelease.title,
+                status: pressRelease.status
+            },
+            progress: {
+                current_step: 'initiated',
+                initiated_at: new Date(pressRelease.date_created),
+                payment_completed_at: null,
+                under_review_at: null,
+                completed_at: null,
+                rejected_at: null,
+                rejection_reason: null
+            },
+            timeline: [
+                {
+                    step: 'initiated',
+                    timestamp: new Date(pressRelease.date_created),
+                    notes: 'Draft saved. Complete payment to continue distribution.'
+                }
+            ],
+            message: 'Draft is saved. Complete payment to continue.',
+            status_message: 'Draft - Ready for payment',
+            next_action: 'Complete payment for distribution'
+        }));
+    }
+    // Format the response
+    const response = {
+        press_release: {
+            _id: pressRelease._id,
+            title: pressRelease.title,
+            status: pressRelease.status
+        },
+        progress: {
+            current_step: progress.current_step,
+            initiated_at: progress.initiated_at,
+            payment_completed_at: progress.payment_completed_at,
+            under_review_at: progress.under_review_at,
+            completed_at: progress.completed_at,
+            rejected_at: progress.rejected_at,
+            rejection_reason: progress.rejection_reason
+        },
+        timeline: progress.progress_history.map((record) => ({
+            step: record.step,
+            timestamp: record.timestamp,
+            notes: record.notes,
+            metadata: record.metadata
+        })),
+        step_descriptions: {
+            'initiated': 'Press release created and initiated',
+            'payment_pending': 'Awaiting payment for distribution',
+            'payment_completed': 'Payment received successfully',
+            'under_review': 'Press release under editorial review',
+            'approved': 'Press release approved and published',
+            'rejected': 'Press release rejected'
+        }
+    };
+    return res.json(new ApiResponse_1.ApiResponse(200, response));
+}));
+/**
+ * Update press release status to under_review (called by admin when reviewing)
+ */
+exports.updatePressReleaseToUnderReview = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { prId } = req.params;
+    const { notes } = req.body;
+    if (!mongoose_1.default.Types.ObjectId.isValid(prId)) {
+        throw new ApiError_1.ApiError(400, 'Invalid press release ID');
+    }
+    const pressRelease = yield PressRelease_1.PressRelease.findByIdAndUpdate(prId, {
+        $set: {
+            status: 'Pending',
+            'tracker.current_status': 'review',
+            'tracker.progress_percentage': 50
+        }
+    }, { new: true });
+    if (!pressRelease) {
+        throw new ApiError_1.ApiError(404, 'Press release not found');
+    }
+    // Record the step for all users' press releases in DB
+    const prObjectId = new mongoose_1.default.Types.ObjectId(prId);
+    const progressRecords = yield PressReleaseProgress_1.PressReleaseProgress.find({ press_release_id: prObjectId });
+    for (const record of progressRecords) {
+        yield (0, exports.recordProgressStep)(prObjectId, record.user_id, 'under_review', notes || 'Press release submitted for editorial review');
+    }
+    return res.json(new ApiResponse_1.ApiResponse(200, {
+        message: 'Press release status updated to under review',
+        press_release: pressRelease
+    }));
+}));
+/**
+ * Approve a press release (called by admin)
+ */
+exports.approvePressRelease = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { prId } = req.params;
+    const { notes } = req.body;
+    if (!mongoose_1.default.Types.ObjectId.isValid(prId)) {
+        throw new ApiError_1.ApiError(400, 'Invalid press release ID');
+    }
+    const pressRelease = yield PressRelease_1.PressRelease.findByIdAndUpdate(prId, {
+        $set: {
+            status: 'Published',
+            'tracker.current_status': 'completed',
+            'tracker.progress_percentage': 100,
+            'tracker.actual_completion': new Date()
+        }
+    }, { new: true });
+    if (!pressRelease) {
+        throw new ApiError_1.ApiError(404, 'Press release not found');
+    }
+    // Record the approval step
+    const prObjectId = new mongoose_1.default.Types.ObjectId(prId);
+    const progressRecords = yield PressReleaseProgress_1.PressReleaseProgress.find({ press_release_id: prObjectId });
+    for (const record of progressRecords) {
+        yield (0, exports.recordProgressStep)(prObjectId, record.user_id, 'approved', notes || 'Press release approved and published', { approved_at: new Date() });
+    }
+    return res.json(new ApiResponse_1.ApiResponse(200, {
+        message: 'Press release approved and published',
+        press_release: pressRelease
+    }));
+}));
+/**
+ * Reject a press release (called by admin)
+ */
+exports.rejectPressRelease = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { prId } = req.params;
+    const { rejection_reason } = req.body;
+    if (!mongoose_1.default.Types.ObjectId.isValid(prId)) {
+        throw new ApiError_1.ApiError(400, 'Invalid press release ID');
+    }
+    if (!rejection_reason) {
+        throw new ApiError_1.ApiError(400, 'Rejection reason is required');
+    }
+    const pressRelease = yield PressRelease_1.PressRelease.findByIdAndUpdate(prId, {
+        $set: {
+            status: 'Draft',
+            'tracker.current_status': 'rejected',
+            'tracker.progress_percentage': 0,
+            'tracker.actual_completion': new Date()
+        }
+    }, { new: true });
+    if (!pressRelease) {
+        throw new ApiError_1.ApiError(404, 'Press release not found');
+    }
+    // Record the rejection step
+    const prObjectId = new mongoose_1.default.Types.ObjectId(prId);
+    const progressRecords = yield PressReleaseProgress_1.PressReleaseProgress.find({ press_release_id: prObjectId });
+    for (const record of progressRecords) {
+        yield (0, exports.recordProgressStep)(prObjectId, record.user_id, 'rejected', rejection_reason, { rejection_reason, rejected_at: new Date() });
+    }
+    return res.json(new ApiResponse_1.ApiResponse(200, {
+        message: 'Press release rejected',
+        press_release: pressRelease,
+        rejection_reason
+    }));
+}));
+/**
+ * Get all press releases with full progress details
+ */
+exports.getAllPressReleasesWithProgress = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+    if (!userId)
+        throw new ApiError_1.ApiError(401, 'Unauthorized');
+    const pressReleases = yield PressRelease_1.PressRelease.find({ user_id: userId })
+        .sort({ createdAt: -1 });
+    const progressList = yield Promise.all(pressReleases.map((pr) => __awaiter(void 0, void 0, void 0, function* () {
+        const progress = yield (0, exports.getProgressTimeline)(pr._id, userId);
+        const currentStep = (progress === null || progress === void 0 ? void 0 : progress.current_step) || 'initiated';
+        // Determine status message based on current step
+        let status_message = '';
+        let next_action = '';
+        if (!progress) {
+            status_message = 'Draft - Ready for payment';
+            next_action = 'Complete payment to continue distribution';
+        }
+        else {
+            switch (currentStep) {
+                case 'initiated':
+                    status_message = 'Draft - Ready for payment';
+                    next_action = 'Complete payment to continue distribution';
+                    break;
+                case 'payment_completed':
+                    status_message = 'Payment received - Awaiting review';
+                    next_action = 'Waiting for admin review';
+                    break;
+                case 'under_review':
+                    status_message = 'Under review';
+                    next_action = 'Pending admin decision';
+                    break;
+                case 'approved':
+                    status_message = 'Published';
+                    next_action = 'Successfully distributed';
+                    break;
+                case 'rejected':
+                    status_message = 'Rejected - Needs revision';
+                    next_action = `Reason: ${(progress === null || progress === void 0 ? void 0 : progress.rejection_reason) || 'See details for more info'}`;
+                    break;
+                default:
+                    status_message = currentStep;
+                    next_action = 'Check details';
+            }
+        }
+        return {
+            _id: pr._id,
+            title: pr.title,
+            status: pr.status,
+            date_created: pr.date_created,
+            current_step: currentStep,
+            initiated_at: (progress === null || progress === void 0 ? void 0 : progress.initiated_at) || new Date(pr.date_created),
+            payment_completed_at: progress === null || progress === void 0 ? void 0 : progress.payment_completed_at,
+            under_review_at: progress === null || progress === void 0 ? void 0 : progress.under_review_at,
+            completed_at: progress === null || progress === void 0 ? void 0 : progress.completed_at,
+            rejected_at: progress === null || progress === void 0 ? void 0 : progress.rejected_at,
+            rejection_reason: progress === null || progress === void 0 ? void 0 : progress.rejection_reason,
+            total_steps_completed: (progress === null || progress === void 0 ? void 0 : progress.progress_history.length) || 1,
+            status_message,
+            next_action
+        };
+    })));
+    return res.json(new ApiResponse_1.ApiResponse(200, {
+        total: progressList.length,
+        press_releases: progressList
+    }));
 }));

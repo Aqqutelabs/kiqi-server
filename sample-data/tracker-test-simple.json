@@ -1,0 +1,29 @@
+{
+  "updateTrackerStatus": {
+    "current_status": "processing",
+    "notes": "Distribution started",
+    "progress_percentage": 25,
+    "reviewers_count": 1
+  },
+  "updateTrackerReview": {
+    "current_status": "review",
+    "notes": "Waiting for approval",
+    "progress_percentage": 75,
+    "reviewers_count": 2
+  },
+  "updateTrackerCompleted": {
+    "current_status": "completed",
+    "notes": "Published successfully",
+    "progress_percentage": 100,
+    "reviewers_count": 2
+  },
+  "updateTrackerRejected": {
+    "current_status": "rejected",
+    "notes": "Policy violation detected",
+    "progress_percentage": 0,
+    "reviewers_count": 1
+  },
+  "updateTrackerMinimal": {
+    "current_status": "pending"
+  }
+}

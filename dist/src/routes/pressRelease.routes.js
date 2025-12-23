@@ -26,8 +26,8 @@ router.put('/cart/:publisherId', (0, zod_validation_middleware_1.validateRequest
 router.delete('/cart/:publisherId', (0, zod_validation_middleware_1.validateRequest)(cart_validation_1.removeFromCartSchema), pressRelease_controller_1.removeFromCart);
 // Publisher routes (these need to be before the generic routes)
 router.get('/publishers', pressRelease_controller_1.getPublishers);
-router.get('/publishers/:id', pressRelease_controller_1.getPublisherDetails);
 router.post('/publishers', pressRelease_controller_1.createPublisher);
+router.get('/publishers/:id', pressRelease_controller_1.getPublisherDetails);
 // Order routes (these need to be before the generic routes)
 router.post('/orders/checkout', pressRelease_controller_1.createOrder);
 router.get('/orders/verify-payment', pressRelease_controller_1.verifyPayment);
@@ -37,4 +37,14 @@ router.post('/create', Upload_1.default.single('image'), (0, zod_validation_midd
 router.get('/:id', pressRelease_controller_1.getPressReleaseDetails);
 router.put('/:id', (0, zod_validation_middleware_1.validateRequest)(pressRelease_validation_1.updatePressReleaseSchema), pressRelease_controller_1.updatePressRelease);
 router.delete('/:id', pressRelease_controller_1.deletePressRelease);
+// Progress Tracker routes
+router.get('/tracker/all', pressRelease_controller_1.getPressReleasesWithTracker);
+router.get('/tracker/:prId', pressRelease_controller_1.getPressReleaseTracker);
+router.put('/tracker/:prId/status', pressRelease_controller_1.updatePressReleaseTrackerStatus);
+// Progress Timeline routes
+router.get('/progress/all', pressRelease_controller_1.getAllPressReleasesWithProgress);
+router.get('/progress/:prId', pressRelease_controller_1.getPressReleaseProgress);
+router.put('/progress/:prId/under-review', pressRelease_controller_1.updatePressReleaseToUnderReview);
+router.put('/progress/:prId/approve', pressRelease_controller_1.approvePressRelease);
+router.put('/progress/:prId/reject', pressRelease_controller_1.rejectPressRelease);
 exports.default = router;
