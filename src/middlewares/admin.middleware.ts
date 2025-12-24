@@ -3,6 +3,17 @@ import { ApiError } from '../utils/ApiError';
 import { StatusCodes } from 'http-status-codes';
 import { AuthRequest } from './Auth.middlewares';
 
+export const adminOnly = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (req.user?.role !== 'admin' && req.user?.role !== 'super_admin') {
+    console.log("REQ.USER:", req.user);
+    return res.status(403).json({ message: 'Admins only' });
+  }
+  next();
+
 /**
  * Admin verification middleware
  * Ensures user has admin/superuser role

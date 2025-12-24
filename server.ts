@@ -16,6 +16,8 @@ import inboxRoute from './src/routes/inbox.route';
 import dotenv from 'dotenv';
 import { verifyJWT } from './src/middlewares/Auth.middlewares';
 import { AuthController } from './src/controllers/auth.controller';
+import adminRoutes from "./src/routes/admin";
+import adminAuthRoutes from './src/routes/admin/auth.route';
 // import errorHandler from './middlewares/errorHandler.middleware';
 
 dotenv.config()
@@ -82,6 +84,9 @@ app.use("/api/v1/inbox", inboxRoute);
 app.use('/api/v1', mainRouter);
 // app.use("/api/settings")
 // app.use("/api/mailChat")
+
+app.use("/api/v1/admin", adminAuthRoutes);
+app.use("/api/v1/admin", adminRoutes);
 
 app.use(errorHandler);
 

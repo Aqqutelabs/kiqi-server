@@ -1,11 +1,14 @@
 import mongoose, { Document, Schema } from "mongoose";
 
+export type UserRole = 'user' | 'admin';
+
 export interface User extends Document{
     id: string;
     firstName: string;
     lastName: string;
     email: string;
     password?: string; // Optional because of social logins
+    role: UserRole;
     organizationName: string;
     googleId?: string;
     walletAddress?: string;
@@ -23,7 +26,14 @@ const UserSchema: Schema = new Schema<User>({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     senderEmail: { type: String, required: false }, // New field for sender email
-})
+
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user',
+    },
+},
+{timestamps: true})
 
 export const UserModel = mongoose.model<User>("User", UserSchema)
 
