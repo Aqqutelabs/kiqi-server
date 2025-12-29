@@ -466,6 +466,7 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) 
     }
     const userId = req.user._id;
     const userEmail = req.user.email;
+    const { press_release_id } = req.body;
 
     // Get user's cart
     const cart = await Cart.findOne({ user_id: userId });
@@ -487,7 +488,7 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) 
     const reference = `ORDER-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
 
     // Create the order with 'Pending' status
-    const order = await Order.create({
+    const orderData: any = {
         user_id: userId,
         items: cart.items,
         order_summary: {
@@ -500,7 +501,17 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) 
         status: 'Pending',
         reference,
         created_at: new Date()
-    });
+    };
+
+    // Add press_release_id if provided
+    if (press_release_id) {
+        if (!mongoose.Types.ObjectId.isValid(press_release_id)) {
+            throw new ApiError(400, 'Invalid press release ID');
+        }
+        orderData.press_release_id = press_release_id;
+    }
+
+    const order = await Order.create(orderData);
 
     // Record payment_pending step for each publication in the order
     for (const item of cart.items) {
@@ -734,17 +745,31 @@ export const paystackWebhook = asyncHandler(async (req: Request, res: Response) 
         order.payment_status = 'Successful';
         await order.save();
 
-        // Record payment_completed step for all press releases (if they exist)
-        // Note: In a typical workflow, the press release would be created before payment
-        const pressReleases = await PressRelease.find({ user_id: order.user_id });
-        for (const pr of pressReleases) {
+        // Record payment_completed step for the associated press release
+        // If press_release_id is set, update only that press release
+        // Otherwise, update all press releases for the user (backward compatibility)
+        if (order.press_release_id) {
+            console.log(`📍 Recording payment_completed for specific PR: ${order.press_release_id}`);
             await recordProgressStep(
-                pr._id,
+                order.press_release_id,
                 order.user_id,
                 'payment_completed',
                 `Payment completed for press release distribution`,
                 { payment_reference: reference, order_id: String(order._id) }
             );
+        } else {
+            console.log(`📍 Recording payment_completed for all PRs of user: ${order.user_id}`);
+            // Backward compatibility: update all press releases for the user
+            const pressReleases = await PressRelease.find({ user_id: order.user_id });
+            for (const pr of pressReleases) {
+                await recordProgressStep(
+                    pr._id,
+                    order.user_id,
+                    'payment_completed',
+                    `Payment completed for press release distribution`,
+                    { payment_reference: reference, order_id: String(order._id) }
+                );
+            }
         }
 
         // Clear the user's cart

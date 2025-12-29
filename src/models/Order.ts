@@ -3,6 +3,7 @@ import { CheckoutOrder } from '../types/pressRelease.types';
 
 interface OrderDocument extends Document, Omit<CheckoutOrder, 'payment_methods'> {
     user_id: Schema.Types.ObjectId;
+    press_release_id?: Schema.Types.ObjectId;
     items: Array<{
         publisherId: string;
         name: string;
@@ -21,6 +22,11 @@ const OrderSchema = new Schema<OrderDocument>({
         type: Schema.Types.ObjectId,
         ref: 'User',
         required: true
+    },
+    press_release_id: {
+        type: Schema.Types.ObjectId,
+        ref: 'PressRelease',
+        required: false
     },
     items: [{
         publisherId: { type: String, required: true },

@@ -21,8 +21,9 @@ export const createOrderSchema = z.object({
             name: z.string().nonempty('Publication name is required'),
             price: z.string().nonempty('Price is required'),
             details: z.string().nonempty('Publication details are required')
-        })).nonempty('At least one publication is required'),
-        payment_method: z.enum(['Paystack', 'Crypto Wallet', 'Digital Wallet'])
+        })).nonempty('At least one publication is required').optional(),
+        payment_method: z.enum(['Paystack', 'Crypto Wallet', 'Digital Wallet']).optional(),
+        press_release_id: z.string().optional()
     })
 });
 
