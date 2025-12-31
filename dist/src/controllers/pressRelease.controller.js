@@ -402,6 +402,7 @@ exports.createOrder = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(v
     }
     const userId = req.user._id;
     const userEmail = req.user.email;
+    const { press_release_id } = req.body;
     // Get user's cart
     const cart = yield Cart_1.Cart.findOne({ user_id: userId });
     if (!cart || cart.items.length === 0) {
@@ -418,7 +419,7 @@ exports.createOrder = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(v
     // Generate unique reference for Paystack
     const reference = `ORDER-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
     // Create the order with 'Pending' status
-    const order = yield Order_1.Order.create({
+    const orderData = {
         user_id: userId,
         items: cart.items,
         order_summary: {
@@ -431,7 +432,15 @@ exports.createOrder = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(v
         status: 'Pending',
         reference,
         created_at: new Date()
-    });
+    };
+    // Add press_release_id if provided
+    if (press_release_id) {
+        if (!mongoose_1.default.Types.ObjectId.isValid(press_release_id)) {
+            throw new ApiError_1.ApiError(400, 'Invalid press release ID');
+        }
+        orderData.press_release_id = press_release_id;
+    }
+    const order = yield Order_1.Order.create(orderData);
     // Record payment_pending step for each publication in the order
     for (const item of cart.items) {
         // Note: We don't have PR ID yet at order stage, so we'll record this when payment completes
@@ -539,9 +548,30 @@ exports.verifyPayment = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter
         throw new ApiError_1.ApiError(400, 'Payment verification failed or payment was not successful');
     }
     // Update order status to 'Completed'
-    const order = yield Order_1.Order.findOneAndUpdate({ reference, user_id: req.user._id }, { $set: { status: 'Completed' } }, { new: true });
+    const order = yield Order_1.Order.findOneAndUpdate({ reference, user_id: req.user._id }, { $set: { status: 'Completed', payment_status: 'Successful' } }, { new: true });
     if (!order) {
         throw new ApiError_1.ApiError(404, 'Order not found');
+    }
+    // Record payment_completed step for the associated press release
+    // If press_release_id is set, update only that press release
+    // Otherwise, update all press releases for the user (backward compatibility)
+    try {
+        if (order.press_release_id) {
+            console.log(`📍 Recording payment_completed for specific PR: ${order.press_release_id}`);
+            yield (0, exports.recordProgressStep)(order.press_release_id, order.user_id, 'payment_completed', `Payment completed for press release distribution`, { payment_reference: reference, order_id: String(order._id) });
+        }
+        else {
+            console.log(`📍 Recording payment_completed for all PRs of user: ${order.user_id}`);
+            // Backward compatibility: update all press releases for the user
+            const pressReleases = yield PressRelease_1.PressRelease.find({ user_id: order.user_id });
+            for (const pr of pressReleases) {
+                yield (0, exports.recordProgressStep)(pr._id, order.user_id, 'payment_completed', `Payment completed for press release distribution`, { payment_reference: reference, order_id: String(order._id) });
+            }
+        }
+    }
+    catch (progressError) {
+        console.error(`❌ Failed to record progress step for payment verification:`, progressError);
+        // Don't throw - order was updated successfully, just log the error
     }
     // Clear the cart after successful payment verification
     yield Cart_1.Cart.findOneAndUpdate({ user_id: req.user._id }, { $set: { items: [] } });
@@ -600,11 +630,20 @@ exports.paystackWebhook = (0, AsyncHandler_1.asyncHandler)((req, res) => __await
         order.status = 'Completed';
         order.payment_status = 'Successful';
         yield order.save();
-        // Record payment_completed step for all press releases (if they exist)
-        // Note: In a typical workflow, the press release would be created before payment
-        const pressReleases = yield PressRelease_1.PressRelease.find({ user_id: order.user_id });
-        for (const pr of pressReleases) {
-            yield (0, exports.recordProgressStep)(pr._id, order.user_id, 'payment_completed', `Payment completed for press release distribution`, { payment_reference: reference, order_id: String(order._id) });
+        // Record payment_completed step for the associated press release
+        // If press_release_id is set, update only that press release
+        // Otherwise, update all press releases for the user (backward compatibility)
+        if (order.press_release_id) {
+            console.log(`📍 Recording payment_completed for specific PR: ${order.press_release_id}`);
+            yield (0, exports.recordProgressStep)(order.press_release_id, order.user_id, 'payment_completed', `Payment completed for press release distribution`, { payment_reference: reference, order_id: String(order._id) });
+        }
+        else {
+            console.log(`📍 Recording payment_completed for all PRs of user: ${order.user_id}`);
+            // Backward compatibility: update all press releases for the user
+            const pressReleases = yield PressRelease_1.PressRelease.find({ user_id: order.user_id });
+            for (const pr of pressReleases) {
+                yield (0, exports.recordProgressStep)(pr._id, order.user_id, 'payment_completed', `Payment completed for press release distribution`, { payment_reference: reference, order_id: String(order._id) });
+            }
         }
         // Clear the user's cart
         const cartUpdate = yield Cart_1.Cart.findOneAndUpdate({ user_id: order.user_id }, { $set: { items: [] } }, { new: true });

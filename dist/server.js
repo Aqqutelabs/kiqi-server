@@ -20,6 +20,8 @@ const emailList_route_1 = __importDefault(require("./src/routes/emailList.route"
 const inbox_route_1 = __importDefault(require("./src/routes/inbox.route"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const auth_controller_1 = require("./src/controllers/auth.controller");
+const admin_1 = __importDefault(require("./src/routes/admin"));
+const auth_route_2 = __importDefault(require("./src/routes/admin/auth.route"));
 // import errorHandler from './middlewares/errorHandler.middleware';
 dotenv_1.default.config();
 (0, ConnectDB_1.default)();
@@ -71,6 +73,8 @@ app.use("/api/v1/inbox", inbox_route_1.default);
 app.use('/api/v1', index_2.default);
 // app.use("/api/settings")
 // app.use("/api/mailChat")
+app.use("/api/v1/admin", auth_route_2.default);
+app.use("/api/v1/admin", admin_1.default);
 app.use(ErrorHandler_1.default);
 // Start the server
 app.listen(PORT, () => {

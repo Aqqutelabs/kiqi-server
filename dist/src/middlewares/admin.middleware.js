@@ -1,8 +1,17 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.adminRateLimit = exports.auditLog = exports.verifySuperAdmin = exports.verifyAdmin = void 0;
+exports.adminRateLimit = exports.auditLog = exports.verifySuperAdmin = exports.verifyAdmin = exports.adminOnly = void 0;
 const ApiError_1 = require("../utils/ApiError");
 const http_status_codes_1 = require("http-status-codes");
+const adminOnly = (req, res, next) => {
+    var _a, _b;
+    if (((_a = req.user) === null || _a === void 0 ? void 0 : _a.role) !== 'admin' && ((_b = req.user) === null || _b === void 0 ? void 0 : _b.role) !== 'super_admin') {
+        console.log("REQ.USER:", req.user);
+        return res.status(403).json({ message: 'Admins only' });
+    }
+    next();
+};
+exports.adminOnly = adminOnly;
 /**
  * Admin verification middleware
  * Ensures user has admin/superuser role

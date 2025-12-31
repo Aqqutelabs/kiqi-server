@@ -157,7 +157,7 @@ export class EmailListController {
         next: NextFunction
     ): Promise<void> => {
         try{
-            const userId = req.user?._id || req.user?.id;
+            const userId = (req.user?._id || req.user?.id) as string;
             const emailLists = await this.emailListService.getEmailListsByUser(userId);
             res.status(200).json({
                 error: false,

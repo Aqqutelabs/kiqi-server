@@ -41,6 +41,11 @@ const OrderSchema = new mongoose_1.Schema({
         ref: 'User',
         required: true
     },
+    press_release_id: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'PressRelease',
+        required: false
+    },
     items: [{
             publisherId: { type: String, required: true },
             name: { type: String, required: true },

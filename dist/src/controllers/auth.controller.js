@@ -56,7 +56,7 @@ class AuthController {
                 console.log('Update Sender Email - Request Body:', req.body);
                 console.log('Update Sender Email - User:', req.user);
                 // Get userId from req.user (set by auth middleware)
-                const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id);
+                const userId = (((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id));
                 const { senderEmail } = req.body;
                 if (!senderEmail) {
                     res.status(http_status_codes_1.StatusCodes.BAD_REQUEST).json({

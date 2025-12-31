@@ -665,12 +665,44 @@ export const verifyPayment = asyncHandler(async (req: AuthRequest, res: Response
     // Update order status to 'Completed'
     const order = await Order.findOneAndUpdate(
         { reference, user_id: req.user._id },
-        { $set: { status: 'Completed' } },
+        { $set: { status: 'Completed', payment_status: 'Successful' } },
         { new: true }
     );
 
     if (!order) {
         throw new ApiError(404, 'Order not found');
+    }
+
+    // Record payment_completed step for the associated press release
+    // If press_release_id is set, update only that press release
+    // Otherwise, update all press releases for the user (backward compatibility)
+    try {
+        if (order.press_release_id) {
+            console.log(`📍 Recording payment_completed for specific PR: ${order.press_release_id}`);
+            await recordProgressStep(
+                order.press_release_id,
+                order.user_id,
+                'payment_completed',
+                `Payment completed for press release distribution`,
+                { payment_reference: reference, order_id: String(order._id) }
+            );
+        } else {
+            console.log(`📍 Recording payment_completed for all PRs of user: ${order.user_id}`);
+            // Backward compatibility: update all press releases for the user
+            const pressReleases = await PressRelease.find({ user_id: order.user_id });
+            for (const pr of pressReleases) {
+                await recordProgressStep(
+                    pr._id,
+                    order.user_id,
+                    'payment_completed',
+                    `Payment completed for press release distribution`,
+                    { payment_reference: reference, order_id: String(order._id) }
+                );
+            }
+        }
+    } catch (progressError) {
+        console.error(`❌ Failed to record progress step for payment verification:`, progressError);
+        // Don't throw - order was updated successfully, just log the error
     }
 
     // Clear the cart after successful payment verification

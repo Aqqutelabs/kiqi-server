@@ -20,7 +20,7 @@ export class AuthController {
       console.log('Update Sender Email - Request Body:', req.body);
       console.log('Update Sender Email - User:', req.user);
       // Get userId from req.user (set by auth middleware)
-      const userId = req.user?._id || req.user?.id;
+      const userId = (req.user?._id || req.user?.id) as string;
       const { senderEmail } = req.body;
       if (!senderEmail) {
         res.status(StatusCodes.BAD_REQUEST).json({

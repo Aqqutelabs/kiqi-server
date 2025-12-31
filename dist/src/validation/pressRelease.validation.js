@@ -21,8 +21,9 @@ exports.createOrderSchema = zod_1.z.object({
             name: zod_1.z.string().nonempty('Publication name is required'),
             price: zod_1.z.string().nonempty('Price is required'),
             details: zod_1.z.string().nonempty('Publication details are required')
-        })).nonempty('At least one publication is required'),
-        payment_method: zod_1.z.enum(['Paystack', 'Crypto Wallet', 'Digital Wallet'])
+        })).nonempty('At least one publication is required').optional(),
+        payment_method: zod_1.z.enum(['Paystack', 'Crypto Wallet', 'Digital Wallet']).optional(),
+        press_release_id: zod_1.z.string().optional()
     })
 });
 exports.createPublisherSchema = zod_1.z.object({

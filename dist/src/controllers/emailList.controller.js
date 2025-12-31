@@ -119,7 +119,7 @@ class EmailListController {
         this.getEmailListsByUser = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
             var _a, _b;
             try {
-                const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id);
+                const userId = (((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id));
                 const emailLists = yield this.emailListService.getEmailListsByUser(userId);
                 res.status(200).json({
                     error: false,
