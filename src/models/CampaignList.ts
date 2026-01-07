@@ -14,7 +14,7 @@ const ListSchema = new Schema<IList>(
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     name: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
-    contacts: [{ type: Schema.Types.ObjectId, ref: "Contact" }],
+    contacts: [{ type: Schema.Types.ObjectId, ref: "CampaignContact" }],
   },
   { timestamps: true }
 );

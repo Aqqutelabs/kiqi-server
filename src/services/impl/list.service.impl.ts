@@ -1,7 +1,14 @@
 import { ListModel } from "../../models/CampaignList";
 import { Types } from "mongoose";
+import { ContactSyncService } from "./contact-sync.service";
 
 export class ListService {
+  private contactSyncService: ContactSyncService;
+
+  constructor() {
+    this.contactSyncService = new ContactSyncService();
+  }
+
   public async createList(userId: string, name: string, description?: string) {
     return await ListModel.create({
       userId: new Types.ObjectId(userId),
@@ -27,13 +34,29 @@ export class ListService {
     ]);
   }
 
+  public async getListById(userId: string, listId: string) {
+    // Return list details with populated contacts
+    return await ListModel.findOne({
+      _id: new Types.ObjectId(listId),
+      userId: new Types.ObjectId(userId)
+    }).populate('contacts');
+  }
+
   public async addContactsToList(userId: string, listId: string, contactIds: string[]) {
     // $addToSet ensures we don't add the same contact twice
-    return await ListModel.findOneAndUpdate(
+    const updatedList = await ListModel.findOneAndUpdate(
       { _id: listId, userId: new Types.ObjectId(userId) },
       { $addToSet: { contacts: { $each: contactIds.map(id => new Types.ObjectId(id)) } } },
       { new: true }
     );
+
+    // Sync to corresponding Email List and SMS Group
+    if (updatedList) {
+      await this.contactSyncService.syncCrmListToEmailList(userId, listId);
+      await this.contactSyncService.syncCrmListToSmsGroup(userId, listId);
+    }
+
+    return updatedList;
   }
 
   public async removeContactFromList(userId: string, listId: string, contactId: string) {

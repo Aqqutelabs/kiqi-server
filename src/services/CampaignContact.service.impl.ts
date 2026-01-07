@@ -1,8 +1,15 @@
 import { CampaignContactModel, ICampaignContact } from "../models/CampaignContact";
 import { Types } from "mongoose";
+import { ContactSyncService } from "./impl/contact-sync.service";
 
 export class ContactService {
-  public async createContact(userId: string, data: Partial<ICampaignContact>) {
+  private contactSyncService: ContactSyncService;
+
+  constructor() {
+    this.contactSyncService = new ContactSyncService();
+  }
+
+  public async createContact(userId: string, data: Partial<ICampaignContact> & { phoneCountry?: string; phoneNumber?: string }) {
     try {
       // Validate required fields
       if (!data.firstName || !data.firstName.trim()) {
@@ -18,11 +25,31 @@ export class ContactService {
         if (!hasPrimary) data.emails[0].isPrimary = true;
       }
 
+      // Transform phoneCountry and phoneNumber to phones array format
+      const contactData: any = { ...data };
+      if (data.phoneCountry || data.phoneNumber) {
+        const phoneNumber = data.phoneNumber ? `${data.phoneCountry || ''}${data.phoneNumber}`.trim() : '';
+        if (phoneNumber) {
+          contactData.phones = [{
+            number: phoneNumber,
+            isPrimary: true
+          }];
+        }
+        // Remove the old fields
+        delete contactData.phoneCountry;
+        delete contactData.phoneNumber;
+      }
+
       const contact = new CampaignContactModel({
-        ...data,
+        ...contactData,
         userId: new Types.ObjectId(userId),
       });
-      return await contact.save();
+      const savedContact = await contact.save();
+
+      // Sync to General Email List and/or SMS Group
+      await this.contactSyncService.syncNewContactToGeneralLists(userId, savedContact);
+
+      return savedContact;
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`Failed to create contact: ${error.message}`);
@@ -213,12 +240,20 @@ export class ContactService {
         contacts.map(contact => ({ ...contact, userId: new Types.ObjectId(userId) }))
       );
 
+      // Bulk sync imported contacts to General Email List and SMS Group
+      const syncResult = await this.contactSyncService.bulkSyncContactsToGeneralLists(
+        userId, 
+        insertedContacts as ICampaignContact[]
+      );
+
       return {
         success: true,
         imported: insertedContacts.length,
         skipped: errors.length,
         errors: errors.length > 0 ? errors : undefined,
-        contacts: insertedContacts
+        contacts: insertedContacts,
+        syncedToEmailList: syncResult.emailsAdded,
+        syncedToSmsGroup: syncResult.phonesAdded
       };
     } catch (error) {
       if (error instanceof Error) {

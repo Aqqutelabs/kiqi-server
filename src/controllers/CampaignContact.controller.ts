@@ -38,6 +38,15 @@ export class ContactController {
     try {
       const userId = (req.user?._id || req.user?.id) as string;
       const { id } = req.params;
+      
+      // Validate if id is a valid MongoDB ObjectId (24 hex characters)
+      if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({ 
+          error: true, 
+          message: `Invalid contact ID "${id}". Expected a 24-character MongoDB ObjectId.` 
+        });
+      }
+      
       const { CampaignContactModel } = await import("../models/CampaignContact");
       
       const contact = await CampaignContactModel.findOne({ _id: id, userId });
@@ -61,6 +70,71 @@ export class ContactController {
       res.status(StatusCodes.OK).json({ error: false, message: "Contacts deleted successfully" });
     } catch (error) {
       next(error);
+    }
+  };
+
+  public updateContact = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = (req.user?._id || req.user?.id) as string;
+      const { id } = req.params;
+      
+      // Validate if id is a valid MongoDB ObjectId
+      if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({ 
+          error: true, 
+          message: `Invalid contact ID "${id}". Expected a 24-character MongoDB ObjectId.` 
+        });
+      }
+
+      const updatedContact = await this.contactService.updateContact(userId, id, req.body);
+      
+      if (!updatedContact) {
+        return res.status(StatusCodes.NOT_FOUND).json({ 
+          error: true, 
+          message: "Contact not found or you don't have permission to update it" 
+        });
+      }
+      
+      res.status(StatusCodes.OK).json({ error: false, contact: updatedContact });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
+      res.status(StatusCodes.BAD_REQUEST).json({ 
+        error: true, 
+        message: errorMessage 
+      });
+    }
+  };
+
+  public deleteContact = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = (req.user?._id || req.user?.id) as string;
+      const { id } = req.params;
+      
+      // Validate if id is a valid MongoDB ObjectId
+      if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({ 
+          error: true, 
+          message: `Invalid contact ID "${id}". Expected a 24-character MongoDB ObjectId.` 
+        });
+      }
+
+      const { CampaignContactModel } = await import("../models/CampaignContact");
+      const result = await CampaignContactModel.deleteOne({ _id: id, userId });
+      
+      if (result.deletedCount === 0) {
+        return res.status(StatusCodes.NOT_FOUND).json({ 
+          error: true, 
+          message: "Contact not found or you don't have permission to delete it" 
+        });
+      }
+      
+      res.status(StatusCodes.OK).json({ error: false, message: "Contact deleted successfully" });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
+      res.status(StatusCodes.BAD_REQUEST).json({ 
+        error: true, 
+        message: errorMessage 
+      });
     }
   };
 

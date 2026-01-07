@@ -20,6 +20,7 @@ formRouter.post("/", (req, res, next) => {
   ctrl.createForm(req, res);
 });
 formRouter.get("/:formId/submissions", ctrl.getSubmissions);
+formRouter.delete("/:formId", ctrl.deleteForm);
 formRouter.get("/", async (req, res) => {
   try {
     console.log("🟡 [form.routes] GET / endpoint hit");

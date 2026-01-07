@@ -47,24 +47,45 @@ contactRouter.use(verifyJWT);
 contactRouter.post("/import-csv", upload.single("file"), contactController.importCSV);
 contactRouter.post("/bulk-delete", contactController.bulkDelete);
 
-// Generic contact routes
+// Generic contact routes BEFORE parameterized routes
 contactRouter.get("/", contactController.getAll);
 contactRouter.post("/", contactController.create);
-contactRouter.get("/:id", contactController.getById);
 
-// List Routes
+// List Routes - MUST come before generic /:id routes to prevent "lists" being treated as an ID
 contactRouter.get("/lists", async (req, res) => {
   const userId = (req.user?._id || req.user?.id) as string;
   const lists = await listService.getListsForUser(userId);
   res.status(StatusCodes.OK).json({ error: false, lists });
 });
 
-
 contactRouter.post("/lists", async (req, res) => {
   const userId = (req.user?._id || req.user?.id) as string;
   const { name, description } = req.body;
   const list = await listService.createList(userId, name, description);
   res.status(StatusCodes.OK).json({ error: false, list });
+});
+
+contactRouter.get("/lists/:id", async (req, res) => {
+  try {
+    const userId = (req.user?._id || req.user?.id) as string;
+    const { id } = req.params;
+    const list = await listService.getListById(userId, id);
+    
+    if (!list) {
+      return res.status(StatusCodes.NOT_FOUND).json({ 
+        error: true, 
+        message: "List not found or you don't have permission to view it" 
+      });
+    }
+    
+    res.status(StatusCodes.OK).json({ error: false, list });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ 
+      error: true, 
+      message: errorMessage 
+    });
+  }
 });
 
 contactRouter.post("/lists/:id/add-contacts", async (req, res) => {
@@ -99,5 +120,12 @@ contactRouter.delete("/lists/:id", async (req, res) => {
     });
   }
 });
+
+// Update and delete contact by ID
+contactRouter.put("/:id", contactController.updateContact);
+contactRouter.delete("/:id", contactController.deleteContact);
+
+// Parameterized contact routes - MUST come LAST
+contactRouter.get("/:id", contactController.getById);
 
 export default contactRouter;
