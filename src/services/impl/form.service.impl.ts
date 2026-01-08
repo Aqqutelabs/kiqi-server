@@ -56,13 +56,30 @@ export class FormService {
       }
 
       // 1. Extract standard fields (case-insensitive search for Email/Phone/Name)
-      const emailKey = Object.keys(submissionData).find(k => k.toLowerCase().includes("email"));
-      const firstNameKey = Object.keys(submissionData).find(k => k.toLowerCase().includes("first name"));
-      const lastNameKey = Object.keys(submissionData).find(k => k.toLowerCase().includes("last name"));
-      const phoneKey = Object.keys(submissionData).find(k => k.toLowerCase().includes("phone"));
+      // Note: submissionData keys are normalized (no spaces, lowercase) e.g., "firstname", "emailaddress"
+      const emailKey = Object.keys(submissionData).find(k => {
+        const normalized = k.toLowerCase().replace(/\s+/g, '');
+        return normalized.includes("email");
+      });
+      const firstNameKey = Object.keys(submissionData).find(k => {
+        const normalized = k.toLowerCase().replace(/\s+/g, '');
+        return normalized.includes("firstname") || normalized === "firstname";
+      });
+      const lastNameKey = Object.keys(submissionData).find(k => {
+        const normalized = k.toLowerCase().replace(/\s+/g, '');
+        return normalized.includes("lastname") || normalized === "lastname";
+      });
+      const phoneKey = Object.keys(submissionData).find(k => {
+        const normalized = k.toLowerCase().replace(/\s+/g, '');
+        return normalized.includes("phone") || normalized.includes("mobile");
+      });
 
       const email = emailKey ? submissionData[emailKey] : null;
-      console.log("🔵 [FormService.submitForm] Extracted fields - email:", email, "firstName:", firstNameKey, "lastName:", lastNameKey);
+      const firstName = firstNameKey ? submissionData[firstNameKey] : null;
+      const lastName = lastNameKey ? submissionData[lastNameKey] : null;
+      
+      console.log("🔵 [FormService.submitForm] Extracted keys - emailKey:", emailKey, "firstNameKey:", firstNameKey, "lastNameKey:", lastNameKey);
+      console.log("🔵 [FormService.submitForm] Extracted values - email:", email, "firstName:", firstName, "lastName:", lastName);
 
       if (!email) throw new Error("Email field is required for contact creation");
 
@@ -77,12 +94,16 @@ export class FormService {
       if (contact) {
         // Update existing contact
         console.log("🔵 [FormService.submitForm] Updating existing contact:", contact._id);
+        const updateFirstName = firstName || contact.firstName;
+        const updateLastName = lastName || contact.lastName;
+        console.log("🔵 [FormService.submitForm] Updating with firstName:", updateFirstName, "lastName:", updateLastName);
+        
         contact = await CampaignContactModel.findByIdAndUpdate(
           contact._id,
           {
             $set: {
-              firstName: firstNameKey ? submissionData[firstNameKey] : contact.firstName,
-              lastName: lastNameKey ? submissionData[lastNameKey] : contact.lastName
+              firstName: updateFirstName,
+              lastName: updateLastName
             },
             $addToSet: {
               tags: { $each: ["Lead Form", form.name] },
@@ -94,10 +115,14 @@ export class FormService {
       } else {
         // Create new contact
         console.log("🔵 [FormService.submitForm] Creating new contact");
+        const newFirstName = firstName || "New";
+        const newLastName = lastName || "Lead";
+        console.log("🔵 [FormService.submitForm] Creating with firstName:", newFirstName, "lastName:", newLastName);
+        
         contact = await CampaignContactModel.create({
           userId: new Types.ObjectId(form.userId as any),
-          firstName: firstNameKey ? submissionData[firstNameKey] : "New",
-          lastName: lastNameKey ? submissionData[lastNameKey] : "Lead",
+          firstName: newFirstName,
+          lastName: newLastName,
           emails: [{ address: email.toLowerCase(), isPrimary: true }],
           phones: phoneKey ? [{ number: submissionData[phoneKey], isPrimary: true }] : [],
           tags: ["Lead Form", form.name]

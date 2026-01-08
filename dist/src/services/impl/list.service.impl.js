@@ -12,7 +12,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ListService = void 0;
 const CampaignList_1 = require("../../models/CampaignList");
 const mongoose_1 = require("mongoose");
+const contact_sync_service_1 = require("./contact-sync.service");
 class ListService {
+    constructor() {
+        this.contactSyncService = new contact_sync_service_1.ContactSyncService();
+    }
     createList(userId, name, description) {
         return __awaiter(this, void 0, void 0, function* () {
             return yield CampaignList_1.ListModel.create({
@@ -40,10 +44,25 @@ class ListService {
             ]);
         });
     }
+    getListById(userId, listId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Return list details with populated contacts
+            return yield CampaignList_1.ListModel.findOne({
+                _id: new mongoose_1.Types.ObjectId(listId),
+                userId: new mongoose_1.Types.ObjectId(userId)
+            }).populate('contacts');
+        });
+    }
     addContactsToList(userId, listId, contactIds) {
         return __awaiter(this, void 0, void 0, function* () {
             // $addToSet ensures we don't add the same contact twice
-            return yield CampaignList_1.ListModel.findOneAndUpdate({ _id: listId, userId: new mongoose_1.Types.ObjectId(userId) }, { $addToSet: { contacts: { $each: contactIds.map(id => new mongoose_1.Types.ObjectId(id)) } } }, { new: true });
+            const updatedList = yield CampaignList_1.ListModel.findOneAndUpdate({ _id: listId, userId: new mongoose_1.Types.ObjectId(userId) }, { $addToSet: { contacts: { $each: contactIds.map(id => new mongoose_1.Types.ObjectId(id)) } } }, { new: true });
+            // Sync to corresponding Email List and SMS Group
+            if (updatedList) {
+                yield this.contactSyncService.syncCrmListToEmailList(userId, listId);
+                yield this.contactSyncService.syncCrmListToSmsGroup(userId, listId);
+            }
+            return updatedList;
         });
     }
     removeContactFromList(userId, listId, contactId) {

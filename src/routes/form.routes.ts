@@ -10,6 +10,11 @@ console.log("🔵 [form.routes] FormModel loaded:", typeof FormModel);
 console.log("🔵 [form.routes] FormController loaded:", typeof FormController);
 
 // PUBLIC ROUTES (Used by the Hosted Form Link & Iframe)
+// Slug-based routes (friendly URLs) - must come before :formId routes
+formRouter.get("/s/:slug", ctrl.getPublicFormBySlug);
+formRouter.post("/s/:slug/submit", ctrl.postSubmissionBySlug);
+
+// Legacy ID-based routes (for backward compatibility)
 formRouter.get("/public/:formId", ctrl.getPublicForm);
 formRouter.post("/public/:formId/submit", ctrl.postSubmission);
 

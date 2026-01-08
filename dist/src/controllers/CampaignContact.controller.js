@@ -79,6 +79,13 @@ class ContactController {
             try {
                 const userId = (((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id));
                 const { id } = req.params;
+                // Validate if id is a valid MongoDB ObjectId (24 hex characters)
+                if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+                    return res.status(http_status_codes_1.StatusCodes.BAD_REQUEST).json({
+                        error: true,
+                        message: `Invalid contact ID "${id}". Expected a 24-character MongoDB ObjectId.`
+                    });
+                }
                 const { CampaignContactModel } = yield Promise.resolve().then(() => __importStar(require("../models/CampaignContact")));
                 const contact = yield CampaignContactModel.findOne({ _id: id, userId });
                 if (!contact) {
@@ -103,6 +110,65 @@ class ContactController {
             }
             catch (error) {
                 next(error);
+            }
+        });
+        this.updateContact = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
+            try {
+                const userId = (((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id));
+                const { id } = req.params;
+                // Validate if id is a valid MongoDB ObjectId
+                if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+                    return res.status(http_status_codes_1.StatusCodes.BAD_REQUEST).json({
+                        error: true,
+                        message: `Invalid contact ID "${id}". Expected a 24-character MongoDB ObjectId.`
+                    });
+                }
+                const updatedContact = yield this.contactService.updateContact(userId, id, req.body);
+                if (!updatedContact) {
+                    return res.status(http_status_codes_1.StatusCodes.NOT_FOUND).json({
+                        error: true,
+                        message: "Contact not found or you don't have permission to update it"
+                    });
+                }
+                res.status(http_status_codes_1.StatusCodes.OK).json({ error: false, contact: updatedContact });
+            }
+            catch (error) {
+                const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
+                res.status(http_status_codes_1.StatusCodes.BAD_REQUEST).json({
+                    error: true,
+                    message: errorMessage
+                });
+            }
+        });
+        this.deleteContact = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
+            try {
+                const userId = (((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id));
+                const { id } = req.params;
+                // Validate if id is a valid MongoDB ObjectId
+                if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+                    return res.status(http_status_codes_1.StatusCodes.BAD_REQUEST).json({
+                        error: true,
+                        message: `Invalid contact ID "${id}". Expected a 24-character MongoDB ObjectId.`
+                    });
+                }
+                const { CampaignContactModel } = yield Promise.resolve().then(() => __importStar(require("../models/CampaignContact")));
+                const result = yield CampaignContactModel.deleteOne({ _id: id, userId });
+                if (result.deletedCount === 0) {
+                    return res.status(http_status_codes_1.StatusCodes.NOT_FOUND).json({
+                        error: true,
+                        message: "Contact not found or you don't have permission to delete it"
+                    });
+                }
+                res.status(http_status_codes_1.StatusCodes.OK).json({ error: false, message: "Contact deleted successfully" });
+            }
+            catch (error) {
+                const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
+                res.status(http_status_codes_1.StatusCodes.BAD_REQUEST).json({
+                    error: true,
+                    message: errorMessage
+                });
             }
         });
         // IMPORT CONTACTS FROM CSV

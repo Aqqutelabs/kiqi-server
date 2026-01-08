@@ -56,11 +56,10 @@ contactRouter.use(Auth_middlewares_1.verifyJWT);
 // Contact Routes - More specific routes first
 contactRouter.post("/import-csv", upload.single("file"), contactController.importCSV);
 contactRouter.post("/bulk-delete", contactController.bulkDelete);
-// Generic contact routes
+// Generic contact routes BEFORE parameterized routes
 contactRouter.get("/", contactController.getAll);
 contactRouter.post("/", contactController.create);
-contactRouter.get("/:id", contactController.getById);
-// List Routes
+// List Routes - MUST come before generic /:id routes to prevent "lists" being treated as an ID
 contactRouter.get("/lists", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     const userId = (((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id));
@@ -73,6 +72,28 @@ contactRouter.post("/lists", (req, res) => __awaiter(void 0, void 0, void 0, fun
     const { name, description } = req.body;
     const list = yield listService.createList(userId, name, description);
     res.status(http_status_codes_1.StatusCodes.OK).json({ error: false, list });
+}));
+contactRouter.get("/lists/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    try {
+        const userId = (((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id));
+        const { id } = req.params;
+        const list = yield listService.getListById(userId, id);
+        if (!list) {
+            return res.status(http_status_codes_1.StatusCodes.NOT_FOUND).json({
+                error: true,
+                message: "List not found or you don't have permission to view it"
+            });
+        }
+        res.status(http_status_codes_1.StatusCodes.OK).json({ error: false, list });
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
+        res.status(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR).json({
+            error: true,
+            message: errorMessage
+        });
+    }
 }));
 contactRouter.post("/lists/:id/add-contacts", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
@@ -106,4 +127,9 @@ contactRouter.delete("/lists/:id", (req, res) => __awaiter(void 0, void 0, void 
         });
     }
 }));
+// Update and delete contact by ID
+contactRouter.put("/:id", contactController.updateContact);
+contactRouter.delete("/:id", contactController.deleteContact);
+// Parameterized contact routes - MUST come LAST
+contactRouter.get("/:id", contactController.getById);
 exports.default = contactRouter;

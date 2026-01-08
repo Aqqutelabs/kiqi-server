@@ -21,6 +21,10 @@ const ctrl = new form_controller_1.FormController();
 console.log("🔵 [form.routes] FormModel loaded:", typeof Form_1.FormModel);
 console.log("🔵 [form.routes] FormController loaded:", typeof form_controller_1.FormController);
 // PUBLIC ROUTES (Used by the Hosted Form Link & Iframe)
+// Slug-based routes (friendly URLs) - must come before :formId routes
+formRouter.get("/s/:slug", ctrl.getPublicFormBySlug);
+formRouter.post("/s/:slug/submit", ctrl.postSubmissionBySlug);
+// Legacy ID-based routes (for backward compatibility)
 formRouter.get("/public/:formId", ctrl.getPublicForm);
 formRouter.post("/public/:formId/submit", ctrl.postSubmission);
 // PROTECTED ROUTES (Dashboard)
@@ -30,6 +34,7 @@ formRouter.post("/", (req, res, next) => {
     ctrl.createForm(req, res);
 });
 formRouter.get("/:formId/submissions", ctrl.getSubmissions);
+formRouter.delete("/:formId", ctrl.deleteForm);
 formRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     try {

@@ -21,6 +21,7 @@ interface IFormField {
 export interface IForm extends Document {
   userId: Types.ObjectId; // Owner
   name: string;
+  slug: string; // Friendly URL identifier
   fields: IFormField[];
   isActive: boolean;
   submissionCount: number;
@@ -31,6 +32,7 @@ const FormSchema = new Schema<IForm>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     name: { type: String, required: true, trim: true },
+    slug: { type: String, required: true, unique: true, index: true },
     fields: [
       {
         type: { type: String, enum: Object.values(FieldType), required: true },

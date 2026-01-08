@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { FormService } from "../services/impl/form.service.impl";
 import { FormModel } from "../models/Form";
 import { StatusCodes } from "http-status-codes";
+import { generateUniqueSlug } from "../utils/slug";
 
 const formService = new FormService();
 
@@ -25,13 +26,17 @@ export class FormController {
         });
       }
       
-      const form = await FormModel.create({ ...req.body, userId });
+      // Generate a unique slug for the form
+      const slug = generateUniqueSlug(req.body.name);
+      console.log("🔵 [FormController.createForm] Generated slug:", slug);
+      
+      const form = await FormModel.create({ ...req.body, userId, slug });
       console.log("✅ [FormController.createForm] Form created successfully:", form._id);
       
-      // Generate public link
+      // Generate public link using slug (friendlier URL)
       const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 8000}`;
-      const publicLink = `${baseUrl}/api/v1/forms/public/${form._id}`;
-      const submissionLink = `${baseUrl}/api/v1/forms/public/${form._id}/submit`;
+      const publicLink = `${baseUrl}/api/v1/forms/s/${form.slug}`;
+      const submissionLink = `${baseUrl}/api/v1/forms/s/${form.slug}/submit`;
       
       console.log("✅ [FormController.createForm] Public link generated:", publicLink);
       
@@ -55,6 +60,13 @@ export class FormController {
   // PUBLIC: Get Form Schema for Rendering the UI
   public getPublicForm = async (req: Request, res: Response) => {
     const form = await FormModel.findById(req.params.formId).select("name fields isActive");
+    if (!form) return res.status(404).json({ message: "Form not found" });
+    res.json(form);
+  };
+
+  // PUBLIC: Get Form by Slug (Friendly URL)
+  public getPublicFormBySlug = async (req: Request, res: Response) => {
+    const form = await FormModel.findOne({ slug: req.params.slug }).select("name fields isActive _id");
     if (!form) return res.status(404).json({ message: "Form not found" });
     res.json(form);
   };
@@ -138,9 +150,110 @@ export class FormController {
       // Submit the form
       const submission = await formService.submitForm(req.params.formId, normalizedSubmissionData);
       console.log("✅ [FormController.postSubmission] Submission created successfully:", submission._id);
-      res.status(StatusCodes.OK).json({ success: true, message: "Submitted successfully" });
+      
+      const response = { 
+        success: true, 
+        message: "Submitted successfully",
+        submissionId: submission._id,
+        contactId: submission.contactId
+      };
+      console.log("✅ [FormController.postSubmission] API Response:", JSON.stringify(response, null, 2));
+      
+      res.status(StatusCodes.OK).json(response);
     } catch (err: any) {
       console.error("❌ [FormController.postSubmission] Error:", err.message);
+      res.status(StatusCodes.BAD_REQUEST).json({ error: true, message: err.message });
+    }
+  };
+
+  // PUBLIC: Submit Form Data by Slug (Friendly URL)
+  public postSubmissionBySlug = async (req: Request, res: Response) => {
+    try {
+      console.log("🔵 [FormController.postSubmissionBySlug] Form submission started for slug:", req.params.slug);
+      console.log("🔵 [FormController.postSubmissionBySlug] Submission data:", req.body);
+
+      // Fetch the form schema by slug
+      const form = await FormModel.findOne({ slug: req.params.slug });
+      if (!form) {
+        return res.status(StatusCodes.NOT_FOUND).json({ error: true, message: "Form not found" });
+      }
+
+      // Use the same normalization logic
+      const normalizeFieldNames = (data: Record<string, any>, formFields: any[]) => {
+        const normalizedData: Record<string, any> = {};
+        formFields.forEach((field) => {
+          const label = field.label;
+          const normalizedKey = label.replace(/\s+/g, '').toLowerCase();
+          
+          const possibleKeys = [
+            label,
+            label.toLowerCase(),
+            normalizedKey,
+            label.split(' ')[0].toLowerCase(),
+            field.type,
+          ];
+          
+          let value = undefined;
+          for (const key of possibleKeys) {
+            if (data[key] !== undefined) {
+              value = data[key];
+              break;
+            }
+          }
+          
+          if (value === undefined) {
+            const dataKeys = Object.keys(data);
+            for (const dataKey of dataKeys) {
+              if (dataKey.toLowerCase() === normalizedKey || 
+                  dataKey.replace(/\s+/g, '').toLowerCase() === normalizedKey) {
+                value = data[dataKey];
+                break;
+              }
+            }
+          }
+          
+          normalizedData[normalizedKey] = value;
+        });
+        return normalizedData;
+      };
+
+      const normalizedSubmissionData = normalizeFieldNames(req.body.submissionData, form.fields);
+      console.log("🔵 [FormController.postSubmissionBySlug] Normalized data:", normalizedSubmissionData);
+
+      // Validate required fields
+      const validateRequiredFields = (data: Record<string, any>, formFields: any[]) => {
+        const missingFields = formFields
+          .filter((field) => field.required)
+          .map((field) => field.label.replace(/\s+/g, '').toLowerCase())
+          .filter((key) => !data[key]);
+
+        if (missingFields.length > 0) {
+          throw new Error(`${missingFields.join(', ')} field(s) are required`);
+        }
+      };
+
+      try {
+        validateRequiredFields(normalizedSubmissionData, form.fields);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Validation failed";
+        return res.status(StatusCodes.BAD_REQUEST).json({ error: true, message: errorMessage });
+      }
+
+      // Submit the form using form._id
+      const submission = await formService.submitForm((form._id as any).toString(), normalizedSubmissionData);
+      console.log("✅ [FormController.postSubmissionBySlug] Submission created successfully:", submission._id);
+      
+      const response = { 
+        success: true, 
+        message: "Submitted successfully",
+        submissionId: submission._id,
+        contactId: submission.contactId
+      };
+      console.log("✅ [FormController.postSubmissionBySlug] API Response:", JSON.stringify(response, null, 2));
+      
+      res.status(StatusCodes.OK).json(response);
+    } catch (err: any) {
+      console.error("❌ [FormController.postSubmissionBySlug] Error:", err.message);
       res.status(StatusCodes.BAD_REQUEST).json({ error: true, message: err.message });
     }
   };

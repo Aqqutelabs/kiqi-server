@@ -15,6 +15,7 @@ var FieldType;
 const FormSchema = new mongoose_1.Schema({
     userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     name: { type: String, required: true, trim: true },
+    slug: { type: String, required: true, unique: true, index: true },
     fields: [
         {
             type: { type: String, enum: Object.values(FieldType), required: true },

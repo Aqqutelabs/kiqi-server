@@ -12,7 +12,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ContactService = void 0;
 const CampaignContact_1 = require("../models/CampaignContact");
 const mongoose_1 = require("mongoose");
+const contact_sync_service_1 = require("./impl/contact-sync.service");
 class ContactService {
+    constructor() {
+        this.contactSyncService = new contact_sync_service_1.ContactSyncService();
+    }
     createContact(userId, data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
@@ -29,8 +33,25 @@ class ContactService {
                     if (!hasPrimary)
                         data.emails[0].isPrimary = true;
                 }
-                const contact = new CampaignContact_1.CampaignContactModel(Object.assign(Object.assign({}, data), { userId: new mongoose_1.Types.ObjectId(userId) }));
-                return yield contact.save();
+                // Transform phoneCountry and phoneNumber to phones array format
+                const contactData = Object.assign({}, data);
+                if (data.phoneCountry || data.phoneNumber) {
+                    const phoneNumber = data.phoneNumber ? `${data.phoneCountry || ''}${data.phoneNumber}`.trim() : '';
+                    if (phoneNumber) {
+                        contactData.phones = [{
+                                number: phoneNumber,
+                                isPrimary: true
+                            }];
+                    }
+                    // Remove the old fields
+                    delete contactData.phoneCountry;
+                    delete contactData.phoneNumber;
+                }
+                const contact = new CampaignContact_1.CampaignContactModel(Object.assign(Object.assign({}, contactData), { userId: new mongoose_1.Types.ObjectId(userId) }));
+                const savedContact = yield contact.save();
+                // Sync to General Email List and/or SMS Group
+                yield this.contactSyncService.syncNewContactToGeneralLists(userId, savedContact);
+                return savedContact;
             }
             catch (error) {
                 if (error instanceof Error) {
@@ -203,12 +224,16 @@ class ContactService {
                 }
                 // Bulk insert
                 const insertedContacts = yield CampaignContact_1.CampaignContactModel.insertMany(contacts.map(contact => (Object.assign(Object.assign({}, contact), { userId: new mongoose_1.Types.ObjectId(userId) }))));
+                // Bulk sync imported contacts to General Email List and SMS Group
+                const syncResult = yield this.contactSyncService.bulkSyncContactsToGeneralLists(userId, insertedContacts);
                 return {
                     success: true,
                     imported: insertedContacts.length,
                     skipped: errors.length,
                     errors: errors.length > 0 ? errors : undefined,
-                    contacts: insertedContacts
+                    contacts: insertedContacts,
+                    syncedToEmailList: syncResult.emailsAdded,
+                    syncedToSmsGroup: syncResult.phonesAdded
                 };
             }
             catch (error) {

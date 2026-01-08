@@ -1,0 +1,105 @@
+{
+  "name": "Website Contact Form",
+  "fields": [
+    {
+      "type": "text",
+      "label": "First Name",
+      "placeholder": "e.g. Sarah",
+      "required": true
+    },
+    {
+      "type": "text",
+      "label": "Last Name",
+      "placeholder": "e.g. Johnson",
+      "required": true
+    },
+    {
+      "type": "email",
+      "label": "Email Address",
+      "placeholder": "sarah.j@techcorp.com",
+      "required": true
+    },
+    {
+      "type": "phone",
+      "label": "Mobile Number",
+      "placeholder": "+1 (555) 000-0000",
+      "required": false
+    },
+    {
+      "type": "dropdown",
+      "label": "Company Size",
+      "required": false,
+      "options": ["1-10", "11-50", "51-200", "201+"]
+    },
+    {
+      "type": "paragraph",
+      "label": "Project Details",
+      "placeholder": "Tell us about your needs...",
+      "required": false
+    }
+  ],
+  "submissions": [
+    {
+      "description": "Complete submission with all fields",
+      "data": {
+        "First Name": "Sarah",
+        "Last Name": "Johnson",
+        "Email Address": "sarah.j@techcorp.com",
+        "Mobile Number": "+1 (555) 123-4567",
+        "Company Size": "51-200",
+        "Project Details": "We're looking to develop a custom CRM solution for our sales team. The system needs to integrate with our existing tools and handle about 150 users. We'd like to discuss timeline and pricing options."
+      }
+    },
+    {
+      "description": "Minimal submission with only required fields",
+      "data": {
+        "First Name": "Michael",
+        "Last Name": "Chen",
+        "Email Address": "m.chen@startup.io"
+      }
+    },
+    {
+      "description": "Submission with most optional fields filled",
+      "data": {
+        "First Name": "Emily",
+        "Last Name": "Rodriguez",
+        "Email Address": "emily.r@innovate.com",
+        "Mobile Number": "+1 (555) 987-6543",
+        "Company Size": "11-50",
+        "Project Details": "Need help with cloud migration and DevOps setup."
+      }
+    },
+    {
+      "description": "Submission with different company size",
+      "data": {
+        "First Name": "David",
+        "Last Name": "Williams",
+        "Email Address": "david@smallbiz.com",
+        "Mobile Number": "+1 (555) 246-8135",
+        "Company Size": "1-10",
+        "Project Details": "Small business looking for website redesign and SEO optimization. Budget-conscious project."
+      }
+    },
+    {
+      "description": "Enterprise submission",
+      "data": {
+        "First Name": "Jennifer",
+        "Last Name": "Martinez",
+        "Email Address": "j.martinez@globalcorp.com",
+        "Mobile Number": "+1 (555) 555-0199",
+        "Company Size": "201+",
+        "Project Details": "Enterprise-level data analytics platform needed. Must support multi-tenant architecture, real-time processing, and comply with SOC 2 requirements. Looking for Q2 2026 deployment."
+      }
+    },
+    {
+      "description": "International submission",
+      "data": {
+        "First Name": "Raj",
+        "Last Name": "Patel",
+        "Email Address": "raj.patel@techventures.in",
+        "Mobile Number": "+91 98765 43210",
+        "Company Size": "51-200"
+      }
+    }
+  ]
+}
