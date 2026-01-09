@@ -68,7 +68,9 @@ class ContactController {
                 const userId = (((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id));
                 // Extract query params for search & pagination
                 const result = yield this.contactService.getContacts(userId, req.query);
-                res.status(http_status_codes_1.StatusCodes.OK).json(Object.assign({ error: false }, result));
+                // Fetch form leads count
+                const formLeadsCount = yield this.contactService.getFormLeads(userId);
+                res.status(http_status_codes_1.StatusCodes.OK).json(Object.assign(Object.assign({ error: false }, result), { formLeads: formLeadsCount }));
             }
             catch (error) {
                 next(error);

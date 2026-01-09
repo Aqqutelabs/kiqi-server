@@ -28,7 +28,15 @@ export class ContactController {
       const userId = (req.user?._id || req.user?.id) as string;
       // Extract query params for search & pagination
       const result = await this.contactService.getContacts(userId, req.query);
-      res.status(StatusCodes.OK).json({ error: false, ...result });
+
+      // Fetch form leads count
+      const formLeadsCount = await this.contactService.getFormLeads(userId);
+
+      res.status(StatusCodes.OK).json({
+        error: false,
+        ...result,
+        formLeads: formLeadsCount, // Return only the count of form leads
+      });
     } catch (error) {
       next(error);
     }

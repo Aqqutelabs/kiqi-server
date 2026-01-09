@@ -1,6 +1,7 @@
 import { CampaignContactModel, ICampaignContact } from "../models/CampaignContact";
 import { Types } from "mongoose";
 import { ContactSyncService } from "./impl/contact-sync.service";
+import { FormSubmissionModel, IFormSubmission } from "../models/FormSubmissions";
 
 export class ContactService {
   private contactSyncService: ContactSyncService;
@@ -295,5 +296,15 @@ export class ContactService {
 
     result.push(current);
     return result;
+  }
+
+  public async getFormLeads(userId: string) {
+    const submissions = await FormSubmissionModel.find({ userId })
+      .populate("contactId", "firstName lastName emails phones tags")
+      .exec();
+
+    // Filter out null contactIds and return the count
+    const validLeads = submissions.filter((submission: IFormSubmission) => submission.contactId !== null);
+    return validLeads.length;
   }
 }

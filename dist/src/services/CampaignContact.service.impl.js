@@ -13,6 +13,7 @@ exports.ContactService = void 0;
 const CampaignContact_1 = require("../models/CampaignContact");
 const mongoose_1 = require("mongoose");
 const contact_sync_service_1 = require("./impl/contact-sync.service");
+const FormSubmissions_1 = require("../models/FormSubmissions");
 class ContactService {
     constructor() {
         this.contactSyncService = new contact_sync_service_1.ContactSyncService();
@@ -276,6 +277,16 @@ class ContactService {
         }
         result.push(current);
         return result;
+    }
+    getFormLeads(userId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const submissions = yield FormSubmissions_1.FormSubmissionModel.find({ userId })
+                .populate("contactId", "firstName lastName emails phones tags")
+                .exec();
+            // Filter out null contactIds and return the count
+            const validLeads = submissions.filter((submission) => submission.contactId !== null);
+            return validLeads.length;
+        });
     }
 }
 exports.ContactService = ContactService;
