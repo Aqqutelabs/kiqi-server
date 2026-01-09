@@ -1,20 +1,33 @@
 import { ListModel } from "../../models/CampaignList";
 import { Types } from "mongoose";
 import { ContactSyncService } from "./contact-sync.service";
+import { EmailistServiceImpl } from "./emailList.service.impl";
 
 export class ListService {
   private contactSyncService: ContactSyncService;
+  private emailListService: EmailistServiceImpl;
 
   constructor() {
     this.contactSyncService = new ContactSyncService();
+    this.emailListService = new EmailistServiceImpl();
   }
 
   public async createList(userId: string, name: string, description?: string) {
-    return await ListModel.create({
+    const newList = await ListModel.create({
       userId: new Types.ObjectId(userId),
       name,
       description
     });
+
+    // Create a corresponding email list
+    await this.emailListService.createEmailList({
+      email_listName: name,
+      emails: [], // Initially empty, can be updated later
+      emailFiles: [],
+      userId
+    });
+
+    return newList;
   }
 
   public async getListsForUser(userId: string) {
