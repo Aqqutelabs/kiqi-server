@@ -24,7 +24,7 @@ cron.schedule("* * * * *", async () => {
             // await SocialPoster.publish(post.platform, post.message, post.file);
 
             // Mark as published
-            post.is_published = true;
+            // post.is_published = true;
             await post.save();
 
             console.log(`Published scheduled post: ${post.id}`);

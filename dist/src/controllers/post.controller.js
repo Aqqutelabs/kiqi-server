@@ -16,29 +16,18 @@ class PostController {
     constructor() {
         this.createPost = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
             try {
-                console.log("Incoming file:", req.file);
-                console.log("Request body:", req.body);
-                const { platform, message, publish_date, action } = req.body;
-                // handle uploaded media (single file)
-                let media = null;
-                if (req.file && req.file.path) {
-                    media = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
-                }
+                const { platform, message, media, publish_date, action } = req.body;
                 let is_draft;
-                let is_published = false;
                 let final_publish_date = null;
                 if (action === "draft") {
                     is_draft = true;
-                    is_published = false;
                 }
                 else if (action === "publish_now") {
                     is_draft = false;
-                    is_published = true;
                     final_publish_date = new Date();
                 }
                 else if (action === "schedule") {
                     is_draft = false;
-                    is_published = false;
                     final_publish_date = new Date(publish_date);
                 }
                 else {
@@ -58,7 +47,7 @@ class PostController {
                         return;
                     }
                 }
-                const post = yield this.postService.createPost(platform, message, is_draft, is_published, media || undefined, final_publish_date);
+                const post = yield this.postService.createPost(platform, message, is_draft, media, final_publish_date);
                 res.status(http_status_codes_1.StatusCodes.CREATED).json({
                     error: false,
                     message: is_draft
