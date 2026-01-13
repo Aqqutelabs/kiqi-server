@@ -15,9 +15,22 @@ const http_status_codes_1 = require("http-status-codes");
 class TemplatesController {
     constructor() {
         this.createTemplate = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
             try {
-                const { title, content } = req.body;
-                const template = yield this.templateService.createTemplate(title, content);
+                const { title, content, description, category, subject, variables } = req.body;
+                const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id) || req.body.userId;
+                const dto = {
+                    name: title,
+                    description: description || '',
+                    category: category || 'Custom',
+                    subject: subject || title,
+                    htmlContent: (content === null || content === void 0 ? void 0 : content.htmlContent) || content || '',
+                    plainText: (content === null || content === void 0 ? void 0 : content.plainText) || '',
+                    variables: variables || [],
+                    userId: String(userId || ''),
+                    metadata: req.body.metadata || undefined
+                };
+                const template = yield this.templateService.createTemplate(dto);
                 res.status(http_status_codes_1.StatusCodes.CREATED).json({
                     error: false,
                     message: "Template has been created",
@@ -29,9 +42,11 @@ class TemplatesController {
             }
         });
         this.getTemplateById = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
             try {
                 const id = req.params.id;
-                const template = yield this.templateService.getTemplateById(id);
+                const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id) || req.query.userId || req.body.userId;
+                const template = yield this.templateService.getTemplateById(id, String(userId || ''));
                 if (!template) {
                     res.status(http_status_codes_1.StatusCodes.NOT_FOUND).json({
                         error: true,
@@ -48,8 +63,11 @@ class TemplatesController {
             }
         });
         this.getAllTemplates = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
             try {
-                const templates = yield this.templateService.getTemplates();
+                const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id) || req.query.userId || req.body.userId;
+                const filters = req.query || undefined;
+                const templates = yield this.templateService.getTemplates(String(userId || ''), filters);
                 res.status(http_status_codes_1.StatusCodes.OK).json({
                     error: false,
                     data: templates,
@@ -60,9 +78,11 @@ class TemplatesController {
             }
         });
         this.deleteTemplates = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
             try {
                 const id = req.params.id;
-                yield this.templateService.deleteTemplate(id);
+                const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id) || req.body.userId;
+                yield this.templateService.deleteTemplate(id, String(userId || ''));
                 res.status(http_status_codes_1.StatusCodes.OK).json({
                     error: false,
                     message: "Template has been deleted",

@@ -1,0 +1,185 @@
+{
+  "pressReleaseStatusChangeTests": [
+    {
+      "name": "Change Status to Published",
+      "endpoint": "PUT /api/v1/admin/press-releases/:pressReleaseId/status",
+      "method": "PUT",
+      "description": "Publish a draft press release",
+      "body": {
+        "newStatus": "Published",
+        "reason": "Approved for publication"
+      },
+      "expectedResponse": {
+        "error": false,
+        "message": "Press release status changed from Draft to Published",
+        "data": {
+          "pressRelease": {
+            "_id": "press-release-id",
+            "title": "Press Release Title",
+            "status": "Published",
+            "user_id": "user-id",
+            "createdAt": "2025-12-16T10:00:00Z",
+            "updatedAt": "2025-12-17T12:00:00Z"
+          }
+        }
+      }
+    },
+    {
+      "name": "Change Status to Archived",
+      "endpoint": "PUT /api/v1/admin/press-releases/:pressReleaseId/status",
+      "method": "PUT",
+      "description": "Archive an old press release",
+      "body": {
+        "newStatus": "Archived",
+        "reason": "Campaign ended - archiving for records"
+      },
+      "expectedResponse": {
+        "error": false,
+        "message": "Press release status changed from Published to Archived",
+        "data": {
+          "pressRelease": {
+            "_id": "press-release-id",
+            "title": "Press Release Title",
+            "status": "Archived"
+          }
+        }
+      }
+    },
+    {
+      "name": "Reject Press Release",
+      "endpoint": "PUT /api/v1/admin/press-releases/:pressReleaseId/status",
+      "method": "PUT",
+      "description": "Reject a press release submission",
+      "body": {
+        "newStatus": "Rejected",
+        "reason": "Content does not meet guidelines. Please revise and resubmit."
+      },
+      "expectedResponse": {
+        "error": false,
+        "message": "Press release status changed from Draft to Rejected",
+        "data": {
+          "pressRelease": {
+            "_id": "press-release-id",
+            "title": "Press Release Title",
+            "status": "Rejected"
+          }
+        }
+      }
+    },
+    {
+      "name": "Revert to Draft",
+      "endpoint": "PUT /api/v1/admin/press-releases/:pressReleaseId/status",
+      "method": "PUT",
+      "description": "Revert a published press release back to draft for editing",
+      "body": {
+        "newStatus": "Draft",
+        "reason": "Needs revision - factual error found"
+      },
+      "expectedResponse": {
+        "error": false,
+        "message": "Press release status changed from Published to Draft",
+        "data": {
+          "pressRelease": {
+            "_id": "press-release-id",
+            "title": "Press Release Title",
+            "status": "Draft"
+          }
+        }
+      }
+    },
+    {
+      "name": "Status Change Without Reason",
+      "endpoint": "PUT /api/v1/admin/press-releases/:pressReleaseId/status",
+      "method": "PUT",
+      "description": "Change status with no reason (reason is optional)",
+      "body": {
+        "newStatus": "Published"
+      },
+      "expectedResponse": {
+        "error": false,
+        "message": "Press release status changed from Draft to Published"
+      }
+    }
+  ],
+  "requestHeaders": {
+    "Authorization": "Bearer YOUR_JWT_TOKEN",
+    "Content-Type": "application/json"
+  },
+  "urlParameters": {
+    "pressReleaseId": "Replace with actual press release ID from database (e.g., '64a1b2c3d4e5f6g7h8i9j0k1')"
+  },
+  "allowedStatuses": [
+    "Draft",
+    "Published",
+    "Archived",
+    "Rejected"
+  ],
+  "errorExamples": [
+    {
+      "name": "Invalid Status",
+      "body": {
+        "newStatus": "Pending"
+      },
+      "expectedError": {
+        "error": true,
+        "message": "Invalid status. Allowed: Draft, Published, Archived, Rejected",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "Invalid Press Release ID",
+      "url": "/api/v1/admin/press-releases/invalid-id/status",
+      "body": {
+        "newStatus": "Published"
+      },
+      "expectedError": {
+        "error": true,
+        "message": "Invalid press release ID",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "Press Release Not Found",
+      "url": "/api/v1/admin/press-releases/64a1b2c3d4e5f6g7h8i9j0k1/status",
+      "body": {
+        "newStatus": "Published"
+      },
+      "expectedError": {
+        "error": true,
+        "message": "Press release not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "Unauthorized (Not Admin)",
+      "expectedError": {
+        "error": true,
+        "message": "Access denied. Admin privileges required.",
+        "statusCode": 403
+      }
+    }
+  ],
+  "curlExamples": [
+    {
+      "name": "Publish Press Release",
+      "command": "curl -X PUT 'http://localhost:3000/api/v1/admin/press-releases/64a1b2c3d4e5f6g7h8i9j0k1/status' \\\n  -H 'Authorization: Bearer YOUR_JWT_TOKEN' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"newStatus\": \"Published\",\n    \"reason\": \"Approved for publication\"\n  }'"
+    },
+    {
+      "name": "Archive Press Release",
+      "command": "curl -X PUT 'http://localhost:3000/api/v1/admin/press-releases/64a1b2c3d4e5f6g7h8i9j0k1/status' \\\n  -H 'Authorization: Bearer YOUR_JWT_TOKEN' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"newStatus\": \"Archived\",\n    \"reason\": \"Campaign ended\"\n  }'"
+    },
+    {
+      "name": "Reject Press Release",
+      "command": "curl -X PUT 'http://localhost:3000/api/v1/admin/press-releases/64a1b2c3d4e5f6g7h8i9j0k1/status' \\\n  -H 'Authorization: Bearer YOUR_JWT_TOKEN' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"newStatus\": \"Rejected\",\n    \"reason\": \"Content does not meet guidelines\"\n  }'"
+    }
+  ],
+  "notes": [
+    "Allowed status values: Draft, Published, Archived, Rejected",
+    "The 'reason' field is optional but recommended for audit trail",
+    "Admin authentication is required",
+    "All changes are logged in the audit trail",
+    "The endpoint supports any status transition (no restrictions)",
+    "Timestamps are automatically updated on status change",
+    "Response includes the updated press release object"
+  ]
+}

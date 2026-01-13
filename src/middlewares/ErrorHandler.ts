@@ -7,6 +7,16 @@ import { ApiError } from '../utils/ApiError';
 const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('💥 ERROR 💥', err);
 
+  // If body parsing failed, log raw body if available to aid debugging
+  try {
+    const anyReq: any = req;
+    if (anyReq && anyReq.rawBody) {
+      console.error('💥 Raw request body (captured):', anyReq.rawBody);
+    }
+  } catch (e) {
+    // ignore logging errors
+  }
+
   if (err instanceof ApiError) {
     // Handle Google API quota/rate limit errors (status 429)
     if (err.statusCode === 429) {

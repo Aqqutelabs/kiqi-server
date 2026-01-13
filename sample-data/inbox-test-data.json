@@ -1,0 +1,248 @@
+{
+  "sendMessage": {
+    "description": "Send an email to one or more recipients",
+    "endpoint": "POST /api/v1/inbox/send",
+    "request": {
+      "from": "user@example.com",
+      "to": ["recipient@example.com", "another@example.com"],
+      "cc": ["cc@example.com"],
+      "bcc": ["bcc@example.com"],
+      "subject": "Project Update - Q4 Planning",
+      "body": "<h2>Hello,</h2><p>Here's the latest update on our project.</p><ul><li>Milestone 1: Complete</li><li>Milestone 2: In Progress</li></ul>",
+      "plainText": "Hello,\n\nHere's the latest update on our project.\n\n- Milestone 1: Complete\n- Milestone 2: In Progress",
+      "attachmentIds": []
+    },
+    "expectedResponse": {
+      "statusCode": 201,
+      "message": "Email sent successfully"
+    }
+  },
+  "sendMessageMinimal": {
+    "description": "Send an email with minimal required fields",
+    "endpoint": "POST /api/v1/inbox/send",
+    "request": {
+      "from": "sender@company.com",
+      "to": ["client@example.com"],
+      "subject": "Meeting Confirmation",
+      "body": "<p>The meeting is confirmed for tomorrow at 2 PM.</p>",
+      "plainText": "The meeting is confirmed for tomorrow at 2 PM."
+    }
+  },
+  "saveDraft": {
+    "description": "Save a draft email",
+    "endpoint": "POST /api/v1/inbox/draft",
+    "request": {
+      "from": "user@example.com",
+      "to": ["draft-recipient@example.com"],
+      "cc": [],
+      "bcc": [],
+      "subject": "Draft: Quarterly Report",
+      "body": "<h2>Quarterly Report</h2><p>This is still being worked on...</p>",
+      "plainText": "Quarterly Report\n\nThis is still being worked on..."
+    }
+  },
+  "getMessagesByFolder": {
+    "description": "Get messages from a specific folder",
+    "endpoint": "GET /api/v1/inbox/folder/{folder}?limit=20&page=1",
+    "folderOptions": ["inbox", "sent", "draft", "trash", "archive"],
+    "examples": [
+      {
+        "url": "GET /api/v1/inbox/folder/inbox?limit=20&page=1",
+        "description": "Get inbox messages with pagination"
+      },
+      {
+        "url": "GET /api/v1/inbox/folder/sent",
+        "description": "Get all sent messages (default pagination)"
+      },
+      {
+        "url": "GET /api/v1/inbox/folder/draft?limit=50&page=2",
+        "description": "Get draft messages, page 2 with 50 items per page"
+      }
+    ]
+  },
+  "getStarredMessages": {
+    "description": "Get all starred messages",
+    "endpoint": "GET /api/v1/inbox/starred?limit=20&page=1",
+    "expectedResponse": {
+      "statusCode": 200,
+      "data": {
+        "messages": [],
+        "total": 0,
+        "limit": 20,
+        "page": 1
+      }
+    }
+  },
+  "getThreads": {
+    "description": "Get all conversation threads",
+    "endpoint": "GET /api/v1/inbox/threads?limit=20&page=1",
+    "queryParams": {
+      "limit": "number (optional, default: 20)",
+      "page": "number (optional, default: 1)"
+    },
+    "expectedResponse": {
+      "statusCode": 200,
+      "data": {
+        "threads": [
+          {
+            "_id": "thread_id_1",
+            "subject": "Project Discussion",
+            "participants": ["user@example.com", "colleague@example.com"],
+            "lastMessageAt": "2025-12-08T10:30:00Z",
+            "createdAt": "2025-12-01T08:00:00Z"
+          }
+        ],
+        "total": 1,
+        "limit": 20,
+        "page": 1
+      }
+    }
+  },
+  "getThreadMessages": {
+    "description": "Get all messages in a specific thread",
+    "endpoint": "GET /api/v1/inbox/thread/{threadId}",
+    "example": "GET /api/v1/inbox/thread/507f1f77bcf86cd799439011"
+  },
+  "updateMessage": {
+    "description": "Update message properties (mark as read, star, move to folder)",
+    "endpoint": "PATCH /api/v1/inbox/message/{messageId}",
+    "requests": [
+      {
+        "description": "Mark message as read",
+        "body": {
+          "isRead": true
+        }
+      },
+      {
+        "description": "Star a message",
+        "body": {
+          "isStarred": true
+        }
+      },
+      {
+        "description": "Move message to archive",
+        "body": {
+          "folder": "archive"
+        }
+      },
+      {
+        "description": "Move message to trash",
+        "body": {
+          "folder": "trash"
+        }
+      },
+      {
+        "description": "Combined update",
+        "body": {
+          "isRead": true,
+          "isStarred": true,
+          "folder": "archive"
+        }
+      }
+    ]
+  },
+  "deleteMessage": {
+    "description": "Delete message (move to trash)",
+    "endpoint": "DELETE /api/v1/inbox/message/{messageId}",
+    "example": "DELETE /api/v1/inbox/message/507f1f77bcf86cd799439011"
+  },
+  "searchMessages": {
+    "description": "Search messages by keyword",
+    "endpoint": "GET /api/v1/inbox/search?q={query}&limit=20&page=1",
+    "examples": [
+      {
+        "url": "GET /api/v1/inbox/search?q=project",
+        "description": "Search for messages containing 'project'"
+      },
+      {
+        "url": "GET /api/v1/inbox/search?q=from:colleague@example.com",
+        "description": "Search messages from specific sender"
+      },
+      {
+        "url": "GET /api/v1/inbox/search?q=project&limit=50&page=1",
+        "description": "Search with custom pagination"
+      }
+    ]
+  },
+  "getInboxStats": {
+    "description": "Get inbox statistics",
+    "endpoint": "GET /api/v1/inbox/stats",
+    "expectedResponse": {
+      "statusCode": 200,
+      "data": {
+        "totalMessages": 45,
+        "unreadCount": 5,
+        "starredCount": 8,
+        "foldersBreakdown": {
+          "inbox": 15,
+          "sent": 20,
+          "draft": 3,
+          "trash": 5,
+          "archive": 2
+        }
+      }
+    }
+  },
+  "receiveEmail": {
+    "description": "Webhook endpoint to receive emails from SendGrid Inbound Parse",
+    "endpoint": "POST /api/v1/inbox/receive",
+    "note": "This is a public endpoint but should be protected in production with SendGrid webhook signature validation",
+    "sendGridWebhookExample": {
+      "to": "your-domain-webhook@example.com",
+      "from": "sender@external.com",
+      "subject": "Test Email",
+      "text": "This is the plain text body",
+      "html": "<p>This is the HTML body</p>",
+      "envelope": "{\"to\":[\"your-domain-webhook@example.com\"],\"from\":\"sender@external.com\"}",
+      "attachments": 0
+    }
+  },
+  "postmanCollectionSetup": {
+    "description": "Steps to test in Postman",
+    "steps": [
+      {
+        "step": 1,
+        "action": "Set Authentication",
+        "details": "Add JWT token to Authorization header as Bearer token"
+      },
+      {
+        "step": 2,
+        "action": "Send Message",
+        "url": "POST http://localhost:8000/api/v1/inbox/send",
+        "body": "Use 'sendMessage' payload above"
+      },
+      {
+        "step": 3,
+        "action": "Get Inbox",
+        "url": "GET http://localhost:8000/api/v1/inbox/folder/inbox"
+      },
+      {
+        "step": 4,
+        "action": "Get Sent",
+        "url": "GET http://localhost:8000/api/v1/inbox/folder/sent"
+      },
+      {
+        "step": 5,
+        "action": "Mark Message as Read",
+        "url": "PATCH http://localhost:8000/api/v1/inbox/message/{messageId}",
+        "body": "{ \"isRead\": true }"
+      },
+      {
+        "step": 6,
+        "action": "Star a Message",
+        "url": "PATCH http://localhost:8000/api/v1/inbox/message/{messageId}",
+        "body": "{ \"isStarred\": true }"
+      },
+      {
+        "step": 7,
+        "action": "Get Starred Messages",
+        "url": "GET http://localhost:8000/api/v1/inbox/starred"
+      },
+      {
+        "step": 8,
+        "action": "Get Inbox Statistics",
+        "url": "GET http://localhost:8000/api/v1/inbox/stats"
+      }
+    ]
+  }
+}

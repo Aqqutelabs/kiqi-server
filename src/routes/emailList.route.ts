@@ -12,6 +12,7 @@ emailListRoute.get("/:id", isAuthenticated, emailListController.getEmailList)
 emailListRoute.post("/:id/contacts", isAuthenticated, emailListController.addEmailListContacts)
 emailListRoute.get("/contacts", isAuthenticated, emailListController.getAllContacts)
 emailListRoute.delete("/:id/contacts/:contactId/delete", isAuthenticated, emailListController.deleteEmailListContact)
+emailListRoute.delete("/:id", isAuthenticated, emailListController.deleteEmailList)
 emailListRoute.get("/user/me", isAuthenticated, emailListController.getEmailListsByUser)
 
 export default emailListRoute;

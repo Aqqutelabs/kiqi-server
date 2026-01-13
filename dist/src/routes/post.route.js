@@ -1,0 +1,16 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const Auth_middlewares_1 = require("../middlewares/Auth.middlewares");
+const post_controller_1 = require("../controllers/post.controller");
+const Upload_1 = __importDefault(require("../middlewares/Upload"));
+const postRouter = (0, express_1.Router)();
+const postController = new post_controller_1.PostController();
+postRouter.post("/", Auth_middlewares_1.isAuthenticated, Upload_1.default.single("media"), postController.createPost);
+postRouter.get("/:id", Auth_middlewares_1.isAuthenticated, postController.getPostById);
+postRouter.get("/", Auth_middlewares_1.isAuthenticated, postController.getAllPosts);
+postRouter.delete("/:id", Auth_middlewares_1.isAuthenticated, postController.deletePost);
+exports.default = postRouter;

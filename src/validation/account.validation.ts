@@ -21,6 +21,34 @@ export const walletSchema = z.object({
     isDefault: z.boolean().optional(),
 });
 
+// Phantom Wallet Validation Schemas
+export const phantomSchema = {
+    connect: z.object({
+        publicKey: z.string().min(32).max(44)
+    }),
+    transfer: z.object({
+        amount: z.number().positive()
+    }),
+    verifyTransfer: z.object({
+        signature: z.string(),
+        transactionId: z.string()
+    })
+};
+
+// Extended wallet operations
+export const walletOperationsSchema = {
+    addCredits: z.object({
+        amount: z.number().positive(),
+        paymentMethodId: z.string(),
+    }),
+    deductCredits: z.object({
+        amount: z.number().positive(),
+    }),
+    convertCredits: z.object({
+        amount: z.number().positive(),
+    })
+};
+
 // Transaction Validation Schema
 export const transactionSchema = z.object({
     amount: z.number().positive(),
@@ -31,20 +59,21 @@ export const transactionSchema = z.object({
 });
 
 // Subscription Validation Schema
-export const subscriptionSchema = z.object({
-    planName: z.enum(['Basic', 'Pro', 'Enterprise']),
-    price: z.number().positive(),
-    features: z.array(z.string()),
-    startDate: z.string().datetime(),
-    endDate: z.string().datetime(),
-    nextBillingDate: z.string().datetime(),
-    paymentMethodId: z.string(),
-});
-
-// Update Subscription Schema
-export const updateSubscriptionSchema = subscriptionSchema.partial().omit({
-    startDate: true,
-});
+export const subscriptionSchema = {
+    subscribe: z.object({
+        body: z.object({
+            planName: z.enum(['Basic', 'Pro', 'Enterprise'])
+        })
+    }),
+    update: z.object({
+        planName: z.enum(['Basic', 'Pro', 'Enterprise']).optional(),
+        billingCycle: z.enum(['monthly', 'annual']).optional(),
+        autoRenew: z.boolean().optional()
+    }),
+    cancel: z.object({
+        reason: z.string().min(3).max(500).optional()
+    })
+};
 
 // Account Balance Update Schema
 export const balanceUpdateSchema = z.object({

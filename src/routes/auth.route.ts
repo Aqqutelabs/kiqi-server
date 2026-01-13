@@ -1,5 +1,5 @@
 import express from "express";
-import { AuthController } from "../controllers/auth.controller";
+import { AuthController, getGoogleTokens } from "../controllers/auth.controller";
 import { verifyJWT } from "../middlewares/Auth.middlewares";
 
 const authController = new AuthController();
@@ -14,6 +14,9 @@ authRoutes.use((req, res, next) => {
 
 authRoutes.post("/login", authController.login);
 authRoutes.post("/register", authController.createUser);
-
+authRoutes.post('/google', authController.googleSignIn);
+authRoutes.post('/google/callback', getGoogleTokens);
+authRoutes.get('/google/callback', getGoogleTokens);
+authRoutes.post('/wallet/signup', authController.walletSignup);
 
 export default authRoutes;

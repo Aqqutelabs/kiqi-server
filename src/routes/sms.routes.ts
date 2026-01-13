@@ -12,6 +12,7 @@ router.get('/senders', isAuthenticated, controller.getSenders);
 router.put('/sender/:id', isAuthenticated, controller.updateSender);
 router.delete('/sender/:id', isAuthenticated, controller.deleteSender);
 router.post('/send', isAuthenticated, controller.sendMessage);
+router.post('/mtn/send', isAuthenticated, controller.sendMtnSms);
 router.post('/templates', isAuthenticated, controller.createTemplate);
 router.get('/templates', isAuthenticated, controller.getTemplates);
 router.get('/templates/:id', isAuthenticated, controller.getTemplateById);

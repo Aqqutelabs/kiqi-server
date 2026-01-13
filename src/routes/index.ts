@@ -11,17 +11,31 @@ import accountRouter from './account.routes';
 import subscriptionRouter from './subscription.routes';
 import walletRouter from './wallet.routes';
 import cardRouter from './card.routes';
-import postRouter from './post.route';
-
+import settingsRouter from './settings.routes';
+import conversionRouter from './conversion.routes';
+import inboxRoute from './inbox.route';
+import adminRoute from './admin.routes';
+import contactRouter from './crm.routes';
+import formRouter from './form.routes';
 const router = Router();
 
 router.use('/onboarding', onboardingRouter);
 router.use('/campaigns', campaignRoute);
-router.use('/senders', senderRouter);
+// router.use('/senders', senderRouter);
 router.use('/sms', smsRouter);
 router.use('/sms-templates', templateRouter);
 router.use('/drafts', draftsRouter);
 router.use('/ai-email', emailGenerationRouter);
 router.use('/press-releases', pressReleaseRouter);
+router.use('/account', accountRouter);
+router.use('/subscriptions', subscriptionRouter);
+router.use('/wallets', walletRouter);
+router.use('/cards', cardRouter);
+router.use('/settings', settingsRouter);
+router.use('/conversions', conversionRouter);
+router.use('/inbox', inboxRoute);
+router.use('/admin', adminRoute);
+router.use('/contacts', contactRouter);
+router.use('/forms', formRouter);
 
 export default router;

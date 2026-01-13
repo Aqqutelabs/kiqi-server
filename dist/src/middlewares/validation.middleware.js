@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.chatbotValidator = exports.wordpressValidator = exports.walletLoginValidator = exports.resetPasswordValidator = exports.loginValidator = exports.registerValidator = void 0;
+exports.subscribeValidator = exports.subscribeToPlanValidator = exports.chatbotValidator = exports.wordpressValidator = exports.walletLoginValidator = exports.resetPasswordValidator = exports.loginValidator = exports.registerValidator = void 0;
 const express_validator_1 = require("express-validator");
 const handleValidationErrors = (req, res, next) => {
     const errors = (0, express_validator_1.validationResult)(req);
@@ -49,5 +49,14 @@ exports.chatbotValidator = [
     (0, express_validator_1.body)('welcomeMessage').notEmpty().withMessage('Welcome message is required'),
     (0, express_validator_1.body)('widgetPosition').isIn(['Left Top', 'Left Bottom', 'Right Top', 'Right Bottom']).withMessage('Invalid widget position'),
     (0, express_validator_1.body)('tone').isIn(['Informal', 'Formal']).withMessage('Invalid tone'),
+    handleValidationErrors
+];
+exports.subscribeToPlanValidator = [
+    (0, express_validator_1.body)('planName').notEmpty().withMessage('Plan name is required'),
+    handleValidationErrors
+];
+exports.subscribeValidator = [
+    (0, express_validator_1.body)('planId').notEmpty().withMessage('Plan ID is required'),
+    (0, express_validator_1.body)('paymentMethod').isIn(['paystack', 'card']).withMessage('Invalid payment method. Must be either paystack or card'),
     handleValidationErrors
 ];

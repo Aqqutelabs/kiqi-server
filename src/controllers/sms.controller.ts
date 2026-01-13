@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import axios from 'axios';
 import { SmsServiceImpl } from '../services/impl/sms.service.impl';
 import { StatusCodes } from 'http-status-codes';
 
@@ -200,6 +201,36 @@ export class SmsController {
       const result = await this.smsService.sendBulkSms(targets, tpl.message, from);
       res.status(StatusCodes.OK).json({ error: false, data: result });
     } catch (err) { next(err); }
+  }
+
+  public sendMtnSms = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { to, body: message, from, notificationURL, clientId } = req.body;
+      if (!to || !Array.isArray(to) || to.length === 0) {
+        return res.status(StatusCodes.BAD_REQUEST).json({ error: true, message: 'Field "to" must be a non-empty array of phone numbers' });
+      }
+      if (!message) {
+        return res.status(StatusCodes.BAD_REQUEST).json({ error: true, message: 'Field "body" is required' });
+      }
+
+      const options = {
+        method: 'POST',
+        url: 'https://api.mtn.com/v1/messages/sms',
+        headers: { 'Content-Type': 'application/json' },
+        data: {
+          to,
+          body: message,
+          from: from || '34001',
+          notificationURL: notificationURL || undefined,
+          clientId: clientId || 'My_SMS_APP'
+        }
+      } as any;
+
+      const resp = await axios.request(options);
+      res.status(StatusCodes.OK).json({ error: false, data: resp.data });
+    } catch (err) {
+      next(err);
+    }
   }
 
   // --- Drafts ---

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { StatusCodes } from "http-status-codes";
 import { SenderEmailServiceImpl } from "../services/impl/senderEmail.service.impl";
 import { verifyEmailSender } from '../utils/emailVerification';
+import { sendEmail } from '../utils/EmailService';
 
 export class SenderEmailController {
   private senderEmailService: SenderEmailServiceImpl;
@@ -18,7 +19,8 @@ export class SenderEmailController {
     try {
 
       const { sender, type, email } = req.body;
-      const created = await this.senderEmailService.createSenderEmail( sender, type, email);
+      const userId = (req as any).user?._id;
+      const created = await this.senderEmailService.createSenderEmail( sender, type, email, userId);
 
       res.status(StatusCodes.CREATED).json({
         error: false,
@@ -61,7 +63,8 @@ export class SenderEmailController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const senders = await this.senderEmailService.getAllSenderEmails();
+      const userId = (req as any).user?._id;
+      const senders = await this.senderEmailService.getAllSenderEmails(userId);
       res.status(StatusCodes.OK).json({
         error: false,
         data: senders,
@@ -157,6 +160,108 @@ export class SenderEmailController {
         data: result,
       });
     } catch (error: any) {
+      next(error);
+    }
+  };
+
+  public requestVerificationOtp = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    // OTP-based verification flow has been removed. Use SendGrid verification endpoints instead.
+    res.status(StatusCodes.METHOD_NOT_ALLOWED).json({ error: true, message: 'OTP verification is disabled. Use /sendgrid/request-verification' });
+  };
+
+  public verifyOtp = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    // OTP-based verification flow has been removed. Use SendGrid verification endpoints instead.
+    res.status(StatusCodes.METHOD_NOT_ALLOWED).json({ error: true, message: 'OTP verification is disabled. Use /sendgrid/confirm-verification' });
+  };
+
+  // New: request SendGrid verification (creates sender in SendGrid which sends verification email)
+  public requestSendGridVerification = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      // Accept multiple field name variants to be more forgiving of client payloads
+      const body = req.body || {};
+      const nickname = body.nickname || body.nick || body.name;
+      const senderName = body.senderName || body.sender_name || body.fromName || body.from_name || body.sender || body.name;
+      const email = body.email || body.from_email || body.fromEmail || body.senderEmail || body.sender_email || body.reply_to;
+      const address = body.address || body.addr || '';
+      const city = body.city || '';
+      const state = body.state || '';
+      const zip = body.zip || '';
+      const country = body.country || 'US';
+
+      if (!email || !senderName) {
+        res.status(StatusCodes.BAD_REQUEST).json({ error: true, message: 'senderName and email are required (accepted keys: senderName, sender_name, fromName, from_name and email, from_email, senderEmail)' });
+        return;
+      }
+
+      const userId = (req as any).user?._id;
+      const sender = await this.senderEmailService.requestSendGridVerification(nickname || senderName, senderName, email, address, city, state, zip, country, userId);
+
+      res.status(StatusCodes.OK).json({ error: false, message: 'SendGrid verification initiated', data: sender });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  // New: confirm SendGrid verification (checks SendGrid and marks local sender verified)
+  public confirmSendGridVerification = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const body = req.body || {};
+      const senderId = body.senderId || body.sender_id || body.id;
+      const token = body.token || body.verifyToken || body.verification_token;
+
+      const userId = (req as any).user?._id;
+
+      let sender;
+      if (token) {
+        sender = await this.senderEmailService.confirmSendGridVerificationByToken(token, userId);
+      } else if (senderId) {
+        sender = await this.senderEmailService.confirmSendGridVerification(senderId, userId);
+      } else {
+        res.status(StatusCodes.BAD_REQUEST).json({ error: true, message: 'senderId or token is required' });
+        return;
+      }
+
+      res.status(StatusCodes.OK).json({ error: false, message: 'Sender verified', data: sender });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  // New: retrieve the user's verified SendGrid sender email
+  public getUserVerifiedSender = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const userId = (req as any).user?._id;
+      if (!userId) {
+        res.status(StatusCodes.UNAUTHORIZED).json({ error: true, message: 'Not authenticated' });
+        return;
+      }
+      const sender = await this.senderEmailService.getUserVerifiedSender(userId);
+      if (!sender) {
+        res.status(StatusCodes.NOT_FOUND).json({ error: true, message: 'No verified sender found for user' });
+        return;
+      }
+      res.status(StatusCodes.OK).json({ error: false, message: 'Verified sender found', data: sender });
+    } catch (error) {
       next(error);
     }
   };

@@ -43,7 +43,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
+exports.getGoogleTokens = getGoogleTokens;
+exports.verifyGoogleToken = verifyGoogleToken;
 const http_status_codes_1 = require("http-status-codes");
+const google_auth_library_1 = require("google-auth-library");
 const auth_service_impl_1 = require("../services/impl/auth.service.impl");
 class AuthController {
     constructor() {
@@ -53,7 +56,7 @@ class AuthController {
                 console.log('Update Sender Email - Request Body:', req.body);
                 console.log('Update Sender Email - User:', req.user);
                 // Get userId from req.user (set by auth middleware)
-                const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id);
+                const userId = (((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id));
                 const { senderEmail } = req.body;
                 if (!senderEmail) {
                     res.status(http_status_codes_1.StatusCodes.BAD_REQUEST).json({
@@ -121,8 +124,114 @@ class AuthController {
                 next(error);
             }
         });
+        this.googleSignIn = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { idToken } = req.body;
+                if (!idToken) {
+                    res.status(http_status_codes_1.StatusCodes.BAD_REQUEST).json({ error: true, message: 'idToken is required' });
+                    return;
+                }
+                // Verify token with Google (log verification errors for debugging)
+                let profile = null;
+                try {
+                    profile = yield verifyGoogleToken(idToken);
+                }
+                catch (verifyErr) {
+                    console.error('Google token verification error:', (verifyErr === null || verifyErr === void 0 ? void 0 : verifyErr.message) || verifyErr);
+                }
+                if (!profile) {
+                    res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({ error: true, message: 'Invalid Google ID token' });
+                    return;
+                }
+                const email = profile.email || '';
+                const firstName = profile.given_name || profile.name || 'Unknown';
+                const lastName = profile.family_name || '';
+                const googleId = profile.sub || '';
+                const { UserModel } = yield Promise.resolve().then(() => __importStar(require('../models/User')));
+                let user = yield UserModel.findOne({ email });
+                if (user) {
+                    // update google id if missing
+                    if (!user.googleId) {
+                        user.googleId = googleId;
+                        yield user.save();
+                    }
+                }
+                else {
+                    // create user with a random password (social login)
+                    const randomPassword = Math.random().toString(36).slice(2, 12);
+                    user = yield UserModel.create({
+                        firstName,
+                        lastName: lastName || ' ',
+                        email,
+                        password: randomPassword,
+                        organizationName: '',
+                        googleId
+                    });
+                }
+                // generate tokens
+                const accessToken = this.authService.generateAccessTokenForUser(user);
+                const refreshToken = this.authService.generateRefreshTokenForUser(user);
+                const userObj = user.toObject ? user.toObject() : user;
+                if (userObj.password)
+                    delete userObj.password;
+                res.status(http_status_codes_1.StatusCodes.OK).json({ error: false, message: 'Signed in with Google', accessToken, refreshToken, user: userObj });
+            }
+            catch (err) {
+                next(err);
+            }
+        });
+        this.walletSignup = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { walletAddress, signature, message } = req.body;
+                if (!walletAddress || !signature || !message) {
+                    res.status(http_status_codes_1.StatusCodes.BAD_REQUEST).json({
+                        error: true,
+                        message: 'walletAddress, signature, and message are required'
+                    });
+                    return;
+                }
+                const { user, accessToken, refreshToken } = yield this.authService.createUserWithWallet(walletAddress, signature, message);
+                const userObj = user.toObject ? user.toObject() : user;
+                if (userObj.password)
+                    delete userObj.password;
+                res.status(http_status_codes_1.StatusCodes.CREATED).json({
+                    error: false,
+                    message: 'Wallet signup successful',
+                    accessToken,
+                    refreshToken,
+                    user: userObj
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
         this.authService = new auth_service_impl_1.AuthServiceImpl();
     }
 }
 exports.AuthController = AuthController;
-// hpe
+// Google OAuth2 client + helpers
+const googleClient = new google_auth_library_1.OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, process.env.GOOGLE_REDIRECT_URI || "https://gokiki.app");
+function getGoogleTokens(req, res) {
+    return __awaiter(this, void 0, void 0, function* () {
+        var _a;
+        const code = req.query.code || ((_a = req.body) === null || _a === void 0 ? void 0 : _a.code);
+        try {
+            const { tokens } = yield googleClient.getToken(code);
+            res.json({ success: true, tokens });
+        }
+        catch (err) {
+            console.error(err);
+            res.status(500).json({ message: "Token exchange failed" });
+        }
+    });
+}
+function verifyGoogleToken(idToken) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const ticket = yield googleClient.verifyIdToken({
+            idToken,
+            audience: process.env.GOOGLE_CLIENT_ID
+        });
+        return ticket.getPayload();
+    });
+}

@@ -1,0 +1,107 @@
+{
+  "update_tracker_status_tests": [
+    {
+      "name": "Update to Processing",
+      "method": "PUT",
+      "endpoint": "/api/v1/press-releases/tracker/69456d55d5ae44ddacf47a19/status",
+      "headers": {
+        "Authorization": "Bearer YOUR_AUTH_TOKEN",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "current_status": "processing",
+        "notes": "Started distribution to media outlets",
+        "progress_percentage": 25,
+        "reviewers_count": 1
+      }
+    },
+    {
+      "name": "Update to Review",
+      "method": "PUT",
+      "endpoint": "/api/v1/press-releases/tracker/69456d55d5ae44ddacf47a19/status",
+      "headers": {
+        "Authorization": "Bearer YOUR_AUTH_TOKEN",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "current_status": "review",
+        "notes": "Press release awaiting editorial review",
+        "progress_percentage": 75,
+        "reviewers_count": 2
+      }
+    },
+    {
+      "name": "Update to Completed",
+      "method": "PUT",
+      "endpoint": "/api/v1/press-releases/tracker/69456d55d5ae44ddacf47a19/status",
+      "headers": {
+        "Authorization": "Bearer YOUR_AUTH_TOKEN",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "current_status": "completed",
+        "notes": "Press release successfully published to all outlets",
+        "progress_percentage": 100,
+        "reviewers_count": 2
+      }
+    },
+    {
+      "name": "Update to Rejected",
+      "method": "PUT",
+      "endpoint": "/api/v1/press-releases/tracker/69456d55d5ae44ddacf47a19/status",
+      "headers": {
+        "Authorization": "Bearer YOUR_AUTH_TOKEN",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "current_status": "rejected",
+        "notes": "Rejected due to policy violation, needs revision",
+        "progress_percentage": 10,
+        "reviewers_count": 1
+      }
+    },
+    {
+      "name": "Minimal Update - Status Only",
+      "method": "PUT",
+      "endpoint": "/api/v1/press-releases/tracker/69456d55d5ae44ddacf47a19/status",
+      "headers": {
+        "Authorization": "Bearer YOUR_AUTH_TOKEN",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "current_status": "pending"
+      }
+    },
+    {
+      "name": "Update with Progress Only",
+      "method": "PUT",
+      "endpoint": "/api/v1/press-releases/tracker/69456d55d5ae44ddacf47a19/status",
+      "headers": {
+        "Authorization": "Bearer YOUR_AUTH_TOKEN",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "current_status": "processing",
+        "progress_percentage": 50
+      }
+    }
+  ],
+  "get_tracker_tests": [
+    {
+      "name": "Get Tracker Details",
+      "method": "GET",
+      "endpoint": "/api/v1/press-releases/tracker/69456d55d5ae44ddacf47a19",
+      "headers": {
+        "Authorization": "Bearer YOUR_AUTH_TOKEN"
+      }
+    },
+    {
+      "name": "Get All Trackers",
+      "method": "GET",
+      "endpoint": "/api/v1/press-releases/tracker/all",
+      "headers": {
+        "Authorization": "Bearer YOUR_AUTH_TOKEN"
+      }
+    }
+  ]
+}

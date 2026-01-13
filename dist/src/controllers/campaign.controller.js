@@ -12,40 +12,97 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CampaignController = void 0;
 const campaign_service_impl_1 = require("../services/impl/campaign.service.impl");
 const http_status_codes_1 = require("http-status-codes");
+const ApiError_1 = require("../utils/ApiError");
+const advancedCampaignSettings_dto_1 = require("../dtos/advancedCampaignSettings.dto");
+const advancedCampaignSettings_service_1 = require("../services/advancedCampaignSettings.service");
+/**
+ * Handles HTTP requests related to email campaigns.
+ * Interacts with CampaignServiceImpl for business logic.
+ */
 class CampaignController {
     constructor() {
         this.createCampaign = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
-                // Accept all campaign fields from the request body
-                const { campaignName, subjectLine, status, emailListIds, senderEmail, deliveryStatus, category, campaignTopic, instructions, reward, startDate, endDate, time } = req.body;
-                const created = yield this.campaignService.createCampaign({
+                const { campaignName, subjectLine, senderId, body, autoStart, scheduledAt, audience } = req.body;
+                const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+                if (!userId) {
+                    throw new Error("User not authenticated");
+                }
+                if (!senderId) {
+                    throw new Error("senderId is required");
+                }
+                // If autoStart is true, audience is required
+                if (autoStart) {
+                    if (!audience) {
+                        throw new Error("audience is required when autoStart is true");
+                    }
+                    const hasEmailLists = audience.emailLists && Array.isArray(audience.emailLists) && audience.emailLists.length > 0;
+                    const hasManualEmails = audience.manualEmails && Array.isArray(audience.manualEmails) && audience.manualEmails.length > 0;
+                    if (!hasEmailLists && !hasManualEmails) {
+                        throw new Error("audience must contain either emailLists or manualEmails");
+                    }
+                }
+                // Validate scheduledAt if autoStart is true
+                if (autoStart && scheduledAt) {
+                    const scheduledDate = new Date(scheduledAt);
+                    if (isNaN(scheduledDate.getTime())) {
+                        throw new Error("Invalid scheduledAt date format");
+                    }
+                    if (scheduledDate < new Date()) {
+                        throw new Error("scheduledAt must be in the future");
+                    }
+                }
+                const campaignData = {
                     campaignName,
                     subjectLine,
-                    status,
-                    emailListIds,
-                    senderEmail,
-                    deliveryStatus,
-                    category,
-                    campaignTopic,
-                    instructions,
-                    reward,
-                    startDate,
-                    endDate,
-                    time
-                });
-                res.status(http_status_codes_1.StatusCodes.CREATED).json({
-                    error: false,
-                    message: "Campaign has been created",
-                    data: created,
-                });
+                    content: body ? { htmlContent: body, plainText: body } : undefined,
+                    senderId,
+                    user_id: userId,
+                    audience: audience || { emailLists: [], excludeLists: [], manualEmails: [] }
+                };
+                let response;
+                if (autoStart) {
+                    // Create campaign and schedule it to start
+                    // NOTE: The 'as any' cast is no longer strictly necessary because the method now exists
+                    response = yield this.campaignService.createAndScheduleCampaign(campaignData, scheduledAt ? new Date(scheduledAt) : new Date());
+                    const successMessage = scheduledAt
+                        ? "Campaign has been created and scheduled for later"
+                        : "Campaign has been created and scheduled to start immediately";
+                    const resBody = {
+                        error: false,
+                        message: successMessage,
+                        data: response.campaign,
+                        jobId: response.jobId
+                    };
+                    // Include sending error if one occurred, to help frontend debug
+                    if (response.sendingError) {
+                        resBody.sendingError = response.sendingError;
+                    }
+                    res.status(http_status_codes_1.StatusCodes.CREATED).json(resBody);
+                }
+                else {
+                    // Just create campaign in Draft status
+                    const created = yield this.campaignService.createCampaign(campaignData);
+                    res.status(http_status_codes_1.StatusCodes.CREATED).json({
+                        error: false,
+                        message: "Campaign has been created",
+                        data: created,
+                    });
+                }
             }
             catch (error) {
                 next(error);
             }
         });
         this.getAllCampaigns = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
-                const campaigns = yield this.campaignService.getAllCampaigns();
+                const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+                if (!userId) {
+                    throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.UNAUTHORIZED, "User not authenticated");
+                }
+                const campaigns = yield this.campaignService.getAllCampaigns(userId);
                 res.status(http_status_codes_1.StatusCodes.OK).json({
                     error: false,
                     data: campaigns
@@ -56,9 +113,14 @@ class CampaignController {
             }
         });
         this.getCampaignById = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 const id = req.params.id;
-                const campaign = yield this.campaignService.getCampaignById(id);
+                const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+                if (!userId) {
+                    throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.UNAUTHORIZED, "User not authenticated");
+                }
+                const campaign = yield this.campaignService.getCampaignById(id, userId);
                 res.status(http_status_codes_1.StatusCodes.OK).json({
                     error: false,
                     data: campaign
@@ -69,13 +131,16 @@ class CampaignController {
             }
         });
         this.updateCampaign = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 const id = req.params.id;
-                const { campaignName, subjectLine } = req.body;
-                const updated = yield this.campaignService.updateCampaign(id, {
-                    campaignName,
-                    subjectLine
-                });
+                const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+                if (!userId) {
+                    throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.UNAUTHORIZED, "User not authenticated");
+                }
+                const { campaignName, subjectLine, body } = req.body;
+                const updated = yield this.campaignService.updateCampaign(id, userId, Object.assign({ campaignName,
+                    subjectLine }, (body ? { content: { htmlContent: body, plainText: body } } : {})));
                 res.status(http_status_codes_1.StatusCodes.OK).json({
                     error: false,
                     message: "Campaign has been updated.",
@@ -87,9 +152,14 @@ class CampaignController {
             }
         });
         this.deleteCampaign = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 const id = req.params.id;
-                const deleted = yield this.campaignService.deleteCampaign(id);
+                const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+                if (!userId) {
+                    throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.UNAUTHORIZED, "User not authenticated");
+                }
+                yield this.campaignService.deleteCampaign(id, userId);
                 res.status(http_status_codes_1.StatusCodes.OK).json({
                     error: false,
                     message: "Campaign has been deleted",
@@ -119,6 +189,7 @@ class CampaignController {
                     return;
                 }
                 // Fetch email list and validate ownership
+                // NOTE: The 'as any' cast is no longer strictly necessary because the method now exists
                 const emailList = yield this.campaignService.getEmailListForUser(emailListId, userId);
                 if (!emailList) {
                     res.status(http_status_codes_1.StatusCodes.NOT_FOUND).json({
@@ -135,14 +206,16 @@ class CampaignController {
                     return;
                 }
                 // Send emails (use fixed sender, dynamic replyTo)
+                // NOTE: The 'as any' cast is no longer strictly necessary because the method now exists
                 yield this.campaignService.sendBulkEmail(emailList.emails, subject, body, replyTo);
                 // Save campaign record
                 const campaign = yield this.campaignService.createCampaign({
                     campaignName,
                     subjectLine: subject,
-                    status: 'Completed',
-                    emailListIds: [emailListId],
-                    senderEmail: process.env.EMAIL_FROM || 'noreply@data.widernetfarms.org',
+                    content: body ? { htmlContent: body, plainText: body } : undefined,
+                    senderId: process.env.EMAIL_FROM || 'noreply@data.widernetfarms.org', // Using senderId as a proxy for sender email
+                    user_id: userId,
+                    audience: { emailLists: [emailListId], excludeLists: [], manualEmails: [] }
                 });
                 res.status(http_status_codes_1.StatusCodes.OK).json({
                     error: false,
@@ -166,6 +239,7 @@ class CampaignController {
                     return;
                 }
                 // Update the campaign to reference the email list
+                // NOTE: The 'as any' cast is no longer strictly necessary because the method now exists
                 const updatedCampaign = yield this.campaignService.addEmailListToCampaign(campaignId, emailListId);
                 if (!updatedCampaign) {
                     res.status(http_status_codes_1.StatusCodes.NOT_FOUND).json({
@@ -188,6 +262,7 @@ class CampaignController {
         this.getCampaignWithEmailList = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
             try {
                 const { id } = req.params;
+                // NOTE: Missing userId check in controller, but the service method now exists
                 const campaignWithList = yield this.campaignService.getCampaignWithEmailList(id);
                 if (!campaignWithList) {
                     res.status(http_status_codes_1.StatusCodes.NOT_FOUND).json({
@@ -205,7 +280,200 @@ class CampaignController {
                 next(error);
             }
         });
+        // Search campaigns by name, subject, or category
+        this.searchCampaigns = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            try {
+                const { q, status, limit, page } = req.query;
+                if (!q || typeof q !== 'string') {
+                    throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, "Search query (q) is required");
+                }
+                const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+                if (!userId) {
+                    throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.UNAUTHORIZED, "User not authenticated");
+                }
+                const { results, total } = yield this.campaignService.searchCampaigns(userId, q, {
+                    status: status,
+                    limit: Number(limit) || 20,
+                    page: Number(page) || 1
+                });
+                res.status(http_status_codes_1.StatusCodes.OK).json({
+                    error: false,
+                    data: {
+                        campaigns: results,
+                        total,
+                        limit: Number(limit) || 20,
+                        page: Number(page) || 1
+                    }
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+        /**
+         * Unified endpoint for managing advanced email campaign settings
+         * POST /api/v1/campaigns/:campaignId/advanced-settings
+         *
+         * Supports operations via query parameter:
+         * - POST with body: Save/update settings
+         * - POST with ?action=get: Retrieve settings
+         * - POST with ?action=validate: Validate settings
+         * - POST with ?action=defaults: Get default settings
+         * - POST with ?action=check-batch&totalRecipients=X: Check batch feasibility
+         * - POST with ?action=batch-status&jobId=X: Get batch job status
+         */
+        this.manageAdvancedSettings = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            try {
+                const campaignId = req.params.campaignId;
+                const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+                const action = req.query.action || 'save';
+                if (!userId && action !== 'defaults' && action !== 'validate') {
+                    throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.UNAUTHORIZED, "User not authenticated");
+                }
+                switch (action) {
+                    case 'save':
+                    case 'update':
+                        return this.saveAdvancedSettings(campaignId, userId, req.body, res, next);
+                    case 'get':
+                        return this.getAdvancedSettings(campaignId, userId, res, next);
+                    case 'validate':
+                        return this.validateAdvancedSettings(req.body, res, next);
+                    case 'defaults':
+                        return this.getDefaultAdvancedSettings(res, next);
+                    case 'check-batch':
+                        return this.validateBatchSending(campaignId, userId, req.body.totalRecipients, res, next);
+                    case 'batch-status':
+                        return this.getBatchJobStatus(req.query.jobId, res, next);
+                    default:
+                        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, `Unknown action: ${action}`);
+                }
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+        this.saveAdvancedSettings = (campaignId, userId, body, res, next) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const advancedSettings = body;
+                // Merge with defaults
+                const finalSettings = advancedCampaignSettings_dto_1.AdvancedSettingsDefaults.mergeWithDefaults(advancedSettings);
+                // Validate settings
+                const validation = advancedCampaignSettings_dto_1.AdvancedSettingsValidator.validateAdvancedSettings(finalSettings);
+                if (!validation.valid) {
+                    throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, `Validation failed: ${validation.errors.join(", ")}`);
+                }
+                // Save settings to campaign
+                const updated = yield this.campaignService.updateAdvancedSettings(campaignId, userId, finalSettings);
+                res.status(http_status_codes_1.StatusCodes.OK).json({
+                    error: false,
+                    message: "Advanced settings saved successfully",
+                    data: updated.advancedSettings
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+        this.getAdvancedSettings = (campaignId, userId, res, next) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const campaign = yield this.campaignService.getCampaignById(campaignId, userId);
+                if (!campaign) {
+                    throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, "Campaign not found");
+                }
+                const settings = campaign.advancedSettings || advancedCampaignSettings_dto_1.AdvancedSettingsDefaults.getDefaults();
+                res.status(http_status_codes_1.StatusCodes.OK).json({
+                    error: false,
+                    data: settings
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+        this.validateAdvancedSettings = (settings, res, next) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const validation = advancedCampaignSettings_dto_1.AdvancedSettingsValidator.validateAdvancedSettings(settings);
+                res.status(http_status_codes_1.StatusCodes.OK).json({
+                    error: !validation.valid,
+                    valid: validation.valid,
+                    errors: validation.errors,
+                    data: settings
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+        this.getDefaultAdvancedSettings = (res, next) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const defaults = advancedCampaignSettings_dto_1.AdvancedSettingsDefaults.getDefaults();
+                res.status(http_status_codes_1.StatusCodes.OK).json({
+                    error: false,
+                    data: defaults
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+        this.validateBatchSending = (campaignId, userId, totalRecipients, res, next) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const campaign = yield this.campaignService.getCampaignById(campaignId, userId);
+                if (!campaign) {
+                    throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, "Campaign not found");
+                }
+                const settings = campaign.advancedSettings || advancedCampaignSettings_dto_1.AdvancedSettingsDefaults.getDefaults();
+                const recipientCount = totalRecipients || 1000;
+                const feasibility = this.advancedSettingsService.validateBatchSendingFeasibility(recipientCount, settings.batchSending.emailsPerBatch, settings.batchSending.intervalMinutes, settings.dailySendLimit);
+                const schedule = this.advancedSettingsService.calculateBatchSchedule(recipientCount, settings.batchSending.emailsPerBatch, settings.batchSending.intervalMinutes);
+                res.status(http_status_codes_1.StatusCodes.OK).json({
+                    error: false,
+                    feasible: feasibility.feasible,
+                    estimatedTimeMinutes: feasibility.estimatedTime,
+                    batchCount: Math.ceil(recipientCount / settings.batchSending.emailsPerBatch),
+                    schedule,
+                    issues: feasibility.issues,
+                    data: {
+                        dailyLimit: settings.dailySendLimit,
+                        emailsPerBatch: settings.batchSending.emailsPerBatch,
+                        intervalMinutes: settings.batchSending.intervalMinutes
+                    }
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+        this.getBatchJobStatus = (jobId, res, next) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const jobStatus = this.advancedSettingsService.getBatchJobStatus(jobId);
+                if (!jobStatus) {
+                    throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, "Batch job not found");
+                }
+                const progressPercentage = (jobStatus.sentCount / jobStatus.totalRecipients) * 100;
+                res.status(http_status_codes_1.StatusCodes.OK).json({
+                    error: false,
+                    data: {
+                        jobId: jobStatus.jobId,
+                        campaignId: jobStatus.campaignId,
+                        totalRecipients: jobStatus.totalRecipients,
+                        sentCount: jobStatus.sentCount,
+                        remainingCount: jobStatus.totalRecipients - jobStatus.sentCount,
+                        progressPercentage: Math.round(progressPercentage),
+                        currentBatchIndex: jobStatus.currentBatchIndex,
+                        createdAt: jobStatus.createdAt,
+                        lastExecuted: jobStatus.lastExecuted
+                    }
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
         this.campaignService = new campaign_service_impl_1.CampaignServiceImpl();
+        this.advancedSettingsService = new advancedCampaignSettings_service_1.AdvancedCampaignSettingsService();
     }
 }
 exports.CampaignController = CampaignController;

@@ -72,6 +72,49 @@ export interface CheckoutOrder {
 }
 
 export interface CreatePressRelease {
-    campaign_id: string;
     pr_content: string;  // Rich text content
+    status: 'Draft' | 'Published' | 'Scheduled';
+    image?: string; // Optional image field
+}
+
+// Press Release Tracker Status Types
+export type PressReleaseTrackerStatus = 'completed' | 'pending' | 'processing' | 'review' | 'rejected';
+
+export interface StatusConfig {
+    icon: string; // icon name for frontend
+    color: string;
+    textColor: string;
+}
+
+export interface StatusConfigMap {
+    [key: string]: StatusConfig;
+}
+
+export interface PressReleaseTracker {
+    _id: string;
+    pr_id: string;
+    title: string;
+    current_status: PressReleaseTrackerStatus;
+    status_history: Array<{
+        status: PressReleaseTrackerStatus;
+        timestamp: string;
+        notes?: string;
+    }>;
+    progress_percentage: number;
+    estimated_completion: string;
+    actual_completion?: string;
+    reviewers_count: number;
+    distribution_outlets: number;
+    current_step: number;
+    total_steps: number;
+}
+
+export interface ProgressTrackerResponse {
+    tracker: PressReleaseTracker;
+    status_config: StatusConfigMap;
+    timeline: Array<{
+        status: PressReleaseTrackerStatus;
+        date: string;
+        description: string;
+    }>;
 }

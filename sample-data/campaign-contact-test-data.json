@@ -1,0 +1,132 @@
+{
+  "createContact": {
+    "firstName": "John",
+    "lastName": "Doe",
+    "jobTitle": "Senior Software Engineer",
+    "company": "Tech Solutions Inc",
+    "location": "San Francisco, CA",
+    "emails": [
+      {
+        "address": "john.doe@techsolutions.com",
+        "isPrimary": true
+      },
+      {
+        "address": "john.doe@personal.com",
+        "isPrimary": false
+      }
+    ],
+    "phones": [
+      {
+        "number": "+1-415-555-0123",
+        "isPrimary": true
+      },
+      {
+        "number": "+1-415-555-0124",
+        "isPrimary": false
+      }
+    ],
+    "tags": ["engineering", "decision-maker", "tech-lead"],
+    "notes": "Key contact for enterprise sales. Very responsive to emails.",
+    "isArchived": false
+  },
+  "createContactMinimal": {
+    "firstName": "Jane",
+    "lastName": "Smith",
+    "emails": [
+      {
+        "address": "jane.smith@company.com",
+        "isPrimary": true
+      }
+    ]
+  },
+  "createContactWithoutEmails": {
+    "firstName": "Bob",
+    "lastName": "Johnson",
+    "jobTitle": "Marketing Manager",
+    "company": "Global Marketing Ltd",
+    "phones": [
+      {
+        "number": "+1-206-555-0134",
+        "isPrimary": true
+      }
+    ],
+    "tags": ["marketing", "b2b"]
+  },
+  "bulkCreateContacts": [
+    {
+      "firstName": "Alice",
+      "lastName": "Williams",
+      "jobTitle": "Sales Director",
+      "company": "Fortune 500 Corp",
+      "emails": [
+        {
+          "address": "alice.williams@fortune500.com",
+          "isPrimary": true
+        }
+      ],
+      "tags": ["sales", "director"]
+    },
+    {
+      "firstName": "Michael",
+      "lastName": "Brown",
+      "jobTitle": "Product Manager",
+      "company": "Innovation Labs",
+      "emails": [
+        {
+          "address": "michael.brown@innovationlabs.com",
+          "isPrimary": true
+        }
+      ],
+      "tags": ["product", "management"]
+    },
+    {
+      "firstName": "Sarah",
+      "lastName": "Davis",
+      "jobTitle": "CFO",
+      "company": "Financial Services Group",
+      "emails": [
+        {
+          "address": "sarah.davis@finservices.com",
+          "isPrimary": true
+        }
+      ],
+      "phones": [
+        {
+          "number": "+1-212-555-0145",
+          "isPrimary": true
+        }
+      ],
+      "tags": ["finance", "executive", "decision-maker"]
+    }
+  ],
+  "invalidRequests": {
+    "missingFirstName": {
+      "lastName": "Doe",
+      "emails": [
+        {
+          "address": "test@example.com",
+          "isPrimary": true
+        }
+      ]
+    },
+    "missingLastName": {
+      "firstName": "John",
+      "emails": [
+        {
+          "address": "test@example.com",
+          "isPrimary": true
+        }
+      ]
+    },
+    "emptyFirstName": {
+      "firstName": "",
+      "lastName": "Doe",
+      "emails": [
+        {
+          "address": "test@example.com",
+          "isPrimary": true
+        }
+      ]
+    }
+  }
+}

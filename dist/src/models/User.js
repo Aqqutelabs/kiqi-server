@@ -41,5 +41,10 @@ const UserSchema = new mongoose_1.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     senderEmail: { type: String, required: false }, // New field for sender email
-});
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user',
+    },
+}, { timestamps: true });
 exports.UserModel = mongoose_1.default.model("User", UserSchema);

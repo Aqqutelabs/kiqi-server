@@ -119,11 +119,24 @@ class EmailListController {
         this.getEmailListsByUser = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
             var _a, _b;
             try {
-                const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id);
+                const userId = (((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id));
                 const emailLists = yield this.emailListService.getEmailListsByUser(userId);
                 res.status(200).json({
                     error: false,
                     data: emailLists
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+        this.deleteEmailList = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const id = req.params.id;
+                yield this.emailListService.deleteEmailList(id);
+                res.status(http_status_codes_1.StatusCodes.OK).json({
+                    error: false,
+                    message: "Email list has been deleted successfully."
                 });
             }
             catch (error) {

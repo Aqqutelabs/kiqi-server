@@ -1,37 +1,4 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -41,156 +8,505 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CampaignServiceImpl = void 0;
-const http_status_codes_1 = require("http-status-codes");
+const types_1 = require("../types");
+const SenderEmail_1 = require("../../models/SenderEmail");
 const Campaign_1 = require("../../models/Campaign");
-const ApiError_1 = require("../../utils/ApiError");
+const axios_1 = __importDefault(require("axios"));
+const EmailService_1 = require("../../utils/EmailService");
+const EmailList_1 = require("../../models/EmailList");
+/**
+ * CampaignServiceImpl contains the business logic for managing email campaigns.
+ * All methods are defined as public to be accessible by the CampaignController.
+ */
 class CampaignServiceImpl {
-    createCampaign(data) {
+    constructor() {
+        // Track campaign errors for debugging on frontend
+        this.campaignErrors = new Map();
+    }
+    /**
+     * Creates a campaign and schedules it for immediate or future sending.
+     * @param campaignData The base data for the campaign.
+     * @param scheduledAt The date/time to send the campaign.
+     * @returns The created campaign and the scheduling job ID, including any sending errors.
+     */
+    createAndScheduleCampaign(campaignData, scheduledAt) {
         return __awaiter(this, void 0, void 0, function* () {
-            const isCampaignExists = yield Campaign_1.CampaignModel.findOne({
-                campaignName: data.campaignName
+            console.log(`Scheduling campaign '${campaignData.campaignName}' for ${scheduledAt.toISOString()}`);
+            // Resolve sender: accept local sender _id, a SendGrid sender id, or an email address.
+            if (!campaignData.senderId) {
+                throw new types_1.ApiError(types_1.StatusCodes.BAD_REQUEST, 'senderId (local id, sendgridId, or email) is required to schedule a campaign');
+            }
+            // Helper: try to resolve a SenderModel by different identifiers
+            const resolveSender = (identifier) => __awaiter(this, void 0, void 0, function* () {
+                var _a;
+                // Try local _id first
+                try {
+                    const byId = yield SenderEmail_1.SenderModel.findById(identifier);
+                    if (byId)
+                        return byId;
+                }
+                catch (e) {
+                    // ignore invalid ObjectId error
+                }
+                // Try stored sendgridId
+                let bySg = yield SenderEmail_1.SenderModel.findOne({ sendgridId: identifier });
+                if (bySg)
+                    return bySg;
+                // If identifier looks like an email, search by senderEmail
+                if (identifier.includes('@')) {
+                    const byEmail = yield SenderEmail_1.SenderModel.findOne({ senderEmail: identifier.toLowerCase() });
+                    if (byEmail)
+                        return byEmail;
+                }
+                // If it looks like a SendGrid id (heuristic: contains '-' or starts with 'sg'), try fetching from SendGrid
+                const looksLikeSgId = identifier.startsWith('sg_') || identifier.indexOf('-') !== -1;
+                if (looksLikeSgId) {
+                    const key = process.env.SENDGRID_API_KEY;
+                    if (!key)
+                        return null;
+                    try {
+                        const resp = yield axios_1.default.get(`https://api.sendgrid.com/v3/verified_senders/${encodeURIComponent(identifier)}`, {
+                            headers: { Authorization: `Bearer ${key}` }
+                        });
+                        const body = resp.data || {};
+                        const email = body.from_email || body.email || body.from || body.from_email_address;
+                        const name = body.from_name || body.from_name || body.nickname || undefined;
+                        const isVerified = body.verified === true || body.status === 'verified' || body.is_verified === true;
+                        if (email) {
+                            // Upsert local sender record so we have it locally for future use
+                            let local = yield SenderEmail_1.SenderModel.findOne({ senderEmail: email.toLowerCase() });
+                            if (!local) {
+                                local = yield SenderEmail_1.SenderModel.create({ senderName: name || email, type: 'sendgrid', senderEmail: email.toLowerCase(), verified: !!isVerified, sendgridId: identifier });
+                            }
+                            else {
+                                local.sendgridId = identifier;
+                                local.verified = !!isVerified;
+                                local.type = 'sendgrid';
+                                yield local.save();
+                            }
+                            return local;
+                        }
+                    }
+                    catch (err) {
+                        // ignore SendGrid lookup errors here; caller will handle absence
+                        const e = err;
+                        console.error('[CampaignService] SendGrid lookup failed for id:', identifier, ((_a = e === null || e === void 0 ? void 0 : e.response) === null || _a === void 0 ? void 0 : _a.data) || (e === null || e === void 0 ? void 0 : e.message) || e);
+                    }
+                }
+                return null;
             });
-            const campaign = yield Campaign_1.CampaignModel.create({
-                campaignName: data.campaignName,
-                subjectLine: data.subjectLine,
-                status: data.status,
-                userId: data.userId,
-                emailListIds: data.emailListIds,
-                senderEmail: data.senderEmail,
-                deliveryStatus: data.deliveryStatus,
-                category: data.category,
-                campaignTopic: data.campaignTopic,
-                instructions: data.instructions,
-                reward: data.reward,
-                startDate: data.startDate,
-                endDate: data.endDate,
-                time: data.time
-            });
-            return campaign;
-        });
-    }
-    getAllCampaigns() {
-        return __awaiter(this, void 0, void 0, function* () {
-            return Campaign_1.CampaignModel.find().populate('emailListIds');
-        });
-    }
-    getCampaignById(id) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return Campaign_1.CampaignModel.findById(id).populate('emailListIds');
-        });
-    }
-    updateCampaign(id, data) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const updated = yield Campaign_1.CampaignModel.findByIdAndUpdate(id, data, {
-                new: true,
-                runValidators: true,
-                updatedAt: Date.now()
-            });
-            if (!updated) {
-                throw new Error("Campaign not found or updated");
+            const senderRecord = yield resolveSender(String(campaignData.senderId));
+            if (!senderRecord || !senderRecord.verified) {
+                throw new types_1.ApiError(types_1.StatusCodes.BAD_REQUEST, 'Sender email not found or not verified');
             }
-            return updated;
-        });
-    }
-    deleteCampaign(id) {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield Campaign_1.CampaignModel.findByIdAndDelete(id);
-        });
-    }
-    sendCampaign(id) {
-        return __awaiter(this, void 0, void 0, function* () {
-            // Fetch campaign
-            const campaign = yield Campaign_1.CampaignModel.findById(id);
-            if (!campaign) {
-                throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, "Campaign not found");
-            }
-            // Fetch user
-            const userId = campaign.userId;
-            if (!userId) {
-                throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, "Campaign does not have a userId");
-            }
-            const { UserModel } = yield Promise.resolve().then(() => __importStar(require("../../models/User")));
-            const user = yield UserModel.findById(userId);
-            if (!user) {
-                throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, "User not found");
-            }
-            // Get user's email to use as the reply-to address
-            const replyToEmail = user.email;
-            if (!replyToEmail) {
-                throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, "User email not found");
-            }
-            // Prepare email sending
-            const fromAddress = process.env.EMAIL_FROM || "no-reply@yourapp.com"; // Verified domain with Resend
-            // TODO: Fetch recipients from campaign.emailListIds
-            // TODO: Integrate with SendGrid/Resend/etc. to send email
+            // Ensure campaignData.senderId stores the local sender _id so later sending routines can find it.
             try {
-                // Example: sendEmail({
-                //   from: fromAddress,
-                //   to: recipients,
-                //   subject: campaign.subjectLine,
-                //   replyTo: replyToEmail,
-                //   ...otherData
-                // });
-                // Simulate sending
-                campaign.deliveryStatus = "Sent";
-                yield campaign.save();
+                campaignData.senderId = senderRecord._id;
             }
-            catch (err) {
-                throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR, "Failed to send campaign email");
+            catch (e) {
+                // ignore if unable to overwrite
             }
-            return campaign;
-        });
-    }
-    scheduleCampaign(id) {
-        return __awaiter(this, void 0, void 0, function* () {
-            // const campaignId = await CampaignModel.findById(id)
-            throw new Error("Method not implemented.");
-        });
-    }
-    getCampaignDeliveryStatus() {
-        return __awaiter(this, void 0, void 0, function* () {
-            throw new Error("Method not implemented.");
-        });
-    }
-    getEmailListForUser(emailListId, userId) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const EmailListModel = require("../../models/EmailList").EmailListModel;
-            return EmailListModel.findOne({ _id: emailListId, userId });
-        });
-    }
-    sendBulkEmail(emails, subject, body, replyTo) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const { sendEmail } = require("../../utils/ResendService");
-            const from = process.env.EMAIL_FROM || 'no-reply@yourapp.com';
-            for (const entry of emails) {
-                const to = entry.email || entry;
-                yield sendEmail({
-                    to,
-                    subject,
-                    html: body,
-                    from,
-                    replyTo
+            // Create campaign in database with sender details from the resolved sender record
+            const newCampaign = new Campaign_1.CampaignModel(Object.assign(Object.assign({}, campaignData), { sender: {
+                    senderName: senderRecord.senderName || '',
+                    senderEmail: senderRecord.senderEmail,
+                    replyToEmail: senderRecord.senderEmail
+                }, status: 'Scheduled', createdAt: new Date() }));
+            const savedCampaign = yield newCampaign.save();
+            const campaignDoc = savedCampaign.toObject();
+            // Trigger email sending immediately (or queue for later if scheduledAt is in future)
+            const isImmediate = scheduledAt <= new Date();
+            let sendingError = null;
+            if (isImmediate) {
+                // Send emails now (non-blocking but capture errors)
+                try {
+                    yield this.sendCampaignEmails(campaignDoc);
+                }
+                catch (err) {
+                    const e = err;
+                    sendingError = (e === null || e === void 0 ? void 0 : e.message) || String(e) || 'Unknown error while sending campaign';
+                    console.error(`Error sending campaign ${campaignDoc._id}:`, err);
+                }
+            }
+            else {
+                // In production, queue this with a job scheduler (e.g., BullMQ)
+                console.log(`Campaign ${campaignDoc._id} queued for ${scheduledAt.toISOString()}`);
+            }
+            const response = {
+                campaign: campaignDoc,
+                jobId: `job-${campaignDoc._id}`
+            };
+            // Include error in response if one occurred
+            if (sendingError) {
+                response.sendingError = sendingError;
+                this.campaignErrors.set(campaignDoc._id, {
+                    error: sendingError,
+                    timestamp: new Date()
                 });
             }
+            return response;
         });
     }
-    // Add an email list to a campaign
-    addEmailListToCampaign(campaignId, emailListId) {
+    /**
+     * Sends campaign emails to all recipients in the audience.
+     * @param campaign The campaign to send.
+     */
+    sendCampaignEmails(campaign) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b, _c, _d, _e;
+            try {
+                console.log(`Sending emails for campaign ${campaign._id}...`);
+                const recipients = [];
+                // Get emails from email lists
+                if (((_a = campaign.audience) === null || _a === void 0 ? void 0 : _a.emailLists) && campaign.audience.emailLists.length > 0) {
+                    for (const listId of campaign.audience.emailLists) {
+                        const emailList = yield EmailList_1.EmailListModel.findById(listId);
+                        if (emailList && emailList.emails) {
+                            const emails = emailList.emails.map((e) => typeof e === "string" ? e : e === null || e === void 0 ? void 0 : e.email).filter(Boolean);
+                            recipients.push(...emails);
+                        }
+                    }
+                }
+                // Add manual emails
+                if (((_b = campaign.audience) === null || _b === void 0 ? void 0 : _b.manualEmails) && campaign.audience.manualEmails.length > 0) {
+                    recipients.push(...campaign.audience.manualEmails);
+                }
+                // Remove duplicates
+                const uniqueRecipients = [...new Set(recipients)];
+                console.log(`Sending campaign to ${uniqueRecipients.length} recipients`);
+                // Determine 'from' address from senderId (must be verified)
+                let fromAddress = process.env.EMAIL_FROM;
+                let replyToAddress = undefined;
+                let fromObject = fromAddress;
+                let resolvedSendgridId = undefined;
+                if (campaign.senderId) {
+                    const senderRec = yield SenderEmail_1.SenderModel.findById(campaign.senderId);
+                    if (senderRec && senderRec.verified) {
+                        // Use the verified sender's email (and name) as the 'from' address
+                        fromObject = { email: senderRec.senderEmail, name: senderRec.senderName };
+                        resolvedSendgridId = senderRec.sendgridId;
+                    }
+                }
+                // Pre-send verification: ensure SendGrid shows this sender as verified to avoid 403 at send time
+                try {
+                    const key = process.env.SENDGRID_API_KEY;
+                    if (key && fromObject && typeof fromObject === 'object' && fromObject.email) {
+                        // Use the list endpoint to find and verify the sender by email
+                        const listResp = yield axios_1.default.get('https://api.sendgrid.com/v3/verified_senders', {
+                            headers: { Authorization: `Bearer ${key}` }
+                        });
+                        const listBody = listResp.data || {};
+                        const results = Array.isArray(listBody.result) ? listBody.result : (Array.isArray(listBody) ? listBody : listBody.results || []);
+                        const match = results.find((e) => {
+                            const entryEmail = e.from_email || e.from_email_address || e.email || e.from;
+                            return entryEmail && String(entryEmail).toLowerCase() === String(fromObject.email).toLowerCase();
+                        });
+                        if (!match) {
+                            throw new types_1.ApiError(types_1.StatusCodes.BAD_REQUEST, `No verified SendGrid sender found for email ${fromObject.email}`);
+                        }
+                        const isVerified = match.verified === true || match.status === 'verified' || match.is_verified === true;
+                        if (!isVerified) {
+                            throw new types_1.ApiError(types_1.StatusCodes.BAD_REQUEST, `SendGrid sender for email ${fromObject.email} is not verified`);
+                        }
+                        // store sendgrid id locally if present
+                        const sgId = match.id || match._id || match.sender_id;
+                        if (sgId) {
+                            resolvedSendgridId = sgId;
+                            const local = yield SenderEmail_1.SenderModel.findOne({ senderEmail: String(fromObject.email).toLowerCase() });
+                            if (local) {
+                                local.sendgridId = String(sgId);
+                                local.verified = true;
+                                yield local.save();
+                            }
+                        }
+                    }
+                }
+                catch (err) {
+                    const e = err;
+                    console.error('[CampaignService] Pre-send SendGrid verification failed:', ((_c = e === null || e === void 0 ? void 0 : e.response) === null || _c === void 0 ? void 0 : _c.data) || (e === null || e === void 0 ? void 0 : e.message) || e);
+                    throw err;
+                }
+                // Send to each recipient
+                for (const recipient of uniqueRecipients) {
+                    try {
+                        // Debug: print resolved from and SendGrid sender id (dev-only)
+                        if (process.env.NODE_ENV !== 'production') {
+                            try {
+                                console.log(`[Email][Debug] campaign=${campaign._id} to=${recipient} from=${JSON.stringify(fromObject)} sendgridId=${resolvedSendgridId}`);
+                            }
+                            catch (dbgErr) {
+                                console.log('[Email][Debug] failed to stringify fromObject', dbgErr);
+                            }
+                        }
+                        yield (0, EmailService_1.sendEmail)({
+                            to: recipient,
+                            subject: campaign.subjectLine,
+                            html: ((_d = campaign.content) === null || _d === void 0 ? void 0 : _d.htmlContent) || "<p>Email content</p>",
+                            text: ((_e = campaign.content) === null || _e === void 0 ? void 0 : _e.plainText) || "Email content",
+                            from: fromObject,
+                            replyTo: replyToAddress
+                        });
+                    }
+                    catch (err) {
+                        console.error(`Failed to send to ${recipient}:`, err);
+                    }
+                }
+                console.log(`Campaign ${campaign._id} sent successfully`);
+            }
+            catch (err) {
+                const e = err;
+                console.error(`Error in sendCampaignEmails:`, (e === null || e === void 0 ? void 0 : e.message) || e);
+                throw err;
+            }
+        });
+    }
+    /**
+     * Update simple campaign analytics counters (deliveries, bounces).
+     * This is a lightweight in-memory implementation for the mock service used in tests and local runs.
+     */
+    updateCampaignAnalytics(campaignId_1, metric_1) {
+        return __awaiter(this, arguments, void 0, function* (campaignId, metric, delta = 1) {
+            try {
+                const campaign = yield Campaign_1.CampaignModel.findById(campaignId);
+                if (!campaign)
+                    return;
+                campaign.analytics = campaign.analytics || { deliveries: 0, bounces: 0 };
+                const key = metric;
+                if (typeof campaign.analytics[key] !== 'number')
+                    campaign.analytics[key] = 0;
+                campaign.analytics[key] += delta;
+                yield campaign.save();
+            }
+            catch (error) {
+                console.error(`Error updating campaign analytics: ${error}`);
+            }
+        });
+    }
+    /**
+     * Creates a campaign in 'Draft' status.
+     * @param campaignData The base data for the campaign.
+     * @returns The created campaign object.
+     */
+    createCampaign(campaignData) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log(`Creating campaign draft: ${campaignData.campaignName}`);
+            const newCampaign = new Campaign_1.CampaignModel(Object.assign(Object.assign({}, campaignData), { status: 'Draft', createdAt: new Date() }));
+            const savedCampaign = yield newCampaign.save();
+            return savedCampaign.toObject();
+        });
+    }
+    /**
+     * Fetches all campaigns for a specific user ID.
+     * @param userId The ID of the authenticated user.
+     * @returns An array of campaigns.
+     */
+    getAllCampaigns(userId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log(`Fetching all campaigns for user: ${userId}`);
+            const campaigns = yield Campaign_1.CampaignModel.find({ user_id: userId });
+            return campaigns.map(c => c.toObject());
+        });
+    }
+    /**
+     * Fetches a single campaign by ID, ensuring ownership.
+     * @param id The campaign ID.
+     * @param userId The ID of the authenticated user.
+     * @returns The campaign object.
+     * @throws ApiError if not found or unauthorized.
+     */
+    getCampaignById(id, userId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log(`Fetching campaign ID ${id} for user ${userId}`);
+            const campaign = yield Campaign_1.CampaignModel.findById(id);
+            if (!campaign || campaign.user_id.toString() !== userId) {
+                throw new types_1.ApiError(types_1.StatusCodes.NOT_FOUND, "Campaign not found or unauthorized.");
+            }
+            return campaign.toObject();
+        });
+    }
+    /**
+     * Updates fields of a campaign.
+     * @param id The campaign ID.
+     * @param userId The ID of the authenticated user.
+     * @param updateData The fields to update.
+     * @returns The updated campaign object.
+     * @throws ApiError if not found or unauthorized.
+     */
+    updateCampaign(id, userId, updateData) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log(`Updating campaign ID ${id}`);
+            const campaign = yield Campaign_1.CampaignModel.findById(id);
+            if (!campaign || campaign.user_id.toString() !== userId) {
+                throw new types_1.ApiError(types_1.StatusCodes.NOT_FOUND, "Campaign not found or unauthorized.");
+            }
+            Object.assign(campaign, updateData);
+            const updatedCampaign = yield campaign.save();
+            return updatedCampaign.toObject();
+        });
+    }
+    /**
+     * Retrieves any error that occurred during campaign sending.
+     * @param campaignId The campaign ID.
+     * @returns The error object if one exists, null otherwise.
+     */
+    getCampaignError(campaignId) {
+        return this.campaignErrors.get(campaignId) || null;
+    }
+    /**
+     * Updates advanced email settings for a campaign.
+     * @param campaignId The campaign ID.
+     * @param userId The user ID for authorization.
+     * @param settings The advanced email settings.
+     * @returns The updated campaign.
+     */
+    updateAdvancedSettings(campaignId, userId, settings) {
         return __awaiter(this, void 0, void 0, function* () {
             const campaign = yield Campaign_1.CampaignModel.findById(campaignId);
-            if (!campaign)
-                return null;
-            campaign.emailListId = emailListId;
-            yield campaign.save();
-            return campaign;
+            if (!campaign || campaign.user_id.toString() !== userId) {
+                throw new types_1.ApiError(types_1.StatusCodes.NOT_FOUND, 'Campaign not found');
+            }
+            campaign.advancedSettings = settings;
+            const updated = yield campaign.save();
+            return updated.toObject();
         });
     }
-    // Fetch a campaign and its associated email list data
-    getCampaignWithEmailList(campaignId) {
+    /**
+     * Deletes a campaign.
+     * @param id The campaign ID.
+     * @param userId The ID of the authenticated user.
+     * @throws ApiError if not found or unauthorized.
+     */
+    deleteCampaign(id, userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            return Campaign_1.CampaignModel.findById(campaignId).populate('emailListId');
+            console.log(`Deleting campaign ID ${id}`);
+            const result = yield Campaign_1.CampaignModel.deleteOne({ _id: id, user_id: userId });
+            if (result.deletedCount === 0) {
+                throw new types_1.ApiError(types_1.StatusCodes.NOT_FOUND, "Campaign not found or unauthorized.");
+            }
+            console.log(`Successfully deleted campaign ID ${id}.`);
+        });
+    }
+    /**
+     * Fetches an email list, ensuring it belongs to the user.
+     * @param emailListId The email list ID.
+     * @param userId The ID of the authenticated user.
+     * @returns The EmailList object or null if not found.
+     */
+    getEmailListForUser(emailListId, userId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log(`Fetching email list ${emailListId} for user ${userId}`);
+            const list = yield EmailList_1.EmailListModel.findOne({ _id: emailListId, user_id: userId });
+            return list ? list.toObject() : null;
+        });
+    }
+    /**
+     * Mocks the bulk email sending process.
+     */
+    sendBulkEmail(emails, subject, body, replyTo) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log(`Sending ${emails.length} emails with subject: "${subject}" (Reply-To: ${replyTo})`);
+            if (!emails || emails.length === 0)
+                return;
+            const unique = [...new Set(emails)];
+            for (const to of unique) {
+                try {
+                    yield (0, EmailService_1.sendEmail)({
+                        to,
+                        subject,
+                        html: body || undefined,
+                        text: body || undefined,
+                        replyTo: replyTo || undefined
+                    });
+                }
+                catch (err) {
+                    console.error(`[CampaignService] sendBulkEmail failed for ${to}:`, (err === null || err === void 0 ? void 0 : err.message) || err);
+                }
+            }
+        });
+    }
+    /**
+     * Adds an email list ID to a campaign's audience.
+     * @param campaignId The campaign ID.
+     * @param emailListId The email list ID to add.
+     * @returns The updated campaign object.
+     * @throws ApiError if campaign/list is not found.
+     */
+    addEmailListToCampaign(campaignId, emailListId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log(`Adding email list ${emailListId} to campaign ${campaignId}`);
+            const campaign = yield Campaign_1.CampaignModel.findById(campaignId);
+            if (!campaign) {
+                return null; // Campaign not found
+            }
+            campaign.audience.emailLists = campaign.audience.emailLists || [];
+            if (!campaign.audience.emailLists.some(id => String(id) === String(emailListId))) {
+                campaign.audience.emailLists.push(emailListId);
+            }
+            const updated = yield campaign.save();
+            return updated.toObject();
+        });
+    }
+    /**
+     * Fetches a campaign and populates its associated email list data.
+     * @param id The campaign ID.
+     * @returns The campaign with embedded list details, or null if not found.
+     */
+    getCampaignWithEmailList(id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            console.log(`Fetching campaign ${id} with email list data`);
+            const campaign = yield Campaign_1.CampaignModel.findById(id);
+            if (!campaign || !((_a = campaign.audience.emailLists) === null || _a === void 0 ? void 0 : _a[0])) {
+                return null;
+            }
+            const emailListId = campaign.audience.emailLists[0];
+            const emailList = yield EmailList_1.EmailListModel.findById(emailListId);
+            if (!emailList) {
+                // Campaign found, but list reference is broken/missing
+                return null;
+            }
+            return { campaign: campaign.toObject(), emailListDetails: emailList.toObject() };
+        });
+    }
+    searchCampaigns(userId, query, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const limit = (options === null || options === void 0 ? void 0 : options.limit) || 10;
+            const page = (options === null || options === void 0 ? void 0 : options.page) || 1;
+            const skip = (page - 1) * limit;
+            // Search in MongoDB using text search and filtering
+            const searchQuery = {
+                user_id: userId,
+                $or: [
+                    { campaignName: { $regex: query, $options: 'i' } },
+                    { subjectLine: { $regex: query, $options: 'i' } },
+                    { category: { $regex: query, $options: 'i' } }
+                ]
+            };
+            // Add status filter if provided
+            if (options === null || options === void 0 ? void 0 : options.status) {
+                searchQuery.status = options.status;
+            }
+            try {
+                const Campaign = require('../../models/Campaign').Campaign;
+                const campaigns = yield Campaign.find(searchQuery)
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit);
+                const total = yield Campaign.countDocuments(searchQuery);
+                return {
+                    results: campaigns,
+                    total
+                };
+            }
+            catch (error) {
+                console.error('Search campaigns error:', error);
+                throw new types_1.ApiError(types_1.StatusCodes.NOT_FOUND, "Error searching campaigns");
+            }
         });
     }
 }

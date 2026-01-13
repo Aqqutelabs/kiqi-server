@@ -106,5 +106,15 @@ class EmailistServiceImpl {
             return yield Contacts_1.ContactModel.find();
         });
     }
+    deleteEmailList(id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const emailList = yield EmailList_1.EmailListModel.findByIdAndDelete(id);
+            if (!emailList) {
+                throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, "Email list not found");
+            }
+            // Also delete all associated contacts
+            yield Contacts_1.ContactModel.deleteMany({ groupEmailList: id });
+        });
+    }
 }
 exports.EmailistServiceImpl = EmailistServiceImpl;

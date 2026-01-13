@@ -17,9 +17,11 @@ const templates_route_1 = __importDefault(require("./src/routes/templates.route"
 const googeAi_route_1 = __importDefault(require("./src/routes/googeAi.route"));
 const campaign_route_1 = __importDefault(require("./src/routes/campaign.route"));
 const emailList_route_1 = __importDefault(require("./src/routes/emailList.route"));
+const inbox_route_1 = __importDefault(require("./src/routes/inbox.route"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const Auth_middlewares_1 = require("./src/middlewares/Auth.middlewares");
 const auth_controller_1 = require("./src/controllers/auth.controller");
+const admin_1 = __importDefault(require("./src/routes/admin"));
+const auth_route_2 = __importDefault(require("./src/routes/admin/auth.route"));
 // import errorHandler from './middlewares/errorHandler.middleware';
 dotenv_1.default.config();
 (0, ConnectDB_1.default)();
@@ -32,8 +34,7 @@ app.use((req, res, next) => {
     console.log(`${req.method} ${req.url}`);
     next();
 });
-// Middlewares
-app.use((0, cors_1.default)()); // Enable CORS for all routes
+app.use((0, cors_1.default)());
 app.use(express_1.default.json()); // Parse JSON bodies
 app.use(express_1.default.urlencoded({ extended: true })); // Parse URL-encoded bodies
 // Serve uploaded files statically
@@ -47,25 +48,33 @@ app.get('/health', (req, res) => {
 // Initialize controller after app is created
 const authController = new auth_controller_1.AuthController();
 // Direct sender route for testing
-app.put('/api/v1/sender', Auth_middlewares_1.verifyJWT, (req, res, next) => {
-    console.log('Sender route hit');
-    console.log('Headers:', req.headers);
-    console.log('Body:', req.body);
-    console.log('User from JWT:', req.user);
-    authController.updateSenderEmail(req, res, next);
-});
+// app.put('/api/v1/sender', verifyJWT, (req: Request, res: Response, next: NextFunction) => {
+//   console.log('Sender route hit');
+//   console.log('Headers:', req.headers);
+//   console.log('Body:', req.body);
+//   console.log('User from JWT:', req.user);
+//   authController.updateSenderEmail(req, res, next);
+// });
 // Mount all routes under /api/v1
 app.use("/api/v1/auth", auth_route_1.default);
 // Then other specific routes
-app.use("/api/v1/senderEmail", senderEmail_routes_1.default);
+// Mount sender router. Keep the original mount for backward compatibility
+// app.use("/api/v1/senderEmail", senderRouter);
+// Also mount hyphenated and plural aliases so deployed clients using
+// `/api/v1/sender-emails` or `/api/v1/senders` continue to work.
+// app.use("/api/v1/sender-emails", senderRouter);
+app.use("/api/v1/senders", senderEmail_routes_1.default);
 app.use("/api/v1/templates", templates_route_1.default);
 app.use("/api/v1/ai", googeAi_route_1.default);
 app.use("/api/v1/campaigns", campaign_route_1.default);
 app.use("/api/v1/email-lists", emailList_route_1.default);
+app.use("/api/v1/inbox", inbox_route_1.default);
 // Then the main router last for any remaining routes
 app.use('/api/v1', index_2.default);
 // app.use("/api/settings")
 // app.use("/api/mailChat")
+app.use("/api/v1/admin", auth_route_2.default);
+app.use("/api/v1/admin", admin_1.default);
 app.use(ErrorHandler_1.default);
 // Start the server
 app.listen(PORT, () => {

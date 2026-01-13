@@ -1,0 +1,304 @@
+{
+  "checkout_flow": {
+    "description": "Step-by-step guide to test the order checkout process",
+    "endpoints": [
+      {
+        "step": 1,
+        "title": "Get Available Publishers",
+        "method": "GET",
+        "url": "http://localhost:8000/api/v1/press-releases/publishers",
+        "headers": {
+          "Authorization": "Bearer YOUR_JWT_TOKEN"
+        },
+        "description": "Retrieve list of all publishers to see available options for publishing"
+      },
+      {
+        "step": 2,
+        "title": "Get Publisher Details",
+        "method": "GET",
+        "url": "http://localhost:8000/api/v1/press-releases/publishers/{publisherId}",
+        "headers": {
+          "Authorization": "Bearer YOUR_JWT_TOKEN"
+        },
+        "example": "http://localhost:8000/api/v1/press-releases/publishers/PUB1702134589",
+        "description": "Get detailed information about a specific publisher including price and features"
+      },
+      {
+        "step": 3,
+        "title": "Add Publisher to Cart",
+        "method": "POST",
+        "url": "http://localhost:8000/api/v1/press-releases/cart/add",
+        "headers": {
+          "Authorization": "Bearer YOUR_JWT_TOKEN",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "publisherId": "PUB1702134589"
+        },
+        "expectedResponse": {
+          "statusCode": 200,
+          "data": {
+            "user_id": "user_id_here",
+            "items": [
+              {
+                "publisherId": "PUB1702134589",
+                "name": "Publisher Name",
+                "price": "₦50,000",
+                "selected": true
+              }
+            ],
+            "updated_at": "2025-12-10T10:00:00Z"
+          }
+        }
+      },
+      {
+        "step": 4,
+        "title": "Add Multiple Publishers to Cart",
+        "method": "POST",
+        "url": "http://localhost:8000/api/v1/press-releases/cart/add",
+        "headers": {
+          "Authorization": "Bearer YOUR_JWT_TOKEN",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "publisherId": "PUB1702134590"
+        },
+        "description": "You can add multiple publishers to the cart by calling this endpoint multiple times"
+      },
+      {
+        "step": 5,
+        "title": "Get Cart Items",
+        "method": "GET",
+        "url": "http://localhost:8000/api/v1/press-releases/cart",
+        "headers": {
+          "Authorization": "Bearer YOUR_JWT_TOKEN"
+        },
+        "expectedResponse": {
+          "statusCode": 200,
+          "data": {
+            "user_id": "user_id_here",
+            "items": [
+              {
+                "publisherId": "PUB1702134589",
+                "name": "Publisher Name 1",
+                "price": "₦50,000",
+                "selected": true
+              },
+              {
+                "publisherId": "PUB1702134590",
+                "name": "Publisher Name 2",
+                "price": "₦75,000",
+                "selected": true
+              }
+            ],
+            "updated_at": "2025-12-10T10:00:00Z"
+          }
+        }
+      },
+      {
+        "step": 6,
+        "title": "Update Cart Item (Select/Deselect)",
+        "method": "PUT",
+        "url": "http://localhost:8000/api/v1/press-releases/cart/{publisherId}",
+        "headers": {
+          "Authorization": "Bearer YOUR_JWT_TOKEN",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "selected": false
+        },
+        "example": "PUT http://localhost:8000/api/v1/press-releases/cart/PUB1702134590",
+        "description": "Toggle selection of items in the cart without removing them"
+      },
+      {
+        "step": 7,
+        "title": "Remove Item from Cart",
+        "method": "DELETE",
+        "url": "http://localhost:8000/api/v1/press-releases/cart/{publisherId}",
+        "headers": {
+          "Authorization": "Bearer YOUR_JWT_TOKEN"
+        },
+        "example": "DELETE http://localhost:8000/api/v1/press-releases/cart/PUB1702134590",
+        "description": "Permanently remove a publisher from the cart"
+      },
+      {
+        "step": 8,
+        "title": "Create Order / Checkout",
+        "method": "POST",
+        "url": "http://localhost:8000/api/v1/press-releases/orders/checkout",
+        "headers": {
+          "Authorization": "Bearer YOUR_JWT_TOKEN",
+          "Content-Type": "application/json"
+        },
+        "body": {},
+        "description": "This endpoint creates an order from cart items and initializes Paystack payment. Make sure cart has items and your user has an email.",
+        "expectedResponse": {
+          "statusCode": 201,
+          "data": {
+            "order": {
+              "_id": "order_id",
+              "user_id": "user_id",
+              "items": [
+                {
+                  "publisherId": "PUB1702134589",
+                  "name": "Publisher Name",
+                  "price": "₦50,000",
+                  "selected": true
+                }
+              ],
+              "order_summary": {
+                "subtotal": "₦50,000",
+                "vat_percentage": "7.5%",
+                "vat_amount": "₦3,750",
+                "total_amount": "₦53,750"
+              },
+              "payment_method": "Paystack",
+              "status": "Pending",
+              "reference": "ORDER-1702134589123-456789",
+              "created_at": "2025-12-10T10:00:00Z"
+            },
+            "payment": {
+              "status": true,
+              "message": "Authorization URL created",
+              "data": {
+                "authorization_url": "https://checkout.paystack.com/...",
+                "access_code": "access_code_here",
+                "reference": "ORDER-1702134589123-456789"
+              }
+            }
+          }
+        },
+        "notes": [
+          "Cart must not be empty",
+          "User must be authenticated",
+          "User must have an email address",
+          "After order creation, cart is automatically cleared",
+          "A unique payment reference is generated",
+          "Paystack authorization URL is returned to redirect user to payment gateway"
+        ]
+      },
+      {
+        "step": 9,
+        "title": "Get Order Details",
+        "method": "GET",
+        "url": "http://localhost:8000/api/v1/press-releases/orders/{orderId}",
+        "headers": {
+          "Authorization": "Bearer YOUR_JWT_TOKEN"
+        },
+        "example": "GET http://localhost:8000/api/v1/press-releases/orders/507f1f77bcf86cd799439011",
+        "description": "Retrieve details of a specific order"
+      }
+    ]
+  },
+  "postman_workflow": {
+    "description": "Complete Postman workflow for testing checkout",
+    "setup": [
+      {
+        "step": 1,
+        "action": "Set JWT Token in Authorization",
+        "details": "In Postman, go to Authorization tab and set 'Bearer Token' type with your JWT token"
+      },
+      {
+        "step": 2,
+        "action": "Create Environment Variables (Optional but recommended)",
+        "variables": {
+          "base_url": "http://localhost:8000/api/v1",
+          "token": "YOUR_JWT_TOKEN",
+          "publisherId": "",
+          "orderId": ""
+        }
+      }
+    ],
+    "test_sequence": [
+      {
+        "step": 1,
+        "name": "Get Publishers",
+        "request": "GET {{base_url}}/press-releases/publishers",
+        "save_response": "Save a publisherId from response for next steps"
+      },
+      {
+        "step": 2,
+        "name": "Add to Cart",
+        "request": "POST {{base_url}}/press-releases/cart/add",
+        "body": {
+          "publisherId": "{{publisherId}}"
+        }
+      },
+      {
+        "step": 3,
+        "name": "View Cart",
+        "request": "GET {{base_url}}/press-releases/cart"
+      },
+      {
+        "step": 4,
+        "name": "Create Order (Checkout)",
+        "request": "POST {{base_url}}/press-releases/orders/checkout",
+        "body": {},
+        "save_response": "Save orderId and payment authorization URL"
+      },
+      {
+        "step": 5,
+        "name": "Get Order Details",
+        "request": "GET {{base_url}}/press-releases/orders/{{orderId}}"
+      }
+    ]
+  },
+  "error_scenarios": {
+    "description": "Common errors and how to handle them",
+    "scenarios": [
+      {
+        "error": "Cart is empty",
+        "statusCode": 400,
+        "when": "Calling checkout without adding items to cart",
+        "solution": "Add publishers to cart first using the /cart/add endpoint"
+      },
+      {
+        "error": "Publisher not found",
+        "statusCode": 404,
+        "when": "Using an invalid or non-existent publisherId",
+        "solution": "Get list of publishers first using /publishers endpoint"
+      },
+      {
+        "error": "Unauthorized",
+        "statusCode": 401,
+        "when": "Not providing a valid JWT token",
+        "solution": "Include valid JWT token in Authorization header as Bearer token"
+      },
+      {
+        "error": "User not authenticated",
+        "statusCode": 401,
+        "when": "JWT token is invalid or expired",
+        "solution": "Re-authenticate and get a new JWT token"
+      }
+    ]
+  },
+  "pricing_calculation": {
+    "description": "How order total is calculated",
+    "formula": [
+      "1. Sum all selected publisher prices in cart",
+      "2. Subtotal = Sum of all prices",
+      "3. VAT Amount = Subtotal × 7.5%",
+      "4. Total Amount = Subtotal + VAT Amount",
+      "5. Paystack Amount = Total Amount × 100 (converted to kobo)"
+    ],
+    "example": {
+      "publishers": [
+        { "name": "Publisher A", "price": "₦50,000" },
+        { "name": "Publisher B", "price": "₦75,000" }
+      ],
+      "subtotal": "₦125,000",
+      "vat_7_5_percent": "₦9,375",
+      "total_amount": "₦134,375",
+      "paystack_amount": "13437500 kobo"
+    }
+  },
+  "important_notes": [
+    "Make sure your user account has an email address set (required for Paystack)",
+    "Cart is automatically cleared after successful order creation",
+    "All prices must be valid Nigerian Naira amounts",
+    "Paystack integration requires PAYSTACK_SECRET_KEY in environment variables",
+    "FRONTEND_URL environment variable must be set for payment callback",
+    "Orders are created with 'Pending' status until payment is confirmed",
+    "Each order gets a unique reference in format: ORDER-{timestamp}-{random}"
+  ]
+}

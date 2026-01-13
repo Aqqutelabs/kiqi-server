@@ -20,7 +20,7 @@ export const sendSms = async (to: string, body: string, from?: string) => {
     const msg = await client.messages.create({
       body,
       to,
-      from: from || twilioFrom,
+      from: from 
     });
     return msg;
   } catch (err: any) {

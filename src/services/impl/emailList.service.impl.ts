@@ -83,4 +83,12 @@ export class EmailistServiceImpl implements EmailListService{
         return await ContactModel.find()
     }
     
+    async deleteEmailList(id: string): Promise<void> {
+        const emailList = await EmailListModel.findByIdAndDelete(id);
+        if (!emailList) {
+            throw new ApiError(StatusCodes.NOT_FOUND, "Email list not found");
+        }
+        // Also delete all associated contacts
+        await ContactModel.deleteMany({ groupEmailList: id });
+    }
 }
