@@ -33,7 +33,7 @@ node_cron_1.default.schedule("* * * * *", () => __awaiter(void 0, void 0, void 0
             // Publish it (e.g., to X, Meta, etc.)
             // await SocialPoster.publish(post.platform, post.message, post.file);
             // Mark as published
-            post.is_published = true;
+            // post.is_published = true;
             yield post.save();
             console.log(`Published scheduled post: ${post.id}`);
         }

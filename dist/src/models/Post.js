@@ -40,7 +40,6 @@ const PostSchema = new mongoose_1.Schema({
     message: { type: String },
     media: { type: String },
     is_draft: { type: Boolean, default: true },
-    is_published: { type: Boolean },
     publish_date: { type: Date, default: null },
 }, { timestamps: true });
-exports.PostModel = mongoose_1.default.model("Post", PostSchema);
+exports.PostModel = mongoose_1.default.model("Campaign", PostSchema);

@@ -5,7 +5,6 @@ export interface PostService {
         platform: string,
         message: string,
         is_draft: boolean,
-        is_published: boolean,
         media?: string,        
         publish_date?: Date | null
     ): Promise<PostDoc>;
