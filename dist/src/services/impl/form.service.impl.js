@@ -48,6 +48,7 @@ const Form_1 = require("../../models/Form");
 const mongoose_1 = require("mongoose");
 const FormSubmissions_1 = require("../../models/FormSubmissions");
 const list_service_impl_1 = require("./list.service.impl");
+const RecipientGroup_1 = require("../../models/RecipientGroup");
 class FormService {
     constructor() {
         this.listService = new list_service_impl_1.ListService();
@@ -72,6 +73,57 @@ class FormService {
                 console.log("✅ [FormService] Created new list for form:", listName);
             }
             return list;
+        });
+    }
+    /**
+     * Find or create an SMS recipient group for a form
+     * Group name format: "[Form] {formName}"
+     */
+    findOrCreateFormRecipientGroup(userId, formName) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const groupName = `[Form] ${formName}`;
+            const userObjectId = new mongoose_1.Types.ObjectId(userId);
+            // Check if recipient group already exists
+            let group = yield RecipientGroup_1.RecipientGroupModel.findOne({
+                userId: userObjectId,
+                name: groupName
+            });
+            // Create if doesn't exist
+            if (!group) {
+                group = yield RecipientGroup_1.RecipientGroupModel.create({
+                    name: groupName,
+                    contacts: [],
+                    userId: userObjectId
+                });
+                console.log("✅ [FormService] Created new recipient group for form:", groupName);
+            }
+            return group;
+        });
+    }
+    /**
+     * Add a phone number to a recipient group (if not already present)
+     */
+    addPhoneToRecipientGroup(groupId, phoneNumber) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Check if phone already exists in the group
+            const group = yield RecipientGroup_1.RecipientGroupModel.findById(groupId);
+            if (!group) {
+                throw new Error("Recipient group not found");
+            }
+            const phoneExists = group.contacts.some((contact) => contact.phone === phoneNumber);
+            if (!phoneExists) {
+                yield RecipientGroup_1.RecipientGroupModel.findByIdAndUpdate(groupId, {
+                    $push: {
+                        contacts: { phone: phoneNumber }
+                    }
+                }, { new: true });
+                console.log("✅ [FormService] Phone added to recipient group:", phoneNumber);
+                return true;
+            }
+            else {
+                console.log("ℹ️ [FormService] Phone already exists in recipient group:", phoneNumber);
+                return false;
+            }
         });
     }
     // Public: Handle a form submission from the hosted link
@@ -163,7 +215,25 @@ class FormService {
                     // Don't fail submission if list operation fails, just log it
                     console.warn("⚠️ [FormService.submitForm] Failed to add contact to list:", listError);
                 }
-                // 4. Save Submission
+                // 4. Add phone to form-specific SMS recipient group (if phone was provided)
+                const phoneNumber = phoneKey ? submissionData[phoneKey] : null;
+                if (phoneNumber && typeof phoneNumber === 'string' && phoneNumber.trim().length > 0) {
+                    console.log("🔵 [FormService.submitForm] Adding phone to recipient group:", phoneNumber);
+                    try {
+                        const recipientGroup = yield this.findOrCreateFormRecipientGroup(form.userId.toString(), form.name);
+                        const groupId = recipientGroup._id.toString();
+                        yield this.addPhoneToRecipientGroup(groupId, phoneNumber.trim());
+                        console.log("✅ [FormService.submitForm] Phone added to recipient group:", recipientGroup.name);
+                    }
+                    catch (groupError) {
+                        // Don't fail submission if recipient group operation fails, just log it
+                        console.warn("⚠️ [FormService.submitForm] Failed to add phone to recipient group:", groupError);
+                    }
+                }
+                else {
+                    console.log("ℹ️ [FormService.submitForm] No valid phone number provided, skipping recipient group");
+                }
+                // 5. Save Submission
                 console.log("🔵 [FormService.submitForm] Creating form submission record");
                 const submission = yield FormSubmissions_1.FormSubmissionModel.create({
                     formId: form._id,
@@ -172,7 +242,7 @@ class FormService {
                     data: submissionData
                 });
                 console.log("✅ [FormService.submitForm] Submission saved:", submission._id);
-                // 5. Increment submission count on form
+                // 6. Increment submission count on form
                 console.log("🔵 [FormService.submitForm] Incrementing submission count");
                 yield Form_1.FormModel.updateOne({ _id: formId }, { $inc: { submissionCount: 1 } });
                 console.log("✅ [FormService.submitForm] Submission count incremented");

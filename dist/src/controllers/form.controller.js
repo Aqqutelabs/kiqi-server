@@ -202,7 +202,9 @@ class FormController {
                     });
                     return normalizedData;
                 };
-                const normalizedSubmissionData = normalizeFieldNames(req.body.submissionData, form.fields);
+                // Support both { submissionData: {...} } and direct field submission {...}
+                const submissionData = req.body.submissionData || req.body;
+                const normalizedSubmissionData = normalizeFieldNames(submissionData, form.fields);
                 console.log("🔵 [FormController.postSubmissionBySlug] Normalized data:", normalizedSubmissionData);
                 // Validate required fields
                 const validateRequiredFields = (data, formFields) => {
