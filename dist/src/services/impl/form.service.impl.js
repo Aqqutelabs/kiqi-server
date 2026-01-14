@@ -172,13 +172,15 @@ class FormService {
                 console.log("🔵 [FormService.submitForm] Extracted keys - emailKey:", emailKey, "firstNameKey:", firstNameKey, "lastNameKey:", lastNameKey, "phoneKey:", phoneKey);
                 console.log("🔵 [FormService.submitForm] Extracted values - email:", email, "firstName:", firstName, "lastName:", lastName);
                 console.log("🔵 [FormService.submitForm] Phone value:", phoneKey ? submissionData[phoneKey] : "NO_PHONE_FOUND");
-                if (!email)
-                    throw new Error("Email field is required for contact creation");
+                // Allow contact creation even if both email and phone are absent
+                // Use default values if missing
+                const safeEmail = email ? email.toLowerCase() : `noemail-${Date.now()}@example.com`;
+                const safePhone = phoneKey ? submissionData[phoneKey] : null;
                 // 2. Upsert Contact - First try to find existing contact
-                console.log("🔵 [FormService.submitForm] Upserting contact with email:", email);
+                console.log("🔵 [FormService.submitForm] Upserting contact with email:", safeEmail);
                 let contact = yield CampaignContact_1.CampaignContactModel.findOne({
                     userId: new mongoose_1.Types.ObjectId(form.userId),
-                    "emails.address": email.toLowerCase()
+                    "emails.address": safeEmail
                 });
                 if (contact) {
                     // Update existing contact
@@ -191,7 +193,7 @@ class FormService {
                             firstName: updateFirstName,
                             lastName: updateLastName
                         },
-                        $addToSet: Object.assign({ tags: { $each: ["Lead Form", form.name] } }, (phoneKey ? { phones: { number: submissionData[phoneKey], isPrimary: false } } : {}))
+                        $addToSet: Object.assign({ tags: { $each: ["Lead Form", form.name] } }, (safePhone ? { phones: { number: safePhone, isPrimary: false } } : {}))
                     }, { new: true });
                 }
                 else {
@@ -204,8 +206,8 @@ class FormService {
                         userId: new mongoose_1.Types.ObjectId(form.userId),
                         firstName: newFirstName,
                         lastName: newLastName,
-                        emails: [{ address: email.toLowerCase(), isPrimary: true }],
-                        phones: phoneKey ? [{ number: submissionData[phoneKey], isPrimary: true }] : [],
+                        emails: [{ address: safeEmail, isPrimary: true }],
+                        phones: safePhone ? [{ number: safePhone, isPrimary: true }] : [],
                         tags: ["Lead Form", form.name]
                     });
                 }
