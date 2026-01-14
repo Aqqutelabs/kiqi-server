@@ -162,13 +162,16 @@ class FormService {
                 });
                 const phoneKey = Object.keys(submissionData).find(k => {
                     const normalized = k.toLowerCase().replace(/\s+/g, '');
-                    return normalized.includes("phone") || normalized.includes("mobile");
+                    return normalized.includes("phone") || normalized.includes("mobile") ||
+                        normalized.includes("phonenumber") || normalized.includes("cellphone") ||
+                        normalized.includes("cell") || normalized.includes("tel");
                 });
                 const email = emailKey ? submissionData[emailKey] : null;
                 const firstName = firstNameKey ? submissionData[firstNameKey] : null;
                 const lastName = lastNameKey ? submissionData[lastNameKey] : null;
-                console.log("🔵 [FormService.submitForm] Extracted keys - emailKey:", emailKey, "firstNameKey:", firstNameKey, "lastNameKey:", lastNameKey);
+                console.log("🔵 [FormService.submitForm] Extracted keys - emailKey:", emailKey, "firstNameKey:", firstNameKey, "lastNameKey:", lastNameKey, "phoneKey:", phoneKey);
                 console.log("🔵 [FormService.submitForm] Extracted values - email:", email, "firstName:", firstName, "lastName:", lastName);
+                console.log("🔵 [FormService.submitForm] Phone value:", phoneKey ? submissionData[phoneKey] : "NO_PHONE_FOUND");
                 if (!email)
                     throw new Error("Email field is required for contact creation");
                 // 2. Upsert Contact - First try to find existing contact
