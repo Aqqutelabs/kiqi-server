@@ -53,6 +53,14 @@ class FormService {
     constructor() {
         this.listService = new list_service_impl_1.ListService();
     }
+    // Public: Get all submissions for a form and user
+    getSubmissions(userId, formId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield FormSubmissions_1.FormSubmissionModel.find({ formId, userId })
+                .populate("contactId", "firstName lastName emails phones")
+                .sort({ createdAt: -1 });
+        });
+    }
     /**
      * Find or create a CRM list for a form
      * List name format: "[Form] {formName}"
@@ -252,14 +260,6 @@ class FormService {
                 console.error("❌ [FormService.submitForm] Error:", error instanceof Error ? error.message : error);
                 throw error;
             }
-        });
-    }
-    // Private: Get all submissions for the user's dashboard
-    getSubmissions(userId, formId) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield FormSubmissions_1.FormSubmissionModel.find({ formId, userId })
-                .populate("contactId", "firstName lastName emails phones")
-                .sort({ createdAt: -1 });
         });
     }
     // Delete a form and its submissions
