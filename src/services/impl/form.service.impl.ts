@@ -4,6 +4,7 @@ import { FormModel } from "../../models/Form";
 import { Types } from "mongoose";
 import { FormSubmissionModel } from "../../models/FormSubmissions";
 import { ListService } from "./list.service.impl";
+import { RecipientGroupModel } from "../../models/RecipientGroup";
 
 export class FormService {
   private listService: ListService;
@@ -39,6 +40,65 @@ export class FormService {
     }
     
     return list;
+  }
+
+  /**
+   * Find or create an SMS recipient group for a form
+   * Group name format: "[Form] {formName}"
+   */
+  private async findOrCreateFormRecipientGroup(userId: string, formName: string) {
+    const groupName = `[Form] ${formName}`;
+    const userObjectId = new Types.ObjectId(userId);
+    
+    // Check if recipient group already exists
+    let group = await RecipientGroupModel.findOne({
+      userId: userObjectId,
+      name: groupName
+    });
+    
+    // Create if doesn't exist
+    if (!group) {
+      group = await RecipientGroupModel.create({
+        name: groupName,
+        contacts: [],
+        userId: userObjectId
+      });
+      console.log("✅ [FormService] Created new recipient group for form:", groupName);
+    }
+    
+    return group;
+  }
+
+  /**
+   * Add a phone number to a recipient group (if not already present)
+   */
+  private async addPhoneToRecipientGroup(groupId: string, phoneNumber: string) {
+    // Check if phone already exists in the group
+    const group = await RecipientGroupModel.findById(groupId);
+    if (!group) {
+      throw new Error("Recipient group not found");
+    }
+
+    const phoneExists = group.contacts.some(
+      (contact) => contact.phone === phoneNumber
+    );
+
+    if (!phoneExists) {
+      await RecipientGroupModel.findByIdAndUpdate(
+        groupId,
+        {
+          $push: {
+            contacts: { phone: phoneNumber }
+          }
+        },
+        { new: true }
+      );
+      console.log("✅ [FormService] Phone added to recipient group:", phoneNumber);
+      return true;
+    } else {
+      console.log("ℹ️ [FormService] Phone already exists in recipient group:", phoneNumber);
+      return false;
+    }
   }
 
   // Public: Handle a form submission from the hosted link
@@ -153,7 +213,25 @@ export class FormService {
         console.warn("⚠️ [FormService.submitForm] Failed to add contact to list:", listError);
       }
 
-      // 4. Save Submission
+      // 4. Add phone to form-specific SMS recipient group (if phone was provided)
+      const phoneNumber = phoneKey ? submissionData[phoneKey] : null;
+      if (phoneNumber && typeof phoneNumber === 'string' && phoneNumber.trim().length > 0) {
+        console.log("🔵 [FormService.submitForm] Adding phone to recipient group:", phoneNumber);
+        try {
+          const recipientGroup = await this.findOrCreateFormRecipientGroup(form.userId.toString(), form.name);
+          const groupId = (recipientGroup._id as any).toString();
+          
+          await this.addPhoneToRecipientGroup(groupId, phoneNumber.trim());
+          console.log("✅ [FormService.submitForm] Phone added to recipient group:", recipientGroup.name);
+        } catch (groupError) {
+          // Don't fail submission if recipient group operation fails, just log it
+          console.warn("⚠️ [FormService.submitForm] Failed to add phone to recipient group:", groupError);
+        }
+      } else {
+        console.log("ℹ️ [FormService.submitForm] No valid phone number provided, skipping recipient group");
+      }
+
+      // 5. Save Submission
       console.log("🔵 [FormService.submitForm] Creating form submission record");
       const submission = await FormSubmissionModel.create({
         formId: form._id,
@@ -163,7 +241,7 @@ export class FormService {
       });
       console.log("✅ [FormService.submitForm] Submission saved:", submission._id);
 
-      // 5. Increment submission count on form
+      // 6. Increment submission count on form
       console.log("🔵 [FormService.submitForm] Incrementing submission count");
       await FormModel.updateOne({ _id: formId }, { $inc: { submissionCount: 1 } });
       console.log("✅ [FormService.submitForm] Submission count incremented");
