@@ -148,6 +148,7 @@ class FormService {
                 }
                 // 1. Extract standard fields (case-insensitive search for Email/Phone/Name)
                 // Note: submissionData keys are normalized (no spaces, lowercase) e.g., "firstname", "emailaddress"
+                console.log("🔵 [FormService.submitForm] All submission keys:", Object.keys(submissionData));
                 const emailKey = Object.keys(submissionData).find(k => {
                     const normalized = k.toLowerCase().replace(/\s+/g, '');
                     return normalized.includes("email");
@@ -162,6 +163,7 @@ class FormService {
                 });
                 const phoneKey = Object.keys(submissionData).find(k => {
                     const normalized = k.toLowerCase().replace(/\s+/g, '');
+                    console.log("🔵 [FormService.submitForm] Checking key for phone:", k, "normalized:", normalized);
                     return normalized.includes("phone") || normalized.includes("mobile") ||
                         normalized.includes("phonenumber") || normalized.includes("cellphone") ||
                         normalized.includes("cell") || normalized.includes("tel");
@@ -230,21 +232,24 @@ class FormService {
                 }
                 // 4. Add phone to form-specific SMS recipient group (if phone was provided)
                 const phoneNumber = phoneKey ? submissionData[phoneKey] : null;
+                console.log("🔵 [FormService.submitForm] Phone detection - phoneKey:", phoneKey, "phoneNumber:", phoneNumber);
                 if (phoneNumber && typeof phoneNumber === 'string' && phoneNumber.trim().length > 0) {
                     console.log("🔵 [FormService.submitForm] Adding phone to recipient group:", phoneNumber);
                     try {
                         const recipientGroup = yield this.findOrCreateFormRecipientGroup(form.userId.toString(), form.name);
                         const groupId = recipientGroup._id.toString();
+                        console.log("🔵 [FormService.submitForm] Recipient group found/created:", recipientGroup.name, "ID:", groupId);
                         yield this.addPhoneToRecipientGroup(groupId, phoneNumber.trim());
                         console.log("✅ [FormService.submitForm] Phone added to recipient group:", recipientGroup.name);
                     }
                     catch (groupError) {
                         // Don't fail submission if recipient group operation fails, just log it
-                        console.warn("⚠️ [FormService.submitForm] Failed to add phone to recipient group:", groupError);
+                        console.error("❌ [FormService.submitForm] Failed to add phone to recipient group:", groupError);
                     }
                 }
                 else {
                     console.log("ℹ️ [FormService.submitForm] No valid phone number provided, skipping recipient group");
+                    console.log("ℹ️ [FormService.submitForm] Phone debug - phoneKey exists:", !!phoneKey, "phoneNumber type:", typeof phoneNumber, "phoneNumber value:", phoneNumber);
                 }
                 // 5. Save Submission
                 console.log("🔵 [FormService.submitForm] Creating form submission record");
