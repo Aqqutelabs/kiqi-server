@@ -47,4 +47,17 @@ router.get('/progress/:prId', pressRelease_controller_1.getPressReleaseProgress)
 router.put('/progress/:prId/under-review', pressRelease_controller_1.updatePressReleaseToUnderReview);
 router.put('/progress/:prId/approve', pressRelease_controller_1.approvePressRelease);
 router.put('/progress/:prId/reject', pressRelease_controller_1.rejectPressRelease);
+// ==================== MARKETPLACE ROUTES ====================
+// Marketplace filters and general data
+router.get('/marketplace/filters', pressRelease_controller_1.getMarketplaceFilters);
+// Enhanced cart with add-ons
+router.post('/cart/add-with-addons', pressRelease_controller_1.addToCartWithAddons);
+// Bookmark functionality
+router.post('/bookmarks', pressRelease_controller_1.addBookmark);
+router.delete('/bookmarks/:publisherId', pressRelease_controller_1.removeBookmark);
+router.get('/bookmarks', pressRelease_controller_1.getUserBookmarks);
+// Publisher sharing
+router.post('/publishers/:publisherId/share', pressRelease_controller_1.sharePublisher);
+// Publisher reviews (buyer side)
+router.post('/publishers/:publisherId/review', pressRelease_controller_1.submitPublisherReview);
 exports.default = router;

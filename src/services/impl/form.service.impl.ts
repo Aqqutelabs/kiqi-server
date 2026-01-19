@@ -155,17 +155,21 @@ export class FormService {
       console.log("🔵 [FormService.submitForm] Phone value:", phoneKey ? submissionData[phoneKey] : "NO_PHONE_FOUND");
 
       // Allow contact creation even if both email and phone are absent
-      // Use default values if missing
-      const safeEmail = email ? email.toLowerCase() : `noemail-${Date.now()}@example.com`;
+      // Use empty string if email is missing
+      const safeEmail = email ? email.toLowerCase() : '';
       const safePhone = phoneKey ? submissionData[phoneKey] : null;
 
       // 2. Upsert Contact - First try to find existing contact
       console.log("🔵 [FormService.submitForm] Upserting contact with email:", safeEmail);
       
-      let contact = await CampaignContactModel.findOne({
-        userId: new Types.ObjectId(form.userId as any),
-        "emails.address": safeEmail
-      });
+      let contact;
+      if (safeEmail) {
+        // Only search by email if email is provided
+        contact = await CampaignContactModel.findOne({
+          userId: new Types.ObjectId(form.userId as any),
+          "emails.address": safeEmail
+        });
+      }
 
       if (contact) {
         // Update existing contact
@@ -199,7 +203,7 @@ export class FormService {
           userId: new Types.ObjectId(form.userId as any),
           firstName: newFirstName,
           lastName: newLastName,
-          emails: [{ address: safeEmail, isPrimary: true }],
+          emails: safeEmail ? [{ address: safeEmail, isPrimary: true }] : [],
           phones: safePhone ? [{ number: safePhone, isPrimary: true }] : [],
           tags: ["Lead Form", form.name]
         });

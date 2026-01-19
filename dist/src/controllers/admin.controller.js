@@ -12,11 +12,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.adminController = exports.isAdmin = exports.getSystemOverview = exports.getAllTransactions = exports.updateOrderStatus = exports.getPaymentStats = exports.getSuccessfulPayments = exports.getAllPayments = exports.deletePressRelease = exports.changePressReleaseStatus = exports.getAllPressReleases = exports.getCampaignStats = exports.deleteCampaign = exports.changeCampaignStatus = exports.getCampaignDetails = exports.getAllCampaigns = void 0;
+exports.adminController = exports.isAdmin = exports.getSystemOverview = exports.getAllTransactions = exports.updateOrderStatus = exports.getPaymentStats = exports.getSuccessfulPayments = exports.getAllPayments = exports.deletePressRelease = exports.changePressReleaseStatus = exports.getAllPressReleases = exports.getCampaignStats = exports.deleteCampaign = exports.changeCampaignStatus = exports.getCampaignDetails = exports.getMarketplaceAnalytics = exports.deleteReview = exports.moderateReview = exports.getAllPublisherReviews = exports.updatePublisherFAQs = exports.updatePublisherMetrics = exports.updatePublisherAddons = exports.deletePublisher = exports.togglePublisherStatus = exports.updatePublisher = exports.createPublisher = exports.getPublisherDetails = exports.getAllPublishers = exports.getAllCampaigns = void 0;
 const ApiResponse_1 = require("../utils/ApiResponse");
 const AsyncHandler_1 = require("../utils/AsyncHandler");
 const ApiError_1 = require("../utils/ApiError");
 const PressRelease_1 = require("../models/PressRelease");
+const Publisher_1 = require("../models/Publisher");
 const Order_1 = require("../models/Order");
 const Transaction_1 = require("../models/Transaction");
 const Campaign_1 = require("../models/Campaign");
@@ -25,7 +26,7 @@ const http_status_codes_1 = require("http-status-codes");
 const mongoose_1 = __importDefault(require("mongoose"));
 /**
  * Admin Controller
- * Handles all admin operations including campaigns, press releases, payments, and system management
+ * Handles all admin operations including campaigns, press releases, payments, publisher marketplace management
  */
 // ==================== CAMPAIGN MANAGEMENT ====================
 /**
@@ -86,6 +87,457 @@ exports.getAllCampaigns = (0, AsyncHandler_1.asyncHandler)((req, res) => __await
         }
     }));
 }));
+// ==================== PUBLISHER MARKETPLACE MANAGEMENT ====================
+/**
+ * Get all publishers with marketplace features
+ * GET /api/v1/admin/publishers
+ */
+exports.getAllPublishers = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { level, engagement, delivery, isPublished, isMarketplaceListing, searchTerm, sortBy = 'createdAt', sortOrder = 'desc', page = 1, limit = 20 } = req.query;
+    // Build filter object
+    const filter = {};
+    if (level)
+        filter.level = level;
+    if (engagement)
+        filter.engagement = engagement;
+    if (delivery)
+        filter.delivery = delivery;
+    if (isPublished !== undefined)
+        filter.isPublished = isPublished === 'true';
+    if (isMarketplaceListing !== undefined)
+        filter.isMarketplaceListing = isMarketplaceListing === 'true';
+    if (searchTerm) {
+        filter.$or = [
+            { name: { $regex: searchTerm, $options: 'i' } },
+            { description: { $regex: searchTerm, $options: 'i' } },
+            { coverage: { $regex: searchTerm, $options: 'i' } }
+        ];
+    }
+    const pageNum = parseInt(page) || 1;
+    const limitNum = Math.min(parseInt(limit) || 20, 100);
+    const skip = (pageNum - 1) * limitNum;
+    // Build sort object
+    const sort = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    const publishers = yield Publisher_1.Publisher.find(filter)
+        .populate('createdBy', 'email firstName lastName')
+        .populate('updatedBy', 'email firstName lastName')
+        .populate('reviews.reviewerId', 'email firstName lastName')
+        .sort(sort)
+        .skip(skip)
+        .limit(limitNum)
+        .lean();
+    const total = yield Publisher_1.Publisher.countDocuments(filter);
+    return res.json(new ApiResponse_1.ApiResponse(200, {
+        publishers,
+        pagination: {
+            page: pageNum,
+            limit: limitNum,
+            total,
+            pages: Math.ceil(total / limitNum)
+        }
+    }));
+}));
+/**
+ * Get publisher details by ID
+ * GET /api/v1/admin/publishers/:publisherId
+ */
+exports.getPublisherDetails = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { publisherId } = req.params;
+    if (!mongoose_1.default.Types.ObjectId.isValid(publisherId)) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid publisher ID');
+    }
+    const publisher = yield Publisher_1.Publisher.findById(publisherId)
+        .populate('createdBy', 'email firstName lastName')
+        .populate('updatedBy', 'email firstName lastName')
+        .populate('reviews.reviewerId', 'email firstName lastName')
+        .populate('reviews.moderatedBy', 'email firstName lastName');
+    if (!publisher) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, 'Publisher not found');
+    }
+    return res.json(new ApiResponse_1.ApiResponse(200, publisher));
+}));
+/**
+ * Create new publisher listing
+ * POST /api/v1/admin/publishers
+ */
+exports.createPublisher = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const adminUserId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id);
+    if (!adminUserId) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Admin authentication required');
+    }
+    const { name, price, avg_publish_time, industry_focus, region_reach, audience_reach, key_features, metrics, 
+    // Marketplace fields
+    logo, description, level, engagement, delivery, coverage, formatDepth, addOns, enhancedMetrics, faqs, metaTitle, metaDescription, socialImage, isMarketplaceListing = false } = req.body;
+    // Validate required fields
+    if (!name || !price || !avg_publish_time || !audience_reach) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Missing required fields: name, price, avg_publish_time, audience_reach');
+    }
+    const publisher = yield Publisher_1.Publisher.create({
+        publisherId: `PUB${Date.now()}`,
+        name,
+        price,
+        avg_publish_time,
+        industry_focus: industry_focus || [],
+        region_reach: region_reach || [],
+        audience_reach,
+        key_features: key_features || [],
+        metrics: metrics || {
+            domain_authority: 0,
+            trust_score: 0,
+            avg_traffic: 0,
+            social_signals: 0
+        },
+        // Marketplace fields
+        logo,
+        description,
+        level,
+        engagement,
+        delivery,
+        coverage,
+        formatDepth: formatDepth || [],
+        addOns: addOns || {},
+        enhancedMetrics,
+        faqs: (faqs || []).map((faq, index) => (Object.assign(Object.assign({}, faq), { order: faq.order || index + 1 }))),
+        metaTitle,
+        metaDescription,
+        socialImage,
+        isMarketplaceListing,
+        isPublished: false,
+        createdBy: adminUserId
+    });
+    return res.json(new ApiResponse_1.ApiResponse(201, publisher, 'Publisher created successfully'));
+}));
+/**
+ * Update publisher listing
+ * PUT /api/v1/admin/publishers/:publisherId
+ */
+exports.updatePublisher = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const { publisherId } = req.params;
+    const adminUserId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id);
+    if (!mongoose_1.default.Types.ObjectId.isValid(publisherId)) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid publisher ID');
+    }
+    const updateData = Object.assign({}, req.body);
+    delete updateData._id;
+    delete updateData.publisherId;
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
+    delete updateData.createdBy;
+    updateData.updatedBy = adminUserId;
+    const publisher = yield Publisher_1.Publisher.findByIdAndUpdate(publisherId, updateData, { new: true, runValidators: true }).populate('createdBy updatedBy', 'email firstName lastName');
+    if (!publisher) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, 'Publisher not found');
+    }
+    return res.json(new ApiResponse_1.ApiResponse(200, publisher, 'Publisher updated successfully'));
+}));
+/**
+ * Publish/unpublish publisher listing
+ * PUT /api/v1/admin/publishers/:publisherId/publish
+ */
+exports.togglePublisherStatus = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const { publisherId } = req.params;
+    const { isPublished, publishedReason } = req.body;
+    const adminUserId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id);
+    if (!mongoose_1.default.Types.ObjectId.isValid(publisherId)) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid publisher ID');
+    }
+    const updateData = {
+        isPublished: isPublished === true,
+        updatedBy: adminUserId
+    };
+    if (isPublished === true) {
+        updateData.publishedAt = new Date();
+        updateData.isMarketplaceListing = true;
+    }
+    else {
+        updateData.publishedAt = undefined;
+    }
+    const publisher = yield Publisher_1.Publisher.findByIdAndUpdate(publisherId, updateData, { new: true });
+    if (!publisher) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, 'Publisher not found');
+    }
+    const action = isPublished ? 'published' : 'unpublished';
+    return res.json(new ApiResponse_1.ApiResponse(200, publisher, `Publisher ${action} successfully`));
+}));
+/**
+ * Delete publisher (soft delete)
+ * DELETE /api/v1/admin/publishers/:publisherId
+ */
+exports.deletePublisher = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { publisherId } = req.params;
+    if (!mongoose_1.default.Types.ObjectId.isValid(publisherId)) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid publisher ID');
+    }
+    const publisher = yield Publisher_1.Publisher.findByIdAndDelete(publisherId);
+    if (!publisher) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, 'Publisher not found');
+    }
+    return res.json(new ApiResponse_1.ApiResponse(200, { message: 'Publisher deleted successfully' }));
+}));
+/**
+ * Manage publisher add-ons
+ * PUT /api/v1/admin/publishers/:publisherId/addons
+ */
+exports.updatePublisherAddons = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const { publisherId } = req.params;
+    const { addOns } = req.body;
+    const adminUserId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id);
+    if (!mongoose_1.default.Types.ObjectId.isValid(publisherId)) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid publisher ID');
+    }
+    const publisher = yield Publisher_1.Publisher.findByIdAndUpdate(publisherId, {
+        addOns,
+        updatedBy: adminUserId
+    }, { new: true, runValidators: true });
+    if (!publisher) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, 'Publisher not found');
+    }
+    return res.json(new ApiResponse_1.ApiResponse(200, publisher, 'Add-ons updated successfully'));
+}));
+/**
+ * Update publisher metrics
+ * PUT /api/v1/admin/publishers/:publisherId/metrics
+ */
+exports.updatePublisherMetrics = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const { publisherId } = req.params;
+    const { metrics, enhancedMetrics } = req.body;
+    const adminUserId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id);
+    if (!mongoose_1.default.Types.ObjectId.isValid(publisherId)) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid publisher ID');
+    }
+    const updateData = { updatedBy: adminUserId };
+    if (metrics)
+        updateData.metrics = metrics;
+    if (enhancedMetrics) {
+        updateData.enhancedMetrics = Object.assign(Object.assign({}, enhancedMetrics), { lastUpdated: new Date() });
+    }
+    const publisher = yield Publisher_1.Publisher.findByIdAndUpdate(publisherId, updateData, { new: true, runValidators: true });
+    if (!publisher) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, 'Publisher not found');
+    }
+    return res.json(new ApiResponse_1.ApiResponse(200, publisher, 'Metrics updated successfully'));
+}));
+/**
+ * Manage publisher FAQs
+ * PUT /api/v1/admin/publishers/:publisherId/faqs
+ */
+exports.updatePublisherFAQs = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const { publisherId } = req.params;
+    const { faqs } = req.body;
+    const adminUserId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id);
+    if (!mongoose_1.default.Types.ObjectId.isValid(publisherId)) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid publisher ID');
+    }
+    // Ensure FAQs have proper order
+    const orderedFAQs = (faqs || []).map((faq, index) => (Object.assign(Object.assign({}, faq), { order: faq.order || index + 1, isActive: faq.isActive !== undefined ? faq.isActive : true })));
+    const publisher = yield Publisher_1.Publisher.findByIdAndUpdate(publisherId, {
+        faqs: orderedFAQs,
+        updatedBy: adminUserId
+    }, { new: true, runValidators: true });
+    if (!publisher) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, 'Publisher not found');
+    }
+    return res.json(new ApiResponse_1.ApiResponse(200, publisher, 'FAQs updated successfully'));
+}));
+// ==================== PUBLISHER REVIEW MANAGEMENT ====================
+/**
+ * Get all publisher reviews (for moderation)
+ * GET /api/v1/admin/reviews
+ */
+exports.getAllPublisherReviews = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const { publisherId, isModerated, isApproved, rating, page = 1, limit = 20 } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = Math.min(parseInt(limit) || 20, 100);
+    const skip = (pageNum - 1) * limitNum;
+    const matchStage = {};
+    if (publisherId)
+        matchStage._id = new mongoose_1.default.Types.ObjectId(publisherId);
+    const pipeline = [
+        { $match: matchStage },
+        { $unwind: '$reviews' },
+        {
+            $match: Object.assign(Object.assign(Object.assign({}, (isModerated !== undefined && { 'reviews.isModerated': isModerated === 'true' })), (isApproved !== undefined && { 'reviews.isApproved': isApproved === 'true' })), (rating && { 'reviews.rating': parseInt(rating) }))
+        },
+        {
+            $lookup: {
+                from: 'users',
+                localField: 'reviews.reviewerId',
+                foreignField: '_id',
+                as: 'reviewerInfo'
+            }
+        },
+        {
+            $lookup: {
+                from: 'users',
+                localField: 'reviews.moderatedBy',
+                foreignField: '_id',
+                as: 'moderatorInfo'
+            }
+        },
+        {
+            $project: {
+                publisherId: '$_id',
+                publisherName: '$name',
+                review: '$reviews',
+                reviewer: { $arrayElemAt: ['$reviewerInfo', 0] },
+                moderator: { $arrayElemAt: ['$moderatorInfo', 0] }
+            }
+        },
+        { $sort: { 'review.timestamp': -1 } },
+        { $skip: skip },
+        { $limit: limitNum }
+    ];
+    const reviews = yield Publisher_1.Publisher.aggregate(pipeline);
+    // Get total count
+    const countPipeline = [
+        { $match: matchStage },
+        { $unwind: '$reviews' },
+        {
+            $match: Object.assign(Object.assign(Object.assign({}, (isModerated !== undefined && { 'reviews.isModerated': isModerated === 'true' })), (isApproved !== undefined && { 'reviews.isApproved': isApproved === 'true' })), (rating && { 'reviews.rating': parseInt(rating) }))
+        },
+        { $count: 'total' }
+    ];
+    const totalResult = yield Publisher_1.Publisher.aggregate(countPipeline);
+    const total = ((_a = totalResult[0]) === null || _a === void 0 ? void 0 : _a.total) || 0;
+    return res.json(new ApiResponse_1.ApiResponse(200, {
+        reviews,
+        pagination: {
+            page: pageNum,
+            limit: limitNum,
+            total,
+            pages: Math.ceil(total / limitNum)
+        }
+    }));
+}));
+/**
+ * Moderate review (approve/reject)
+ * PUT /api/v1/admin/reviews/:publisherId/:reviewId/moderate
+ */
+exports.moderateReview = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const { publisherId, reviewId } = req.params;
+    const { isApproved, moderationNote } = req.body;
+    const adminUserId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id);
+    if (!mongoose_1.default.Types.ObjectId.isValid(publisherId)) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid publisher ID');
+    }
+    const publisher = yield Publisher_1.Publisher.findOneAndUpdate({
+        _id: publisherId,
+        'reviews._id': reviewId
+    }, {
+        $set: Object.assign({ 'reviews.$.isModerated': true, 'reviews.$.isApproved': isApproved === true, 'reviews.$.moderatedBy': adminUserId, 'reviews.$.moderatedAt': new Date() }, (moderationNote && { 'reviews.$.moderationNote': moderationNote }))
+    }, { new: true });
+    if (!publisher) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, 'Publisher or review not found');
+    }
+    const action = isApproved ? 'approved' : 'rejected';
+    return res.json(new ApiResponse_1.ApiResponse(200, publisher, `Review ${action} successfully`));
+}));
+/**
+ * Delete review
+ * DELETE /api/v1/admin/reviews/:publisherId/:reviewId
+ */
+exports.deleteReview = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { publisherId, reviewId } = req.params;
+    if (!mongoose_1.default.Types.ObjectId.isValid(publisherId)) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid publisher ID');
+    }
+    const publisher = yield Publisher_1.Publisher.findByIdAndUpdate(publisherId, { $pull: { reviews: { _id: reviewId } } }, { new: true });
+    if (!publisher) {
+        throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.NOT_FOUND, 'Publisher not found');
+    }
+    return res.json(new ApiResponse_1.ApiResponse(200, { message: 'Review deleted successfully' }));
+}));
+// ==================== MARKETPLACE ANALYTICS ====================
+/**
+ * Get marketplace analytics
+ * GET /api/v1/admin/marketplace/analytics
+ */
+exports.getMarketplaceAnalytics = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { startDate, endDate } = req.query;
+    const dateFilter = {};
+    if (startDate)
+        dateFilter.$gte = new Date(startDate);
+    if (endDate)
+        dateFilter.$lte = new Date(endDate);
+    // Publisher stats
+    const totalPublishers = yield Publisher_1.Publisher.countDocuments();
+    const publishedPublishers = yield Publisher_1.Publisher.countDocuments({ isPublished: true, isMarketplaceListing: true });
+    const draftPublishers = yield Publisher_1.Publisher.countDocuments({ isPublished: false });
+    // Review stats
+    const reviewStatsPipeline = [
+        { $unwind: { path: '$reviews', preserveNullAndEmptyArrays: true } },
+        {
+            $group: {
+                _id: null,
+                totalReviews: { $sum: { $cond: [{ $ifNull: ['$reviews', false] }, 1, 0] } },
+                approvedReviews: { $sum: { $cond: [{ $eq: ['$reviews.isApproved', true] }, 1, 0] } },
+                pendingReviews: { $sum: { $cond: [{ $eq: ['$reviews.isModerated', false] }, 1, 0] } },
+                averageRating: { $avg: { $cond: [{ $eq: ['$reviews.isApproved', true] }, '$reviews.rating', null] } }
+            }
+        }
+    ];
+    const reviewStats = yield Publisher_1.Publisher.aggregate(reviewStatsPipeline);
+    // Publisher performance
+    const topPerformingPublishers = yield Publisher_1.Publisher.find({
+        isPublished: true,
+        isMarketplaceListing: true
+    })
+        .sort({ cartAddCount: -1, averageRating: -1 })
+        .limit(10)
+        .select('name cartAddCount viewCount averageRating conversionRate');
+    // Add-on usage stats
+    const addonStatsPipeline = [
+        { $match: { isMarketplaceListing: true } },
+        {
+            $project: {
+                hasBackdating: { $ne: [{ $ifNull: ['$addOns.backdating.enabled', false] }, false] },
+                hasSocialPosting: { $ne: [{ $ifNull: ['$addOns.socialPosting.enabled', false] }, false] },
+                hasFeaturedPlacement: { $ne: [{ $ifNull: ['$addOns.featuredPlacement.enabled', false] }, false] },
+                hasNewsletter: { $ne: [{ $ifNull: ['$addOns.newsletterInclusion.enabled', false] }, false] },
+                hasAuthorByline: { $ne: [{ $ifNull: ['$addOns.authorByline.enabled', false] }, false] },
+                hasPaidAmplification: { $ne: [{ $ifNull: ['$addOns.paidAmplification.enabled', false] }, false] },
+                hasWhitePaper: { $ne: [{ $ifNull: ['$addOns.whitePaperGating.enabled', false] }, false] }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                backdating: { $sum: { $cond: ['$hasBackdating', 1, 0] } },
+                socialPosting: { $sum: { $cond: ['$hasSocialPosting', 1, 0] } },
+                featuredPlacement: { $sum: { $cond: ['$hasFeaturedPlacement', 1, 0] } },
+                newsletter: { $sum: { $cond: ['$hasNewsletter', 1, 0] } },
+                authorByline: { $sum: { $cond: ['$hasAuthorByline', 1, 0] } },
+                paidAmplification: { $sum: { $cond: ['$hasPaidAmplification', 1, 0] } },
+                whitePaper: { $sum: { $cond: ['$hasWhitePaper', 1, 0] } }
+            }
+        }
+    ];
+    const addonStats = yield Publisher_1.Publisher.aggregate(addonStatsPipeline);
+    return res.json(new ApiResponse_1.ApiResponse(200, {
+        publisherStats: {
+            total: totalPublishers,
+            published: publishedPublishers,
+            draft: draftPublishers
+        },
+        reviewStats: reviewStats[0] || {
+            totalReviews: 0,
+            approvedReviews: 0,
+            pendingReviews: 0,
+            averageRating: 0
+        },
+        topPublishers: topPerformingPublishers,
+        addonUsage: addonStats[0] || {}
+    }));
+}));
 /**
  * Get campaign details by ID
  */
@@ -106,7 +558,7 @@ exports.getCampaignDetails = (0, AsyncHandler_1.asyncHandler)((req, res) => __aw
  * Allowed transitions: Draft -> Scheduled -> Active -> Completed/Failed/Paused
  */
 exports.changeCampaignStatus = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b;
     const { campaignId } = req.params;
     const { newStatus, reason } = req.body;
     if (!mongoose_1.default.Types.ObjectId.isValid(campaignId)) {
@@ -130,7 +582,7 @@ exports.changeCampaignStatus = (0, AsyncHandler_1.asyncHandler)((req, res) => __
         from: oldStatus,
         to: newStatus,
         changedAt: new Date(),
-        changedBy: (_a = req.user) === null || _a === void 0 ? void 0 : _a._id,
+        changedBy: ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id),
         reason: reason || 'No reason provided'
     };
     yield campaign.save();
@@ -143,7 +595,7 @@ exports.changeCampaignStatus = (0, AsyncHandler_1.asyncHandler)((req, res) => __
  * Delete campaign (soft delete recommended)
  */
 exports.deleteCampaign = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b;
     const { campaignId } = req.params;
     const { softDelete = true } = req.body;
     if (!mongoose_1.default.Types.ObjectId.isValid(campaignId)) {
@@ -157,7 +609,7 @@ exports.deleteCampaign = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaite
         // Soft delete - mark as deleted instead of removing
         campaign.status = 'Failed';
         campaign.deletedAt = new Date();
-        campaign.deletedBy = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+        campaign.deletedBy = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id);
         yield campaign.save();
         return res.json(new ApiResponse_1.ApiResponse(200, { message: 'Campaign soft deleted' }));
     }
@@ -513,6 +965,22 @@ exports.adminController = {
     getPaymentStats: exports.getPaymentStats,
     updateOrderStatus: exports.updateOrderStatus,
     getAllTransactions: exports.getAllTransactions,
+    // Publisher Marketplace
+    getAllPublishers: exports.getAllPublishers,
+    getPublisherDetails: exports.getPublisherDetails,
+    createPublisher: exports.createPublisher,
+    updatePublisher: exports.updatePublisher,
+    togglePublisherStatus: exports.togglePublisherStatus,
+    deletePublisher: exports.deletePublisher,
+    updatePublisherAddons: exports.updatePublisherAddons,
+    updatePublisherMetrics: exports.updatePublisherMetrics,
+    updatePublisherFAQs: exports.updatePublisherFAQs,
+    // Review Management
+    getAllPublisherReviews: exports.getAllPublisherReviews,
+    moderateReview: exports.moderateReview,
+    deleteReview: exports.deleteReview,
+    // Analytics
+    getMarketplaceAnalytics: exports.getMarketplaceAnalytics,
     // System
     getSystemOverview: exports.getSystemOverview
 };

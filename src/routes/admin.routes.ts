@@ -6,8 +6,8 @@ import { adminController } from '../controllers/admin.controller';
 const adminRoute = express.Router();
 
 // Apply authentication and admin verification to all routes
-//adminRoute.use(isAuthenticated);
-// adminRoute.use(verifyAdmin);
+adminRoute.use(isAuthenticated);
+adminRoute.use(verifyAdmin);
 adminRoute.use(adminRateLimit(1000, 60000)); // 1000 requests per minute for admins
 
 // ==================== SYSTEM OVERVIEW ====================
@@ -135,6 +135,110 @@ adminRoute.put(
  * Query params: status, userId, type, startDate, endDate, page, limit
  */
 adminRoute.get('/transactions', auditLog('LIST_ALL_TRANSACTIONS'), adminController.getAllTransactions);
+
+// ==================== PUBLISHER MARKETPLACE MANAGEMENT ====================
+
+/**
+ * GET /api/v1/admin/publishers
+ * Get all publishers with marketplace features
+ * Query params: level, engagement, delivery, isPublished, isMarketplaceListing, searchTerm, sortBy, sortOrder, page, limit
+ */
+adminRoute.get('/publishers', auditLog('LIST_ALL_PUBLISHERS'), adminController.getAllPublishers);
+
+/**
+ * POST /api/v1/admin/publishers
+ * Create new publisher listing
+ * Body: { name, price, avg_publish_time, industry_focus, region_reach, audience_reach, key_features, metrics, logo, description, level, engagement, delivery, coverage, formatDepth, addOns, enhancedMetrics, faqs, metaTitle, metaDescription, socialImage, isMarketplaceListing }
+ */
+adminRoute.post('/publishers', auditLog('CREATE_PUBLISHER'), adminController.createPublisher);
+
+/**
+ * GET /api/v1/admin/publishers/:publisherId
+ * Get publisher details by ID
+ */
+adminRoute.get('/publishers/:publisherId', auditLog('VIEW_PUBLISHER_DETAILS'), adminController.getPublisherDetails);
+
+/**
+ * PUT /api/v1/admin/publishers/:publisherId
+ * Update publisher listing
+ * Body: { any publisher fields to update }
+ */
+adminRoute.put('/publishers/:publisherId', auditLog('UPDATE_PUBLISHER'), adminController.updatePublisher);
+
+/**
+ * PUT /api/v1/admin/publishers/:publisherId/publish
+ * Publish/unpublish publisher listing
+ * Body: { isPublished: boolean, publishedReason?: string }
+ */
+adminRoute.put('/publishers/:publisherId/publish', auditLog('TOGGLE_PUBLISHER_STATUS'), adminController.togglePublisherStatus);
+
+/**
+ * DELETE /api/v1/admin/publishers/:publisherId
+ * Delete publisher (soft delete)
+ */
+adminRoute.delete(
+    '/publishers/:publisherId',
+    auditLog('DELETE_PUBLISHER'),
+    verifySuperAdmin, // Only super admin can delete
+    adminController.deletePublisher
+);
+
+/**
+ * PUT /api/v1/admin/publishers/:publisherId/addons
+ * Manage publisher add-ons
+ * Body: { addOns: { backdating: { enabled, price }, socialPosting: { enabled, price }, ... } }
+ */
+adminRoute.put('/publishers/:publisherId/addons', auditLog('UPDATE_PUBLISHER_ADDONS'), adminController.updatePublisherAddons);
+
+/**
+ * PUT /api/v1/admin/publishers/:publisherId/metrics
+ * Update publisher metrics
+ * Body: { metrics: { domain_authority, trust_score, ... }, enhancedMetrics: { ctrPercentage, bounceRatePercentage, ... } }
+ */
+adminRoute.put('/publishers/:publisherId/metrics', auditLog('UPDATE_PUBLISHER_METRICS'), adminController.updatePublisherMetrics);
+
+/**
+ * PUT /api/v1/admin/publishers/:publisherId/faqs
+ * Manage publisher FAQs
+ * Body: { faqs: [{ question, answer, order, isActive }] }
+ */
+adminRoute.put('/publishers/:publisherId/faqs', auditLog('UPDATE_PUBLISHER_FAQS'), adminController.updatePublisherFAQs);
+
+// ==================== REVIEW MANAGEMENT ====================
+
+/**
+ * GET /api/v1/admin/reviews
+ * Get all publisher reviews for moderation
+ * Query params: publisherId, isModerated, isApproved, rating, page, limit
+ */
+adminRoute.get('/reviews', auditLog('LIST_PUBLISHER_REVIEWS'), adminController.getAllPublisherReviews);
+
+/**
+ * PUT /api/v1/admin/reviews/:publisherId/:reviewId/moderate
+ * Moderate review (approve/reject)
+ * Body: { isApproved: boolean, moderationNote?: string }
+ */
+adminRoute.put('/reviews/:publisherId/:reviewId/moderate', auditLog('MODERATE_REVIEW'), adminController.moderateReview);
+
+/**
+ * DELETE /api/v1/admin/reviews/:publisherId/:reviewId
+ * Delete review
+ */
+adminRoute.delete(
+    '/reviews/:publisherId/:reviewId',
+    auditLog('DELETE_REVIEW'),
+    verifySuperAdmin, // Only super admin can delete
+    adminController.deleteReview
+);
+
+// ==================== MARKETPLACE ANALYTICS ====================
+
+/**
+ * GET /api/v1/admin/marketplace/analytics
+ * Get marketplace analytics and insights
+ * Query params: startDate, endDate
+ */
+adminRoute.get('/marketplace/analytics', auditLog('VIEW_MARKETPLACE_ANALYTICS'), adminController.getMarketplaceAnalytics);
 
 // ==================== HEALTH CHECK ====================
 

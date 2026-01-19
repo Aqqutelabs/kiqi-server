@@ -33,9 +33,9 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Publisher = exports.FormatType = exports.DeliveryTime = exports.EngagementLevel = exports.PublisherLevel = void 0;
+exports.PublisherListing = exports.FormatType = exports.DeliveryTime = exports.EngagementLevel = exports.PublisherLevel = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
-// Marketplace enums
+// Enums for dropdown values
 var PublisherLevel;
 (function (PublisherLevel) {
     PublisherLevel["PREMIUM"] = "Premium";
@@ -68,22 +68,14 @@ var FormatType;
     FormatType["OPINION"] = "Opinion";
     FormatType["BREAKING_NEWS"] = "Breaking News";
 })(FormatType || (exports.FormatType = FormatType = {}));
-const PublisherSchema = new mongoose_1.Schema({
-    publisherId: { type: String, required: true, unique: true },
-    name: { type: String, required: true },
-    price: { type: String, required: true },
-    avg_publish_time: { type: String, required: true },
-    industry_focus: [{ type: String }],
-    region_reach: [{ type: String }],
-    audience_reach: { type: String, required: true },
-    key_features: [{ type: String }],
-    metrics: {
-        domain_authority: { type: Number, required: false },
-        trust_score: { type: Number, required: false },
-        avg_traffic: { type: Number, required: false },
-        social_signals: { type: Number, required: false }
+const PublisherListingSchema = new mongoose_1.Schema({
+    // Global Header Fields
+    title: {
+        type: String,
+        required: true,
+        maxlength: 50,
+        trim: true
     },
-    // Marketplace fields
     logo: {
         type: String,
         validate: {
@@ -95,23 +87,51 @@ const PublisherSchema = new mongoose_1.Schema({
     },
     description: {
         type: String,
+        required: true,
         maxlength: 200,
         trim: true
     },
+    basePrice: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+    pricingUnit: {
+        type: String,
+        required: true,
+        default: 'per placement'
+    },
+    // Core Publisher Attributes
     level: {
         type: String,
-        enum: Object.values(PublisherLevel)
+        enum: Object.values(PublisherLevel),
+        required: true
     },
     engagement: {
         type: String,
-        enum: Object.values(EngagementLevel)
+        enum: Object.values(EngagementLevel),
+        required: true
     },
     delivery: {
         type: String,
-        enum: Object.values(DeliveryTime)
+        enum: Object.values(DeliveryTime),
+        required: true
     },
     coverage: {
         type: String,
+        required: true,
+        maxlength: 500,
+        trim: true
+    },
+    industryFocus: {
+        type: String,
+        required: true,
+        maxlength: 500,
+        trim: true
+    },
+    audienceReach: {
+        type: String,
+        required: true,
         maxlength: 500,
         trim: true
     },
@@ -119,7 +139,7 @@ const PublisherSchema = new mongoose_1.Schema({
             type: String,
             enum: Object.values(FormatType)
         }],
-    // Add-ons configuration
+    // Add-ons Configuration
     addOns: {
         backdating: {
             enabled: { type: Boolean, default: false },
@@ -153,20 +173,23 @@ const PublisherSchema = new mongoose_1.Schema({
             leadGenEnabled: { type: Boolean, default: false }
         }
     },
-    // Enhanced metrics for marketplace
-    enhancedMetrics: {
-        ctrPercentage: { type: Number, min: 0, max: 100 },
-        bounceRatePercentage: { type: Number, min: 0, max: 100 },
-        referralTraffic: { type: Number, min: 0 },
-        buzzIndex: { type: Number, min: 0 },
-        vibeValuePercentage: { type: Number, min: 0, max: 100 },
+    // Metrics
+    metrics: {
+        domainAuthority: { type: Number, min: 0, max: 100, required: true },
+        trustScore: { type: Number, min: 0, max: 100, required: true },
+        avgTrafficMonthly: { type: Number, min: 0, required: true },
         avgBacklinks: {
-            min: { type: Number, min: 0 },
-            max: { type: Number, min: 0 }
+            min: { type: Number, min: 0, required: true },
+            max: { type: Number, min: 0, required: true }
         },
+        ctrPercentage: { type: Number, min: 0, max: 100, required: true },
+        bounceRatePercentage: { type: Number, min: 0, max: 100, required: true },
+        referralTraffic: { type: Number, min: 0, required: true },
+        buzzIndex: { type: Number, min: 0, required: true },
+        vibeValuePercentage: { type: Number, min: 0, max: 100, required: true },
         lastUpdated: { type: Date, default: Date.now }
     },
-    // Reviews system
+    // Reviews
     reviews: [{
             reviewerId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true },
             reviewerName: { type: String, required: true },
@@ -180,61 +203,60 @@ const PublisherSchema = new mongoose_1.Schema({
         }],
     averageRating: { type: Number, default: 0, min: 0, max: 5 },
     totalReviews: { type: Number, default: 0, min: 0 },
-    // FAQ system
+    // FAQ
     faqs: [{
             question: { type: String, required: true },
             answer: { type: String, required: true },
             order: { type: Number, required: true },
             isActive: { type: Boolean, default: true }
         }],
-    // Marketplace status
+    // Status and Meta
     isPublished: { type: Boolean, default: false },
-    isMarketplaceListing: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
     publicSlug: {
         type: String,
         unique: true,
-        sparse: true,
+        required: true,
         lowercase: true,
         trim: true
     },
-    // SEO fields
+    // SEO and Social
     metaTitle: { type: String, maxlength: 60 },
     metaDescription: { type: String, maxlength: 160 },
     socialImage: { type: String },
+    // Admin tracking
+    createdBy: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true },
+    updatedBy: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' },
+    publishedAt: { type: Date },
     // Analytics
     viewCount: { type: Number, default: 0, min: 0 },
     cartAddCount: { type: Number, default: 0, min: 0 },
     bookmarkCount: { type: Number, default: 0, min: 0 },
     shareCount: { type: Number, default: 0, min: 0 },
-    conversionRate: { type: Number, default: 0, min: 0, max: 100 },
-    // Admin tracking
-    createdBy: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' },
-    updatedBy: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' },
-    publishedAt: { type: Date }
+    conversionRate: { type: Number, default: 0, min: 0, max: 100 }
 }, {
     timestamps: true
 });
-// Indexes for efficient queries
-PublisherSchema.index({ industry_focus: 1 });
-PublisherSchema.index({ region_reach: 1 });
-PublisherSchema.index({ name: 'text' });
-// Marketplace indexes
-PublisherSchema.index({ publicSlug: 1 }, { unique: true, sparse: true });
-PublisherSchema.index({ isPublished: 1, isMarketplaceListing: 1 });
-PublisherSchema.index({ level: 1 });
-PublisherSchema.index({ averageRating: -1 });
-PublisherSchema.index({ 'reviews.isApproved': 1 });
-PublisherSchema.index({ createdAt: -1 });
-// Text search index for marketplace
-PublisherSchema.index({
-    name: 'text',
+// Indexes for performance
+PublisherListingSchema.index({ publicSlug: 1 }, { unique: true });
+PublisherListingSchema.index({ isPublished: 1, isActive: 1 });
+PublisherListingSchema.index({ level: 1 });
+PublisherListingSchema.index({ industryFocus: 1 });
+PublisherListingSchema.index({ averageRating: -1 });
+PublisherListingSchema.index({ basePrice: 1 });
+PublisherListingSchema.index({ createdAt: -1 });
+PublisherListingSchema.index({ 'reviews.isApproved': 1 });
+// Text search index
+PublisherListingSchema.index({
+    title: 'text',
     description: 'text',
+    industryFocus: 'text',
     coverage: 'text'
 });
 // Pre-save middleware to generate slug
-PublisherSchema.pre('save', function (next) {
-    if (this.isModified('name') && !this.publicSlug && this.isMarketplaceListing) {
-        this.publicSlug = this.name.toLowerCase()
+PublisherListingSchema.pre('save', function (next) {
+    if (this.isModified('title') && !this.publicSlug) {
+        this.publicSlug = this.title.toLowerCase()
             .replace(/[^a-z0-9]/g, '-')
             .replace(/-+/g, '-')
             .replace(/^-|-$/g, '') + '-' + Date.now();
@@ -242,9 +264,9 @@ PublisherSchema.pre('save', function (next) {
     next();
 });
 // Pre-save middleware to update review stats
-PublisherSchema.pre('save', function (next) {
+PublisherListingSchema.pre('save', function (next) {
     if (this.isModified('reviews')) {
-        const approvedReviews = (this.reviews || []).filter(r => r.isApproved);
+        const approvedReviews = this.reviews.filter(r => r.isApproved);
         this.totalReviews = approvedReviews.length;
         if (approvedReviews.length > 0) {
             const sum = approvedReviews.reduce((acc, review) => acc + review.rating, 0);
@@ -257,15 +279,15 @@ PublisherSchema.pre('save', function (next) {
     next();
 });
 // Virtual for public URL
-PublisherSchema.virtual('publicUrl').get(function () {
+PublisherListingSchema.virtual('publicUrl').get(function () {
     return `/publishers/${this.publicSlug}`;
 });
 // Method to check if add-on should be displayed
-PublisherSchema.methods.shouldDisplayAddon = function (addonName) {
-    if (!this.addOns || !this.addOns[addonName])
-        return false;
+PublisherListingSchema.methods.shouldDisplayAddon = function (addonName) {
     const addon = this.addOns[addonName];
+    if (!addon)
+        return false;
     return addon.enabled === true ||
         (typeof addon === 'object' && 'price' in addon && (addon.price || 0) > 0);
 };
-exports.Publisher = mongoose_1.default.model('Publisher', PublisherSchema);
+exports.PublisherListing = mongoose_1.default.model('PublisherListing', PublisherListingSchema);

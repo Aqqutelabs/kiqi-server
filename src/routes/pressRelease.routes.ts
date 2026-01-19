@@ -27,7 +27,15 @@ import {
     updatePressReleaseToUnderReview,
     approvePressRelease,
     rejectPressRelease,
-    getAllPressReleasesWithProgress
+    getAllPressReleasesWithProgress,
+    // New marketplace functions
+    addToCartWithAddons,
+    addBookmark,
+    removeBookmark,
+    getUserBookmarks,
+    sharePublisher,
+    submitPublisherReview,
+    getMarketplaceFilters
 } from '../controllers/pressRelease.controller';
 
 import { 
@@ -91,5 +99,24 @@ router.get('/progress/:prId', getPressReleaseProgress);
 router.put('/progress/:prId/under-review', updatePressReleaseToUnderReview);
 router.put('/progress/:prId/approve', approvePressRelease);
 router.put('/progress/:prId/reject', rejectPressRelease);
+
+// ==================== MARKETPLACE ROUTES ====================
+
+// Marketplace filters and general data
+router.get('/marketplace/filters', getMarketplaceFilters);
+
+// Enhanced cart with add-ons
+router.post('/cart/add-with-addons', addToCartWithAddons);
+
+// Bookmark functionality
+router.post('/bookmarks', addBookmark);
+router.delete('/bookmarks/:publisherId', removeBookmark);
+router.get('/bookmarks', getUserBookmarks);
+
+// Publisher sharing
+router.post('/publishers/:publisherId/share', sharePublisher);
+
+// Publisher reviews (buyer side)
+router.post('/publishers/:publisherId/review', submitPublisherReview);
 
 export default router;
