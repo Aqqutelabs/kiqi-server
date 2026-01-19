@@ -79,13 +79,13 @@ app.use("/api/v1/ai", googleAIrouter);
 app.use("/api/v1/campaigns", campaignRoute);
 app.use("/api/v1/email-lists", emailListRoute);
 app.use("/api/v1/inbox", inboxRoute);
+app.use("/api/v1/admin", adminAuthRoutes);
 
 // Then the main router last for any remaining routes
 app.use('/api/v1', mainRouter);
 // app.use("/api/settings")
 // app.use("/api/mailChat")
 
-app.use("/api/v1/admin", adminAuthRoutes);
 app.use("/api/v1/admin", adminRoutes);
 
 app.use(errorHandler);

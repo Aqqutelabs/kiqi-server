@@ -6,7 +6,7 @@ import { adminController } from '../controllers/admin.controller';
 const adminRoute = express.Router();
 
 // Apply authentication and admin verification to all routes
-// adminRoute.use(isAuthenticated);
+adminRoute.use(isAuthenticated);
 adminRoute.use(verifyAdmin);
 adminRoute.use(adminRateLimit(1000, 60000)); // 1000 requests per minute for admins
 
