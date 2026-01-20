@@ -57,17 +57,33 @@ const isAuthenticated = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
             });
             return;
         }
-        jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || "", (err, decoded) => {
+        jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || "", (err, decoded) => __awaiter(void 0, void 0, void 0, function* () {
             if (err || !decoded || typeof decoded !== "object") {
                 res.status(http_status_codes_1.StatusCodes.FORBIDDEN).json({
                     message: "Invalid or expired token",
                 });
                 return;
             }
-            // req.user = (decoded as JwtPayload).id;
-            req.user = decoded;
-            next();
-        });
+            try {
+                // Fetch the full user object from database
+                const userId = decoded._id || decoded.id;
+                const user = yield User_1.UserModel.findById(userId);
+                if (!user) {
+                    res.status(http_status_codes_1.StatusCodes.FORBIDDEN).json({
+                        message: "User not found",
+                    });
+                    return;
+                }
+                req.user = user;
+                next();
+            }
+            catch (fetchError) {
+                console.error('Error fetching user:', fetchError);
+                res.status(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR).json({
+                    message: "Error fetching user",
+                });
+            }
+        }));
     }
     catch (err) {
         res.status(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR).json({

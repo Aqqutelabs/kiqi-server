@@ -4,7 +4,7 @@ import { UserModel } from "../../models/User";
 
 // Create a user
 export const createUser = async (req: Request, res: Response) => {
-  const { firstName, lastName, email, password, organizationName } = req.body;
+  const { firstName, lastName, email, password, organizationName, role } = req.body;
 
   try {
     const existingUser = await UserModel.findOne({ email });
@@ -18,7 +18,7 @@ export const createUser = async (req: Request, res: Response) => {
       email,
       password, // plain text for now, hash later
       organizationName,
-      role: "user", // default role
+      role: role || "user", // allow setting role
     });
 
     res.status(StatusCodes.CREATED).json({

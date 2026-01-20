@@ -7,7 +7,13 @@ const express_1 = __importDefault(require("express"));
 const Auth_middlewares_1 = require("../middlewares/Auth.middlewares");
 const admin_middleware_1 = require("../middlewares/admin.middleware");
 const admin_controller_1 = require("../controllers/admin.controller");
+const adminAuth_controller_1 = require("../controllers/admin/adminAuth.controller");
+const user_controller_1 = require("../controllers/admin/user.controller");
 const adminRoute = express_1.default.Router();
+// Admin login route (no authentication required)
+adminRoute.post('/login', adminAuth_controller_1.adminLogin);
+// Create user route (no authentication required)
+adminRoute.post('/users', user_controller_1.createUser);
 // Apply authentication and admin verification to all routes
 adminRoute.use(Auth_middlewares_1.isAuthenticated);
 adminRoute.use(admin_middleware_1.verifyAdmin);

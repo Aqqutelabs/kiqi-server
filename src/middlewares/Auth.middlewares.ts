@@ -71,7 +71,7 @@ export const isAuthenticated = async (
     }
 
 
-    jwt.verify(token, process.env.JWT_SECRET || "", (err, decoded) => {
+    jwt.verify(token, process.env.JWT_SECRET || "", async (err, decoded) => {
       if (err || !decoded || typeof decoded !== "object") {
         res.status(StatusCodes.FORBIDDEN).json({
           message: "Invalid or expired token",
@@ -79,9 +79,25 @@ export const isAuthenticated = async (
         return;
       }
 
-      // req.user = (decoded as JwtPayload).id;
-      req.user = decoded;
-      next();
+      try {
+        // Fetch the full user object from database
+        const userId = (decoded as any)._id || (decoded as any).id;
+        const user = await UserModel.findById(userId);
+        if (!user) {
+          res.status(StatusCodes.FORBIDDEN).json({
+            message: "User not found",
+          });
+          return;
+        }
+
+        req.user = user as any;
+        next();
+      } catch (fetchError) {
+        console.error('Error fetching user:', fetchError);
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+          message: "Error fetching user",
+        });
+      }
     });
   } catch (err: any) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({

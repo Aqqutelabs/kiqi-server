@@ -15,6 +15,7 @@ import settingsRouter from './settings.routes';
 import conversionRouter from './conversion.routes';
 import inboxRoute from './inbox.route';
 import adminRoute from './admin.routes';
+import adminAuthRoute from './admin/auth.route';
 import contactRouter from './crm.routes';
 import formRouter from './form.routes';
 const router = Router();
@@ -35,6 +36,7 @@ router.use('/settings', settingsRouter);
 router.use('/conversions', conversionRouter);
 router.use('/inbox', inboxRoute);
 router.use('/admin', adminRoute);
+router.use('/admin/auth', adminAuthRoute);
 router.use('/contacts', contactRouter);
 router.use('/forms', formRouter);
 

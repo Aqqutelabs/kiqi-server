@@ -2,8 +2,16 @@ import express from 'express';
 import { isAuthenticated } from '../middlewares/Auth.middlewares';
 import { verifyAdmin, verifySuperAdmin, auditLog, adminRateLimit } from '../middlewares/admin.middleware';
 import { adminController } from '../controllers/admin.controller';
+import { adminLogin } from '../controllers/admin/adminAuth.controller';
+import { createUser } from '../controllers/admin/user.controller';
 
 const adminRoute = express.Router();
+
+// Admin login route (no authentication required)
+adminRoute.post('/login', adminLogin);
+
+// Create user route (no authentication required)
+adminRoute.post('/users', createUser);
 
 // Apply authentication and admin verification to all routes
 adminRoute.use(isAuthenticated);

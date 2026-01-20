@@ -25,7 +25,7 @@ const http_status_codes_1 = require("http-status-codes");
 const User_1 = require("../../models/User");
 // Create a user
 const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { firstName, lastName, email, password, organizationName } = req.body;
+    const { firstName, lastName, email, password, organizationName, role } = req.body;
     try {
         const existingUser = yield User_1.UserModel.findOne({ email });
         if (existingUser) {
@@ -37,7 +37,7 @@ const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             email,
             password, // plain text for now, hash later
             organizationName,
-            role: "user", // default role
+            role: role || "user", // allow setting role
         });
         res.status(http_status_codes_1.StatusCodes.CREATED).json({
             message: "User created successfully",
