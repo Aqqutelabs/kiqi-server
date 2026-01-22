@@ -243,8 +243,8 @@ export const createPublisher = asyncHandler(async (req: AuthRequest, res: Respon
         metaTitle,
         metaDescription,
         socialImage,
-        isMarketplaceListing,
-        isPublished: false,
+        isMarketplaceListing: true,
+        isPublished: true,
         createdBy: adminUserId
     });
 
@@ -749,12 +749,9 @@ export const changeCampaignStatus = asyncHandler(async (req: AuthRequest, res: R
     }));
 });
 
-/**
- * Delete campaign (soft delete recommended)
- */
 export const deleteCampaign = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { campaignId } = req.params;
-    const { softDelete = true } = req.body;
+    const { softDelete = true } = req.body || {};
 
     if (!mongoose.Types.ObjectId.isValid(campaignId)) {
         throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid campaign ID');

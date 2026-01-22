@@ -69,11 +69,11 @@ app.use("/api/v1/ai", googeAi_route_1.default);
 app.use("/api/v1/campaigns", campaign_route_1.default);
 app.use("/api/v1/email-lists", emailList_route_1.default);
 app.use("/api/v1/inbox", inbox_route_1.default);
+app.use("/api/v1/admin", auth_route_2.default);
 // Then the main router last for any remaining routes
 app.use('/api/v1', index_2.default);
 // app.use("/api/settings")
 // app.use("/api/mailChat")
-app.use("/api/v1/admin", auth_route_2.default);
 app.use("/api/v1/admin", admin_1.default);
 app.use(ErrorHandler_1.default);
 // Start the server

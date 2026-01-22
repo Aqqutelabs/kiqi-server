@@ -64,6 +64,7 @@ export const verifySuperAdmin = (req: AuthRequest, res: Response, next: NextFunc
 
         const isSuperAdmin =
             user.role === 'superuser' ||
+            user.role === 'admin' ||
             (user as any).isSuperAdmin === true;
 
         if (!isSuperAdmin) {

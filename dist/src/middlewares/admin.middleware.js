@@ -51,6 +51,7 @@ const verifySuperAdmin = (req, res, next) => {
             throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Not authenticated');
         }
         const isSuperAdmin = user.role === 'superuser' ||
+            user.role === 'admin' ||
             user.isSuperAdmin === true;
         if (!isSuperAdmin) {
             throw new ApiError_1.ApiError(http_status_codes_1.StatusCodes.FORBIDDEN, 'Access denied. Super admin privileges required.');

@@ -706,6 +706,8 @@ exports.createPublisher = (0, AsyncHandler_1.asyncHandler)((req, res) => __await
             avg_traffic: 0,
             social_signals: 0
         },
+        isPublished: true,
+        isMarketplaceListing: true,
         created_by: userId,
         created_at: new Date().toISOString()
     });

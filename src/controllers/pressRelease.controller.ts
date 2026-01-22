@@ -802,6 +802,8 @@ export const createPublisher = asyncHandler(async (req: AuthRequest, res: Respon
             avg_traffic: 0,
             social_signals: 0
         },
+        isPublished: true,
+        isMarketplaceListing: true,
         created_by: userId,
         created_at: new Date().toISOString()
     });
