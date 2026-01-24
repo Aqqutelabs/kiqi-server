@@ -10,7 +10,7 @@ import { Cart } from '../models/Cart';
 import { initializePaystackPayment, verifyPaystackPayment } from '../utils/paystack';
 import mongoose from 'mongoose';
 import { AuthRequest } from '../middlewares/Auth.middlewares';
-import { CheckoutPublicationItem, PressReleaseTracker, ProgressTrackerResponse } from '../types/pressRelease.types';
+import { CheckoutPublicationItem, PressReleaseTracker, ProgressTrackerResponse, PressReleaseTrackerStatus } from '../types/pressRelease.types';
 import { v2 as cloudinary } from 'cloudinary';
 import { createHmac } from 'crypto';
 
@@ -88,6 +88,66 @@ export const recordProgressStep = async (
 
         progress.updated_at = new Date();
         await progress.save();
+
+        // Also update the PressRelease tracker field for backward compatibility
+        try {
+            const pressRelease = await PressRelease.findById(prId);
+            if (pressRelease) {
+                // Map ProgressStep to PressReleaseTrackerStatus
+                const statusMapping: Record<ProgressStep, PressReleaseTrackerStatus> = {
+                    'initiated': 'pending',
+                    'payment_pending': 'pending',
+                    'payment_completed': 'processing',
+                    'under_review': 'review',
+                    'approved': 'completed',
+                    'rejected': 'rejected'
+                };
+
+                // Map to progress percentage
+                const progressMapping: Record<ProgressStep, number> = {
+                    'initiated': 0,
+                    'payment_pending': 20,
+                    'payment_completed': 40,
+                    'under_review': 60,
+                    'approved': 100,
+                    'rejected': 100
+                };
+
+                const trackerStatus = statusMapping[step];
+                const progressPercentage = progressMapping[step];
+
+                // Initialize tracker if it doesn't exist
+                if (!pressRelease.tracker) {
+                    pressRelease.tracker = {
+                        current_status: 'pending',
+                        status_history: [],
+                        progress_percentage: 0,
+                        estimated_completion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+                        reviewers_count: 0
+                    };
+                }
+
+                // Update tracker
+                pressRelease.tracker.current_status = trackerStatus;
+                pressRelease.tracker.progress_percentage = progressPercentage;
+                pressRelease.tracker.status_history.push({
+                    status: trackerStatus,
+                    timestamp: new Date(),
+                    notes: notes || `Status updated to ${trackerStatus}`
+                });
+
+                // Set actual completion for completed/rejected
+                if (step === 'approved' || step === 'rejected') {
+                    pressRelease.tracker.actual_completion = new Date();
+                }
+
+                await pressRelease.save();
+                console.log(`✅ PressRelease tracker updated for PR: ${prId}`);
+            }
+        } catch (trackerError) {
+            console.error('❌ Error updating PressRelease tracker:', trackerError);
+            // Don't throw - progress was saved successfully
+        }
 
         console.log(`✅ Progress step recorded successfully: ${step} for PR: ${prId}`);
         return progress;
@@ -742,9 +802,21 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) 
 
     const order = await Order.create(orderData);
 
-    // Record payment_pending step for each publication in the order
-    for (const item of cart.items) {
-        // Note: We don't have PR ID yet at order stage, so we'll record this when payment completes
+    // Record payment_pending step if press_release_id is provided
+    if (press_release_id) {
+        try {
+            console.log(`📍 Recording payment_pending for PR: ${press_release_id}`);
+            await recordProgressStep(
+                press_release_id,
+                userId,
+                'payment_pending',
+                `Payment initiated for press release distribution`,
+                { order_id: String(order._id), payment_reference: reference }
+            );
+        } catch (progressError) {
+            console.error(`❌ Failed to record payment_pending for PR: ${press_release_id}`, progressError);
+            // Don't throw - order was created successfully
+        }
     }
 
     // Initialize Paystack payment (cart will be cleared only after payment verification)
@@ -1443,53 +1515,90 @@ export const getPressReleaseTracker = asyncHandler(async (req: AuthRequest, res:
     const pressRelease = await PressRelease.findOne({
         _id: prId,
         user_id: userId
-    }) as any;
+    });
 
     if (!pressRelease) {
         throw new ApiError(404, 'Press release not found');
     }
 
-    // Initialize tracker if it doesn't exist
-    if (!pressRelease.tracker) {
-        pressRelease.tracker = {
-            current_status: 'pending',
-            status_history: [{
-                status: 'pending',
-                timestamp: new Date(),
-                notes: 'Press release created'
-            }],
-            progress_percentage: 0,
-            estimated_completion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-            reviewers_count: 0
-        };
-        await pressRelease.save();
+    // Get progress from PressReleaseProgress model
+    const progress = await getProgressTimeline(
+        new mongoose.Types.ObjectId(prId),
+        userId
+    );
+
+    // Map ProgressStep to PressReleaseTrackerStatus
+    const statusMapping: Record<ProgressStep, PressReleaseTrackerStatus> = {
+        'initiated': 'pending',
+        'payment_pending': 'pending',
+        'payment_completed': 'processing',
+        'under_review': 'review',
+        'approved': 'completed',
+        'rejected': 'rejected'
+    };
+
+    // Map to progress percentage
+    const progressMapping: Record<ProgressStep, number> = {
+        'initiated': 0,
+        'payment_pending': 20,
+        'payment_completed': 40,
+        'under_review': 60,
+        'approved': 100,
+        'rejected': 100
+    };
+
+    let currentStatus: PressReleaseTrackerStatus = 'pending';
+    let progressPercentage = 0;
+    let statusHistory: Array<{ status: PressReleaseTrackerStatus; timestamp: string; notes?: string }> = [];
+    let estimatedCompletion = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    let actualCompletion: string | undefined;
+
+    if (progress) {
+        currentStatus = statusMapping[progress.current_step];
+        progressPercentage = progressMapping[progress.current_step];
+
+        // Build status history from progress_history
+        statusHistory = progress.progress_history.map(record => ({
+            status: statusMapping[record.step],
+            timestamp: record.timestamp.toISOString(),
+            notes: record.notes
+        }));
+
+        // Set actual completion
+        if (progress.completed_at) {
+            actualCompletion = progress.completed_at.toISOString();
+        } else if (progress.rejected_at) {
+            actualCompletion = progress.rejected_at.toISOString();
+        }
+    } else {
+        // No progress record, use default initiated state
+        statusHistory = [{
+            status: 'pending',
+            timestamp: pressRelease.date_created ? new Date(pressRelease.date_created).toISOString() : new Date().toISOString(),
+            notes: 'Press release created'
+        }];
     }
 
-    // Build the tracker response with proper typing
-    const estimatedCompletion = pressRelease.tracker.estimated_completion || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    // Build the tracker response
     const tracker: PressReleaseTracker = {
         _id: String(pressRelease._id),
         pr_id: String(pressRelease._id),
         title: pressRelease.title,
-        current_status: pressRelease.tracker.current_status as any,
-        status_history: pressRelease.tracker.status_history.map((h: any) => ({
-            status: h.status as any,
-            timestamp: h.timestamp ? new Date(h.timestamp).toISOString() : new Date().toISOString(),
-            notes: h.notes
-        })),
-        progress_percentage: pressRelease.tracker.progress_percentage,
+        current_status: currentStatus,
+        status_history: statusHistory,
+        progress_percentage: progressPercentage,
         estimated_completion: estimatedCompletion.toISOString(),
-        actual_completion: pressRelease.tracker.actual_completion ? new Date(pressRelease.tracker.actual_completion).toISOString() : undefined,
-        reviewers_count: pressRelease.tracker.reviewers_count,
-        distribution_outlets: pressRelease.distribution_report.length,
-        current_step: Math.floor(pressRelease.tracker.progress_percentage / 20) + 1,
+        actual_completion: actualCompletion,
+        reviewers_count: 0, // Could be enhanced later
+        distribution_outlets: pressRelease.distribution_report?.length || 0,
+        current_step: Math.floor(progressPercentage / 20) + 1,
         total_steps: 5
     };
 
     // Build timeline from status history
-    const timeline = pressRelease.tracker.status_history.map((h: any) => ({
-        status: h.status as any,
-        date: (h.timestamp ? new Date(h.timestamp) : new Date()).toISOString().split('T')[0],
+    const timeline = statusHistory.map(h => ({
+        status: h.status,
+        date: new Date(h.timestamp).toISOString().split('T')[0],
         description: `Status changed to ${h.status}${h.notes ? ': ' + h.notes : ''}`
     }));
 
@@ -1605,22 +1714,50 @@ export const getPressReleasesWithTracker = asyncHandler(async (req: AuthRequest,
     const pressReleases = await PressRelease.find({ user_id: userId })
         .sort({ createdAt: -1 });
 
-    const trackerList = pressReleases.map(pr => {
-        const tracker = pr.tracker || {
-            current_status: 'pending',
-            status_history: [],
-            progress_percentage: 0,
-            estimated_completion: new Date(),
-            reviewers_count: 0
-        };
+    // Get progress for all press releases
+    const progressPromises = pressReleases.map(pr => 
+        getProgressTimeline(pr._id, userId)
+    );
+    const progresses = await Promise.all(progressPromises);
+
+    // Map ProgressStep to PressReleaseTrackerStatus
+    const statusMapping: Record<ProgressStep, PressReleaseTrackerStatus> = {
+        'initiated': 'pending',
+        'payment_pending': 'pending',
+        'payment_completed': 'processing',
+        'under_review': 'review',
+        'approved': 'completed',
+        'rejected': 'rejected'
+    };
+
+    // Map to progress percentage
+    const progressMapping: Record<ProgressStep, number> = {
+        'initiated': 0,
+        'payment_pending': 20,
+        'payment_completed': 40,
+        'under_review': 60,
+        'approved': 100,
+        'rejected': 100
+    };
+
+    const trackerList = pressReleases.map((pr, index) => {
+        const progress = progresses[index];
+        
+        let trackerStatus: PressReleaseTrackerStatus = 'pending';
+        let progressPercentage = 0;
+
+        if (progress) {
+            trackerStatus = statusMapping[progress.current_step];
+            progressPercentage = progressMapping[progress.current_step];
+        }
 
         return {
             _id: pr._id,
             title: pr.title,
             status: pr.status,
-            tracker_status: tracker.current_status,
-            progress_percentage: tracker.progress_percentage,
-            current_step: Math.floor(tracker.progress_percentage / 20) + 1,
+            tracker_status: trackerStatus,
+            progress_percentage: progressPercentage,
+            current_step: Math.floor(progressPercentage / 20) + 1,
             total_steps: 5
         };
     });
