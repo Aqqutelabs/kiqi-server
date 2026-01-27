@@ -38,6 +38,15 @@ import {
     getMarketplaceFilters
 } from '../controllers/pressRelease.controller';
 
+import {
+    createReview,
+    getReviews,
+    getReviewSummary,
+    updateReview,
+    deleteReview,
+    getRecentReviews
+} from '../controllers/review.controller';
+
 import { 
     createPressReleaseSchema,
     updatePressReleaseSchema,
@@ -50,6 +59,13 @@ import {
     updateCartItemSchema,
     removeFromCartSchema
 } from '../validation/cart.validation';
+
+import {
+    createReviewSchema,
+    updateReviewSchema,
+    getReviewsQuerySchema,
+    getRecentReviewsQuerySchema
+} from '../validation/review.validation';
 
 import upload from '../middlewares/Upload';
 
@@ -118,5 +134,17 @@ router.post('/publishers/:publisherId/share', sharePublisher);
 
 // Publisher reviews (buyer side)
 router.post('/publishers/:publisherId/review', submitPublisherReview);
+
+// ==================== REVIEW ROUTES ====================
+
+// Review CRUD for press releases
+router.post('/:pressReleaseId/reviews', validateRequest(createReviewSchema), createReview);
+router.get('/:pressReleaseId/reviews', validateRequest(getReviewsQuerySchema), getReviews);
+router.get('/:pressReleaseId/reviews/summary', getReviewSummary);
+router.put('/reviews/:reviewId', validateRequest(updateReviewSchema), updateReview);
+router.delete('/reviews/:reviewId', deleteReview);
+
+// Admin routes for managing reviews
+router.get('/admin/reviews/recent', validateRequest(getRecentReviewsQuerySchema), getRecentReviews);
 
 export default router;

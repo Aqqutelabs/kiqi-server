@@ -7,8 +7,10 @@ const express_1 = require("express");
 const zod_validation_middleware_1 = require("../middlewares/zod.validation.middleware");
 const Auth_middlewares_1 = require("../middlewares/Auth.middlewares");
 const pressRelease_controller_1 = require("../controllers/pressRelease.controller");
+const review_controller_1 = require("../controllers/review.controller");
 const pressRelease_validation_1 = require("../validation/pressRelease.validation");
 const cart_validation_1 = require("../validation/cart.validation");
+const review_validation_1 = require("../validation/review.validation");
 const Upload_1 = __importDefault(require("../middlewares/Upload"));
 const router = (0, express_1.Router)();
 // Paystack Webhook - PUBLIC endpoint (no authentication required)
@@ -60,4 +62,13 @@ router.get('/bookmarks', pressRelease_controller_1.getUserBookmarks);
 router.post('/publishers/:publisherId/share', pressRelease_controller_1.sharePublisher);
 // Publisher reviews (buyer side)
 router.post('/publishers/:publisherId/review', pressRelease_controller_1.submitPublisherReview);
+// ==================== REVIEW ROUTES ====================
+// Review CRUD for press releases
+router.post('/:pressReleaseId/reviews', (0, zod_validation_middleware_1.validateRequest)(review_validation_1.createReviewSchema), review_controller_1.createReview);
+router.get('/:pressReleaseId/reviews', (0, zod_validation_middleware_1.validateRequest)(review_validation_1.getReviewsQuerySchema), review_controller_1.getReviews);
+router.get('/:pressReleaseId/reviews/summary', review_controller_1.getReviewSummary);
+router.put('/reviews/:reviewId', (0, zod_validation_middleware_1.validateRequest)(review_validation_1.updateReviewSchema), review_controller_1.updateReview);
+router.delete('/reviews/:reviewId', review_controller_1.deleteReview);
+// Admin routes for managing reviews
+router.get('/admin/reviews/recent', (0, zod_validation_middleware_1.validateRequest)(review_validation_1.getRecentReviewsQuerySchema), review_controller_1.getRecentReviews);
 exports.default = router;

@@ -1,0 +1,111 @@
+{
+  "testData": {
+    "pressReleaseIds": [
+      "507f1f77bcf86cd799439011",
+      "507f1f77bcf86cd799439012",
+      "507f1f77bcf86cd799439013"
+    ],
+    "userIds": [
+      "507f1f77bcf86cd799439014",
+      "507f1f77bcf86cd799439015",
+      "507f1f77bcf86cd799439016"
+    ]
+  },
+  "sampleReviews": [
+    {
+      "press_release_id": "507f1f77bcf86cd799439011",
+      "user_id": "507f1f77bcf86cd799439014",
+      "reviewer_name": "John Doe",
+      "rating": 5,
+      "review_text": "Excellent service! Highly recommend.",
+      "status": "verified",
+      "created_at": "2024-01-20T10:30:00Z"
+    },
+    {
+      "press_release_id": "507f1f77bcf86cd799439011",
+      "user_id": "507f1f77bcf86cd799439015",
+      "reviewer_name": "Jane Smith",
+      "rating": 4,
+      "review_text": "Good experience overall. Would recommend!",
+      "status": "verified",
+      "created_at": "2024-01-18T14:20:00Z"
+    },
+    {
+      "press_release_id": "507f1f77bcf86cd799439011",
+      "reviewer_name": "Anonymous",
+      "rating": 5,
+      "review_text": "Outstanding platform! Great ROI and professional service.",
+      "status": "verified",
+      "created_at": "2024-01-15T09:15:00Z"
+    },
+    {
+      "press_release_id": "507f1f77bcf86cd799439011",
+      "user_id": "507f1f77bcf86cd799439016",
+      "reviewer_name": "Mike Johnson",
+      "rating": 3,
+      "review_text": "Decent service but room for improvement.",
+      "status": "verified",
+      "created_at": "2024-01-12T16:45:00Z"
+    },
+    {
+      "press_release_id": "507f1f77bcf86cd799439011",
+      "reviewer_name": "Sarah Wilson",
+      "rating": 2,
+      "review_text": "Not satisfied with the results. Expected better coverage.",
+      "status": "pending",
+      "created_at": "2024-01-10T13:30:00Z"
+    },
+    {
+      "press_release_id": "507f1f77bcf86cd799439012",
+      "user_id": "507f1f77bcf86cd799439014",
+      "reviewer_name": "John Doe",
+      "rating": 5,
+      "review_text": "Fast delivery and high-quality content distribution.",
+      "status": "verified",
+      "created_at": "2024-01-08T11:00:00Z"
+    }
+  ],
+  "testRequests": {
+    "createReview": {
+      "url": "POST /api/v1/press-releases/{pressReleaseId}/reviews",
+      "headers": {
+        "Authorization": "Bearer YOUR_JWT_TOKEN",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "rating": 5,
+        "reviewText": "This is a test review for the press release.",
+        "reviewerName": "Test User"
+      }
+    },
+    "getSummary": {
+      "url": "GET /api/v1/press-releases/{pressReleaseId}/reviews/summary",
+      "headers": {
+        "Authorization": "Bearer YOUR_JWT_TOKEN"
+      }
+    },
+    "getReviews": {
+      "url": "GET /api/v1/press-releases/{pressReleaseId}/reviews?page=1&limit=5",
+      "headers": {
+        "Authorization": "Bearer YOUR_JWT_TOKEN"
+      }
+    },
+    "updateReview": {
+      "url": "PUT /api/v1/press-releases/reviews/{reviewId}",
+      "headers": {
+        "Authorization": "Bearer YOUR_JWT_TOKEN",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "rating": 4,
+        "reviewText": "Updated review text"
+      }
+    },
+    "deleteReview": {
+      "url": "DELETE /api/v1/press-releases/reviews/{reviewId}",
+      "headers": {
+        "Authorization": "Bearer YOUR_JWT_TOKEN"
+      }
+    }
+  }
+}

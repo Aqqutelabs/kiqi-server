@@ -118,3 +118,52 @@ export interface ProgressTrackerResponse {
         description: string;
     }>;
 }
+
+// Review System Types
+export interface Review {
+    _id: string;
+    press_release_id: string;
+    user_id?: string;
+    reviewer_name?: string;
+    rating: number;
+    review_text: string;
+    status: 'pending' | 'verified' | 'rejected';
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ReviewSummary {
+    averageRating: number;
+    totalReviews: number;
+    ratingDistribution: {
+        5: number;
+        4: number;
+        3: number;
+        2: number;
+        1: number;
+    };
+}
+
+export interface ReviewsListResponse {
+    reviews: Review[];
+    pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalReviews: number;
+        hasNext: boolean;
+        hasPrev: boolean;
+    };
+}
+
+export interface CreateReviewRequest {
+    rating: number;
+    reviewText: string;
+    reviewerName?: string;
+}
+
+export interface UpdateReviewRequest {
+    rating?: number;
+    reviewText?: string;
+    reviewerName?: string;
+    status?: 'pending' | 'verified' | 'rejected';
+}
