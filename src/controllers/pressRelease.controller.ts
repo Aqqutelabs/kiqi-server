@@ -4,7 +4,7 @@ import { asyncHandler } from '../utils/AsyncHandler';
 import { ApiError } from '../utils/ApiError';
 import { PressRelease } from '../models/PressRelease';
 import { PressReleaseProgress, ProgressStep } from '../models/PressReleaseProgress';
-import { Publisher } from '../models/Publisher';
+import { Publisher, PublisherAddon } from '../models/Publisher';
 import { Order } from '../models/Order';
 import { Cart } from '../models/Cart';
 import { initializePaystackPayment, verifyPaystackPayment } from '../utils/paystack';
@@ -20,6 +20,98 @@ cloudinary.config({
     api_key: '164375779418948', 
     api_secret: 'otQq6cFFzqGeQO4umSVrrFumA30' // Replace with your actual API secret
 });
+
+// Helper function to transform add-ons into user-friendly format
+const transformAddOns = (addOns: PublisherAddon | undefined): Array<{
+    id: string;
+    name: string;
+    price: number;
+    quantity?: number;
+    description: string;
+}> => {
+    const transformed: Array<{
+        id: string;
+        name: string;
+        price: number;
+        quantity?: number;
+        description: string;
+    }> = [];
+
+    if (!addOns) return transformed;
+
+    // Backdating
+    if (addOns.backdating?.enabled && addOns.backdating.price) {
+        transformed.push({
+            id: 'backdating',
+            name: 'Backdating',
+            price: addOns.backdating.price,
+            description: 'Publish your press release with a custom backdated timestamp for better SEO and visibility.'
+        });
+    }
+
+    // Social Posting
+    if (addOns.socialPosting?.enabled && addOns.socialPosting.price) {
+        transformed.push({
+            id: 'socialPosting',
+            name: 'Social Media Posting',
+            price: addOns.socialPosting.price,
+            description: 'Additional promotion across the publisher\'s social media channels for increased reach.'
+        });
+    }
+
+    // Featured Placement
+    if (addOns.featuredPlacement?.enabled && addOns.featuredPlacement.pricePerUnit) {
+        transformed.push({
+            id: 'featuredPlacement',
+            name: 'Featured Placement',
+            price: addOns.featuredPlacement.pricePerUnit,
+            quantity: addOns.featuredPlacement.maxQuantity || 1,
+            description: 'Premium positioning on the publisher\'s website for maximum visibility and engagement.'
+        });
+    }
+
+    // Newsletter Inclusion
+    if (addOns.newsletterInclusion?.enabled && addOns.newsletterInclusion.price) {
+        transformed.push({
+            id: 'newsletterInclusion',
+            name: 'Newsletter Inclusion',
+            price: addOns.newsletterInclusion.price,
+            description: 'Include your press release in the publisher\'s email newsletter distribution.'
+        });
+    }
+
+    // Author Byline
+    if (addOns.authorByline?.enabled && addOns.authorByline.price) {
+        transformed.push({
+            id: 'authorByline',
+            name: 'Custom Author Byline',
+            price: addOns.authorByline.price,
+            description: 'Add a custom author name or company attribution to your press release.'
+        });
+    }
+
+    // Paid Amplification
+    if (addOns.paidAmplification?.enabled) {
+        transformed.push({
+            id: 'paidAmplification',
+            name: 'Paid Amplification',
+            price: addOns.paidAmplification.minBudget || 0,
+            description: `Budget-based advertising boost ($${addOns.paidAmplification.minBudget || 0} - $${addOns.paidAmplification.maxBudget || 10000}).`
+        });
+    }
+
+    // White Paper Gating
+    if (addOns.whitePaperGating?.enabled && addOns.whitePaperGating.price) {
+        transformed.push({
+            id: 'whitePaperGating',
+            name: 'White Paper Gating',
+            price: addOns.whitePaperGating.price,
+            description: 'Gate your press release behind a lead generation form to capture valuable contacts.'
+        });
+    }
+
+    return transformed;
+};
 
 /**
  * Helper function to record a progress step for a press release
@@ -518,7 +610,7 @@ export const getPublishers = asyncHandler(async (req: AuthRequest, res: Response
             ...publisher.metrics,
             ...publisher.enhancedMetrics
         },
-        addOns: publisher.addOns,
+        addOns: transformAddOns(publisher.addOns),
         publicSlug: publisher.publicSlug,
         hasAddOns: Object.values(publisher.addOns || {}).some((addon: any) => 
             addon?.enabled === true || (addon?.price && addon.price > 0)
@@ -592,13 +684,8 @@ export const getPublisherDetails = asyncHandler(async (req: AuthRequest, res: Re
             vibeValuePercentage: publisher.enhancedMetrics?.vibeValuePercentage || 0
         },
         
-        // Add-ons (only show enabled ones)
-        addOns: Object.entries(publisher.addOns || {}).reduce((acc, [key, addon]) => {
-            if (addon && (addon.enabled === true || (addon.price && addon.price > 0))) {
-                acc[key] = addon;
-            }
-            return acc;
-        }, {} as any),
+        // Add-ons (transformed to user-friendly format)
+        addOns: transformAddOns(publisher.addOns),
         
         // Reviews (only approved ones)
         reviews: {
