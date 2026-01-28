@@ -38,7 +38,27 @@ export const createReview = asyncHandler(async (req: AuthRequest, res: Response)
     });
 
     if (existingReview) {
-        throw new ApiError(400, 'You have already reviewed this press release');
+        if (existingReview.status === 'verified') {
+            throw new ApiError(400, 'You have already reviewed this press release');
+        } else if (existingReview.status === 'pending') {
+            // Update the existing pending review
+            existingReview.rating = parseInt(rating);
+            existingReview.review_text = reviewText.trim();
+            existingReview.reviewer_name = reviewerName || (req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : null) || 'Anonymous';
+            await existingReview.save();
+
+            return res.json(new ApiResponse(200, {
+                message: 'Review updated successfully. It will be published after moderation.',
+                review: {
+                    _id: existingReview._id,
+                    rating: existingReview.rating,
+                    review_text: existingReview.review_text,
+                    reviewer_name: existingReview.reviewer_name,
+                    created_at: existingReview.created_at,
+                    status: existingReview.status
+                }
+            }));
+        }
     }
 
     // Create new review
@@ -85,7 +105,10 @@ export const getReviews = asyncHandler(async (req: AuthRequest, res: Response) =
 
     const reviews = await Review.find({
         press_release_id: pressReleaseId,
-        status: status
+        $or: [
+            { status: status },
+            { status: 'pending', user_id: req.user?._id }
+        ]
     })
     .populate('user_id', 'firstName lastName email')
     .sort({ created_at: -1 })
@@ -94,7 +117,10 @@ export const getReviews = asyncHandler(async (req: AuthRequest, res: Response) =
 
     const total = await Review.countDocuments({
         press_release_id: pressReleaseId,
-        status: status
+        $or: [
+            { status: status },
+            { status: 'pending', user_id: req.user?._id }
+        ]
     });
 
     return res.json(new ApiResponse(200, {

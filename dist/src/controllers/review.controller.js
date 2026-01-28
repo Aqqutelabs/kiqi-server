@@ -43,7 +43,27 @@ exports.createReview = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(
         user_id: (_a = req.user) === null || _a === void 0 ? void 0 : _a._id
     });
     if (existingReview) {
-        throw new ApiError_1.ApiError(400, 'You have already reviewed this press release');
+        if (existingReview.status === 'verified') {
+            throw new ApiError_1.ApiError(400, 'You have already reviewed this press release');
+        }
+        else if (existingReview.status === 'pending') {
+            // Update the existing pending review
+            existingReview.rating = parseInt(rating);
+            existingReview.review_text = reviewText.trim();
+            existingReview.reviewer_name = reviewerName || (req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : null) || 'Anonymous';
+            yield existingReview.save();
+            return res.json(new ApiResponse_1.ApiResponse(200, {
+                message: 'Review updated successfully. It will be published after moderation.',
+                review: {
+                    _id: existingReview._id,
+                    rating: existingReview.rating,
+                    review_text: existingReview.review_text,
+                    reviewer_name: existingReview.reviewer_name,
+                    created_at: existingReview.created_at,
+                    status: existingReview.status
+                }
+            }));
+        }
     }
     // Create new review
     const review = new Review_1.Review({
@@ -71,6 +91,7 @@ exports.createReview = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(
  * Get all reviews for a press release
  */
 exports.getReviews = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
     const { pressReleaseId } = req.params;
     const { page = 1, limit = 10, status = 'verified' } = req.query;
     // Check if press release exists
@@ -83,7 +104,10 @@ exports.getReviews = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(vo
     const skip = (pageNum - 1) * limitNum;
     const reviews = yield Review_1.Review.find({
         press_release_id: pressReleaseId,
-        status: status
+        $or: [
+            { status: status },
+            { status: 'pending', user_id: (_a = req.user) === null || _a === void 0 ? void 0 : _a._id }
+        ]
     })
         .populate('user_id', 'firstName lastName email')
         .sort({ created_at: -1 })
@@ -91,7 +115,10 @@ exports.getReviews = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(vo
         .limit(limitNum);
     const total = yield Review_1.Review.countDocuments({
         press_release_id: pressReleaseId,
-        status: status
+        $or: [
+            { status: status },
+            { status: 'pending', user_id: (_b = req.user) === null || _b === void 0 ? void 0 : _b._id }
+        ]
     });
     return res.json(new ApiResponse_1.ApiResponse(200, {
         reviews: reviews.map(review => {
