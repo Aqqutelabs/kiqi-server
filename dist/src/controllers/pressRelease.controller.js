@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllPressReleasesWithProgress = exports.rejectPressRelease = exports.approvePressRelease = exports.updatePressReleaseToUnderReview = exports.getPressReleaseProgress = exports.getPressReleasesWithTracker = exports.updatePressReleaseTrackerStatus = exports.getPressReleaseTracker = exports.paystackWebhook = exports.verifyPayment = exports.getOrderDetails = exports.sharePublisher = exports.getUserBookmarks = exports.removeBookmark = exports.addBookmark = exports.addToCartWithAddons = exports.getMarketplaceFilters = exports.submitPublisherReview = exports.removeFromCart = exports.updateCartItem = exports.createPublisher = exports.createOrder = exports.getCart = exports.addToCart = exports.getPublisherDetails = exports.getPublishers = exports.deletePressRelease = exports.updatePressRelease = exports.createPressRelease = exports.getPressReleaseDetails = exports.getPressReleaseStats = exports.getDashboardMetrics = exports.getPressReleasesList = exports.getProgressTimeline = exports.recordProgressStep = void 0;
+exports.getAllPressReleasesWithProgress = exports.rejectPressRelease = exports.approvePressRelease = exports.updatePressReleaseToUnderReview = exports.getPressReleaseProgress = exports.getPressReleasesWithTracker = exports.updatePressReleaseTrackerStatus = exports.getPressReleaseTracker = exports.paystackWebhook = exports.verifyPayment = exports.getOrderDetails = exports.sharePublisher = exports.getUserBookmarks = exports.removeBookmark = exports.addBookmark = exports.addToCartWithAddons = exports.getMarketplaceFilters = exports.getPublisherReviews = exports.submitPublisherReview = exports.removeFromCart = exports.updateCartItem = exports.createPublisher = exports.createOrder = exports.getCart = exports.addToCart = exports.getPublisherDetails = exports.getPublishers = exports.deletePressRelease = exports.updatePressRelease = exports.createPressRelease = exports.getPressReleaseDetails = exports.getPressReleaseStats = exports.getDashboardMetrics = exports.getPressReleasesList = exports.getProgressTimeline = exports.recordProgressStep = void 0;
 const ApiResponse_1 = require("../utils/ApiResponse");
 const AsyncHandler_1 = require("../utils/AsyncHandler");
 const ApiError_1 = require("../utils/ApiError");
@@ -936,6 +936,71 @@ exports.submitPublisherReview = (0, AsyncHandler_1.asyncHandler)((req, res) => _
             rating: newReview.rating,
             reviewText: newReview.reviewText,
             timestamp: newReview.timestamp
+        }
+    }));
+}));
+// Get reviews for a specific publisher
+exports.getPublisherReviews = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c;
+    const { publisherId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+    const isAdmin = ((_b = req.user) === null || _b === void 0 ? void 0 : _b.role) === 'admin' || ((_c = req.user) === null || _c === void 0 ? void 0 : _c.isAdmin) === true;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = Math.min(parseInt(limit) || 10, 50); // Max 50 reviews per page
+    const skip = (pageNum - 1) * limitNum;
+    // Find publisher
+    const publisher = yield Publisher_1.Publisher.findById(publisherId);
+    if (!publisher) {
+        throw new ApiError_1.ApiError(404, 'Publisher not found');
+    }
+    // Filter reviews based on user permissions
+    let visibleReviews = (publisher.reviews || []);
+    if (!isAdmin) {
+        // Non-admin users see:
+        // 1. All approved reviews
+        // 2. Their own pending reviews (if authenticated)
+        visibleReviews = visibleReviews.filter(review => review.isApproved ||
+            (userId && review.reviewerId.toString() === userId.toString()));
+    }
+    // Admins see all reviews (approved and pending)
+    // Sort by timestamp (newest first)
+    visibleReviews = visibleReviews.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const totalReviews = visibleReviews.length;
+    const paginatedReviews = visibleReviews.slice(skip, skip + limitNum);
+    // Calculate rating distribution (only from approved reviews for consistency)
+    const approvedReviews = (publisher.reviews || []).filter(review => review.isApproved);
+    const ratingDistribution = [5, 4, 3, 2, 1].map(star => {
+        const count = approvedReviews.filter(r => r.rating === star).length;
+        const totalApproved = approvedReviews.length;
+        const percentage = totalApproved > 0 ? Math.round((count / totalApproved) * 100) : 0;
+        return { star, count, percentage };
+    });
+    // Calculate average rating (only from approved reviews)
+    const averageRating = approvedReviews.length > 0
+        ? approvedReviews.reduce((sum, review) => sum + review.rating, 0) / approvedReviews.length
+        : 0;
+    return res.json(new ApiResponse_1.ApiResponse(200, {
+        reviews: paginatedReviews.map(review => ({
+            id: review._id,
+            reviewerName: review.reviewerName,
+            rating: review.rating,
+            text: review.reviewText,
+            timestamp: review.timestamp,
+            isApproved: review.isApproved,
+            isPending: !review.isApproved
+        })),
+        summary: {
+            averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal
+            totalReviews: approvedReviews.length, // Only count approved reviews in summary
+            ratingDistribution
+        },
+        pagination: {
+            currentPage: pageNum,
+            totalPages: Math.ceil(totalReviews / limitNum),
+            totalReviews,
+            hasNext: skip + limitNum < totalReviews,
+            hasPrev: pageNum > 1
         }
     }));
 }));

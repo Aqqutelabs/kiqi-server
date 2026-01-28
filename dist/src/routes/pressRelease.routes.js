@@ -62,6 +62,7 @@ router.get('/bookmarks', pressRelease_controller_1.getUserBookmarks);
 router.post('/publishers/:publisherId/share', pressRelease_controller_1.sharePublisher);
 // Publisher reviews (buyer side)
 router.post('/publishers/:publisherId/review', pressRelease_controller_1.submitPublisherReview);
+router.get('/publishers/:publisherId/reviews', pressRelease_controller_1.getPublisherReviews);
 // ==================== REVIEW ROUTES ====================
 // Review CRUD for press releases
 router.post('/:pressReleaseId/reviews', (0, zod_validation_middleware_1.validateRequest)(review_validation_1.createReviewSchema), review_controller_1.createReview);

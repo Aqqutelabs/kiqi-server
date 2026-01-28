@@ -1,0 +1,90 @@
+{
+  "description": "Sample data for testing publisher review submission",
+  "endpoint": "POST /api/v1/press-releases/publishers/:publisherId/review",
+  "headers": {
+    "Authorization": "Bearer YOUR_JWT_TOKEN",
+    "Content-Type": "application/json"
+  },
+  "samplePublisherId": "507f1f77bcf86cd799439011",
+  "testCases": [
+    {
+      "name": "5-star review",
+      "url": "http://localhost:8000/api/v1/press-releases/publishers/507f1f77bcf86cd799439011/review",
+      "method": "POST",
+      "body": {
+        "rating": 5,
+        "reviewText": "Excellent service! Fast delivery and great results. Highly recommend this publisher for press release distribution."
+      },
+      "expectedResponse": {
+        "success": true,
+        "message": "Review submitted successfully. It will be published after moderation.",
+        "data": {
+          "rating": 5,
+          "reviewText": "Excellent service! Fast delivery and great results. Highly recommend this publisher for press release distribution.",
+          "timestamp": "2024-01-28T..."
+        }
+      }
+    },
+    {
+      "name": "3-star review",
+      "url": "http://localhost:8000/api/v1/press-releases/publishers/507f1f77bcf86cd799439011/review",
+      "method": "POST",
+      "body": {
+        "rating": 3,
+        "reviewText": "Decent service overall. Delivery was on time but could use some improvements in communication."
+      }
+    },
+    {
+      "name": "Minimum length review",
+      "url": "http://localhost:8000/api/v1/press-releases/publishers/507f1f77bcf86cd799439011/review",
+      "method": "POST",
+      "body": {
+        "rating": 4,
+        "reviewText": "Good work!"
+      }
+    }
+  ],
+  "validationRules": {
+    "rating": "Required, integer between 1-5",
+    "reviewText": "Required, string between 10-1000 characters"
+  },
+  "errorCases": [
+    {
+      "name": "Invalid rating",
+      "body": {
+        "rating": 6,
+        "reviewText": "This should fail"
+      },
+      "expectedError": "Rating must be between 1 and 5"
+    },
+    {
+      "name": "Review text too short",
+      "body": {
+        "rating": 5,
+        "reviewText": "Too short"
+      },
+      "expectedError": "Review text must be at least 10 characters"
+    },
+    {
+      "name": "Missing rating",
+      "body": {
+        "reviewText": "Missing rating field"
+      },
+      "expectedError": "Rating must be between 1 and 5"
+    },
+    {
+      "name": "Duplicate review",
+      "body": {
+        "rating": 5,
+        "reviewText": "Trying to submit another review for same publisher"
+      },
+      "expectedError": "You have already reviewed this publisher"
+    }
+  ],
+  "curlExamples": [
+    {
+      "description": "Submit a 5-star review",
+      "command": "curl -X POST http://localhost:8000/api/v1/press-releases/publishers/507f1f77bcf86cd799439011/review \\\n  -H \"Authorization: Bearer YOUR_JWT_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"rating\": 5,\n    \"reviewText\": \"Excellent service! Fast delivery and great results. Highly recommend this publisher for press release distribution.\"\n  }'"
+    }
+  ]
+}

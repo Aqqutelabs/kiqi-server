@@ -35,6 +35,7 @@ import {
     getUserBookmarks,
     sharePublisher,
     submitPublisherReview,
+    getPublisherReviews,
     getMarketplaceFilters
 } from '../controllers/pressRelease.controller';
 
@@ -134,6 +135,7 @@ router.post('/publishers/:publisherId/share', sharePublisher);
 
 // Publisher reviews (buyer side)
 router.post('/publishers/:publisherId/review', submitPublisherReview);
+router.get('/publishers/:publisherId/reviews', getPublisherReviews);
 
 // ==================== REVIEW ROUTES ====================
 
