@@ -9,6 +9,8 @@ const controller = new SenderEmailController();
 senderRouter.post('/sendgrid/request-verification', isAuthenticated, controller.requestSendGridVerification);
 senderRouter.post('/sendgrid/confirm-verification', isAuthenticated, controller.confirmSendGridVerification);
 senderRouter.get('/sendgrid/verified-sender', isAuthenticated, controller.getUserVerifiedSender);
+senderRouter.get('/sendgrid/verified-senders', isAuthenticated, controller.getUserVerifiedSenders);
+senderRouter.get('/sendgrid/all-verified-senders', isAuthenticated, controller.getAllVerifiedSenders);
 
 
 senderRouter.post("/", isAuthenticated, controller.createSenderEmail);

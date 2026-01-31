@@ -11,4 +11,6 @@ export interface SenderEmailService{
     confirmSendGridVerification(localSenderId: string, userId?: string): Promise<SenderEmailModel>
     confirmSendGridVerificationByToken(token: string, userId?: string): Promise<SenderEmailModel>
     getUserVerifiedSender(userId: string): Promise<SenderEmailModel | null>
+    getUserVerifiedSenders(userId: string): Promise<SenderEmailModel[]>
+    getAllVerifiedSenders(): Promise<SenderEmailModel[]>
 }

@@ -60,7 +60,7 @@ class SubscriptionController {
                 const response = yield axios_1.default.post("https://api.paystack.co/transaction/initialize", {
                     email: req.user.email,
                     amount: amountInKobo,
-                    callback_url: `https://gokiki.app/payment/success`,
+                    callback_url: `https://autosenderai.com/payment/success`,
                     metadata: {
                         planName: validatedPlanName,
                         userId: req.user._id,

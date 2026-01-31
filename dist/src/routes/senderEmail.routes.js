@@ -8,6 +8,8 @@ const controller = new senderEmail_controller_1.SenderEmailController();
 senderRouter.post('/sendgrid/request-verification', Auth_middlewares_1.isAuthenticated, controller.requestSendGridVerification);
 senderRouter.post('/sendgrid/confirm-verification', Auth_middlewares_1.isAuthenticated, controller.confirmSendGridVerification);
 senderRouter.get('/sendgrid/verified-sender', Auth_middlewares_1.isAuthenticated, controller.getUserVerifiedSender);
+senderRouter.get('/sendgrid/verified-senders', Auth_middlewares_1.isAuthenticated, controller.getUserVerifiedSenders);
+senderRouter.get('/sendgrid/all-verified-senders', Auth_middlewares_1.isAuthenticated, controller.getAllVerifiedSenders);
 senderRouter.post("/", Auth_middlewares_1.isAuthenticated, controller.createSenderEmail);
 senderRouter.get("/", Auth_middlewares_1.isAuthenticated, controller.getAllSenderEmails);
 senderRouter.get("/:id", Auth_middlewares_1.isAuthenticated, controller.getSenderEmailById);

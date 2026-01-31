@@ -265,4 +265,47 @@ export class SenderEmailController {
       next(error);
     }
   };
+
+  // New: retrieve all the user's verified SendGrid sender emails
+  public getUserVerifiedSenders = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const userId = (req as any).user?._id;
+      if (!userId) {
+        res.status(StatusCodes.UNAUTHORIZED).json({ error: true, message: 'Not authenticated' });
+        return;
+      }
+      const senders = await this.senderEmailService.getUserVerifiedSenders(userId);
+      res.status(StatusCodes.OK).json({
+        error: false,
+        message: `Found ${senders.length} verified sender(s)`,
+        data: senders,
+        count: senders.length
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  // New: retrieve all verified SendGrid sender emails (admin endpoint)
+  public getAllVerifiedSenders = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const senders = await this.senderEmailService.getAllVerifiedSenders();
+      res.status(StatusCodes.OK).json({
+        error: false,
+        message: `Found ${senders.length} verified sender(s) across all users`,
+        data: senders,
+        count: senders.length
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

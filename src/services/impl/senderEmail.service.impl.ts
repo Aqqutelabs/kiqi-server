@@ -320,6 +320,35 @@ export class SenderEmailServiceImpl implements SenderEmailService{
     }
   }
 
+  /**
+   * Retrieves all verified sender email addresses for a user.
+   * @param userId The user ID.
+   * @returns Array of verified SenderEmailModel records for the user.
+   */
+  async getUserVerifiedSenders(userId: string): Promise<SenderEmailModel[]> {
+    try {
+      const senders = await SenderModel.find({ user_id: userId, verified: true, type: 'sendgrid' });
+      return senders || [];
+    } catch (err: any) {
+      console.error(`[SenderService] Error fetching verified senders for user ${userId}:`, err);
+      return [];
+    }
+  }
+
+  /**
+   * Retrieves all verified sender email addresses across all users.
+   * @returns Array of all verified SenderEmailModel records.
+   */
+  async getAllVerifiedSenders(): Promise<SenderEmailModel[]> {
+    try {
+      const senders = await SenderModel.find({ verified: true, type: 'sendgrid' });
+      return senders || [];
+    } catch (err: any) {
+      console.error(`[SenderService] Error fetching all verified senders:`, err);
+      return [];
+    }
+  }
+
   // OTP-based verifyOtp removed. Use SendGrid verification endpoints instead.
     
 }

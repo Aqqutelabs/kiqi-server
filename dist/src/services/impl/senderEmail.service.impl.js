@@ -324,5 +324,38 @@ class SenderEmailServiceImpl {
             }
         });
     }
+    /**
+     * Retrieves all verified sender email addresses for a user.
+     * @param userId The user ID.
+     * @returns Array of verified SenderEmailModel records for the user.
+     */
+    getUserVerifiedSenders(userId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const senders = yield SenderEmail_1.SenderModel.find({ user_id: userId, verified: true, type: 'sendgrid' });
+                return senders || [];
+            }
+            catch (err) {
+                console.error(`[SenderService] Error fetching verified senders for user ${userId}:`, err);
+                return [];
+            }
+        });
+    }
+    /**
+     * Retrieves all verified sender email addresses across all users.
+     * @returns Array of all verified SenderEmailModel records.
+     */
+    getAllVerifiedSenders() {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const senders = yield SenderEmail_1.SenderModel.find({ verified: true, type: 'sendgrid' });
+                return senders || [];
+            }
+            catch (err) {
+                console.error(`[SenderService] Error fetching all verified senders:`, err);
+                return [];
+            }
+        });
+    }
 }
 exports.SenderEmailServiceImpl = SenderEmailServiceImpl;
