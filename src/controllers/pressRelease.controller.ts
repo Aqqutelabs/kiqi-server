@@ -787,17 +787,73 @@ export const getCart = asyncHandler(async (req: AuthRequest, res: Response) => {
         const enrichedItems = await Promise.all(
             cart.items.map(async (item) => {
                 try {
-                    const publisher = await Publisher.findOne({ publisherId: item.publisherId });
+                    // Support items that store publisher reference as either publisherId string
+                    // or as an ObjectId (marketplace flow uses _id)
+                    let publisher;
+                    try {
+                        if (item.publisherId && mongoose.Types.ObjectId.isValid(String(item.publisherId))) {
+                            publisher = await Publisher.findById(item.publisherId);
+                        }
+                    } catch (err) {
+                        // ignore and fallback
+                    }
+
+                    if (!publisher) {
+                        publisher = await Publisher.findOne({ publisherId: item.publisherId });
+                    }
 
                     if (!publisher) {
                         console.warn(`Publisher not found for publisherId: ${item.publisherId}`);
                     }
 
+                    // Prepare add-on details
+                    const availableAddOns = transformAddOns(publisher?.addOns);
+
+                    let addOnsResponse: Array<any> = [];
+                    let computedSubtotal = 0;
+
+                    // If item has enhanced subtotal stored, use it
+                    if (typeof item.subtotal === 'number') {
+                        computedSubtotal = item.subtotal;
+                    } else {
+                        // Compute base price
+                        const basePrice = publisher ? parseFloat(String(publisher.price).replace(/[^0-9.-]+/g, '')) : (item.basePrice || 0);
+                        const qty = item.quantity || 1;
+                        computedSubtotal = basePrice * qty;
+
+                        // Use selectedAddOns (enhanced) or legacy stored addOns
+                        const selectedAddOns = (item as any).selectedAddOns || [];
+                        for (const a of selectedAddOns) {
+                            const addonId = a.id || a.addonName || a.addon_id;
+                            const addonQty = a.quantity || a.qty || 1;
+                            const addonPriceNum = a.price ? parseFloat(String(a.price).replace(/[^0-9.-]+/g, '')) : (a.addonPrice || 0);
+
+                            // Find meta info
+                            const meta = availableAddOns.find(x => x.id === addonId || x.name === a.name || x.name === a.addonName);
+
+                            addOnsResponse.push({
+                                id: addonId,
+                                name: meta?.name || a.name || a.addonName || addonId,
+                                price: addonPriceNum,
+                                quantity: addonQty,
+                                description: meta?.description || a.description || ''
+                            });
+
+                            computedSubtotal += (addonPriceNum * addonQty);
+                        }
+                    }
+
+                    // Build display price string (legacy flows expect string price)
+                    const displayPrice = item.price || (typeof computedSubtotal === 'number' ? `₦${computedSubtotal.toFixed(2)}` : undefined);
+
                     return {
                         publisherId: item.publisherId,
-                        name: item.name,
-                        price: item.price,
-                        selected: item.selected,
+                        name: item.name || item.publisherTitle || (publisher ? publisher.name : 'Unknown'),
+                        price: displayPrice,
+                        subtotal: computedSubtotal,
+                        quantity: item.quantity || 1,
+                        selected: item.selected !== undefined ? item.selected : true,
+                        addOns: addOnsResponse,
                         region_reach: publisher?.region_reach || item.region_reach || [],
                         audience_reach: publisher?.audience_reach || item.audience_reach || 'N/A'
                     };
@@ -808,6 +864,7 @@ export const getCart = asyncHandler(async (req: AuthRequest, res: Response) => {
                         name: item.name,
                         price: item.price,
                         selected: item.selected,
+                        addOns: [],
                         region_reach: item.region_reach || [],
                         audience_reach: item.audience_reach || 'N/A'
                     };
@@ -850,10 +907,16 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) 
         throw new ApiError(400, 'Cart is empty');
     }
 
-    // Calculate order summary
+    // Calculate order summary (support enhanced items with numeric subtotal)
     const subtotal = cart.items.reduce((acc: number, item) => {
-        const price = parseFloat(item.price.replace(/[^0-9.-]+/g, ''));
-        return acc + price;
+        if (typeof (item as any).subtotal === 'number') {
+            return acc + (item as any).subtotal;
+        }
+        if (item.price) {
+            const price = parseFloat(String(item.price).replace(/[^0-9.-]+/g, '')) || 0;
+            return acc + price;
+        }
+        return acc;
     }, 0);
 
     const vat_percentage = '7.5%';
@@ -1229,16 +1292,17 @@ export const addToCartWithAddons = asyncHandler(async (req: AuthRequest, res: Re
     const basePrice = parseFloat(publisher.price.replace(/[^0-9.-]+/g, ''));
     let addOnsPrice = 0;
     const processedAddOns: any[] = [];
+    const availableAddOns = transformAddOns(publisher.addOns);
 
     // Process selected add-ons
     for (const addonName of selectedAddOns) {
         const addon = publisher.addOns?.[addonName as keyof typeof publisher.addOns];
         if (addon && (addon.enabled || ('price' in addon && addon.price && addon.price > 0))) {
-            let addonCost = ('price' in addon && addon.price) ? addon.price : 0;
+            let addonCost = ('price' in addon && addon.price) ? (addon as any).price : 0;
             let addonQuantity = 1;
             
             // Handle different add-on types
-            if (addonName === 'featuredPlacement' && 'pricePerUnit' in addon && addon.pricePerUnit) {
+            if (addonName === 'featuredPlacement' && 'pricePerUnit' in addon && (addon as any).pricePerUnit) {
                 const featuredAddon = addon as { enabled: boolean; pricePerUnit?: number; maxQuantity?: number };
                 addonQuantity = Math.min(quantity, featuredAddon.maxQuantity || 1);
                 addonCost = (featuredAddon.pricePerUnit || 0) * addonQuantity;
@@ -1251,10 +1315,14 @@ export const addToCartWithAddons = asyncHandler(async (req: AuthRequest, res: Re
             }
             
             addOnsPrice += addonCost;
+
+            const meta = availableAddOns.find(x => x.id === addonName);
             processedAddOns.push({
-                addonName,
-                addonPrice: addonCost,
+                id: addonName,
+                name: meta?.name || addonName,
+                price: `₦${(addonCost).toFixed(2)}`,
                 quantity: addonQuantity,
+                description: meta?.description,
                 budget: addonName === 'paidAmplification' ? customBudgets[addonName] : undefined
             });
         }

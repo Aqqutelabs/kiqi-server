@@ -36,10 +36,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Cart = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 const CartItemSchema = new mongoose_1.Schema({
-    publisherId: { type: String, required: true },
-    name: { type: String, required: true },
-    price: { type: String, required: true },
-    selected: { type: Boolean, default: true }
+    publisherId: { type: mongoose_1.Schema.Types.Mixed, required: true },
+    name: { type: String },
+    publisherTitle: { type: String },
+    price: { type: String },
+    basePrice: { type: Number },
+    quantity: { type: Number, default: 1 },
+    selectedAddOns: [{
+            id: { type: String },
+            name: { type: String },
+            price: { type: String },
+            quantity: { type: Number },
+            description: { type: String }
+        }],
+    subtotal: { type: Number },
+    selected: { type: Boolean, default: true },
+    region_reach: [{ type: String }],
+    audience_reach: { type: String }
 });
 const CartSchema = new mongoose_1.Schema({
     user_id: {

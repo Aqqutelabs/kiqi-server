@@ -1,11 +1,27 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 // Cart item interface
+interface CartAddOn {
+    id: string;
+    name?: string;
+    price?: string; // stored as string for backward compatibility with existing price parsing
+    quantity?: number;
+    description?: string;
+}
+
 interface CartItem {
-    publisherId: string;
-    name: string;
-    price: string;
-    selected: boolean;
+    // Accept either publisherId (string) or mongo ObjectId (_id) depending on which flow added the item
+    publisherId: string | mongoose.Types.ObjectId;
+    name?: string;
+    publisherTitle?: string;
+    // Legacy price field (string) used by older flows
+    price?: string;
+    // Enhanced fields for marketplace flow
+    basePrice?: number;
+    quantity?: number;
+    selectedAddOns?: CartAddOn[];
+    subtotal?: number;
+    selected?: boolean;
     region_reach?: string[];
     audience_reach?: string;
 }
@@ -21,10 +37,23 @@ interface CartDocument extends Document {
 }
 
 const CartItemSchema = new Schema<CartItem>({
-    publisherId: { type: String, required: true },
-    name: { type: String, required: true },
-    price: { type: String, required: true },
-    selected: { type: Boolean, default: true }
+    publisherId: { type: Schema.Types.Mixed, required: true },
+    name: { type: String },
+    publisherTitle: { type: String },
+    price: { type: String },
+    basePrice: { type: Number },
+    quantity: { type: Number, default: 1 },
+    selectedAddOns: [{
+        id: { type: String },
+        name: { type: String },
+        price: { type: String },
+        quantity: { type: Number },
+        description: { type: String }
+    }],
+    subtotal: { type: Number },
+    selected: { type: Boolean, default: true },
+    region_reach: [{ type: String }],
+    audience_reach: { type: String }
 });
 
 const CartSchema = new Schema<CartDocument>({

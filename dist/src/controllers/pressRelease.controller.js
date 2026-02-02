@@ -695,15 +695,64 @@ exports.getCart = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 
         // Fetch publisher data for each item to get the latest region_reach and audience_reach
         const enrichedItems = yield Promise.all(cart.items.map((item) => __awaiter(void 0, void 0, void 0, function* () {
             try {
-                const publisher = yield Publisher_1.Publisher.findOne({ publisherId: item.publisherId });
+                // Support items that store publisher reference as either publisherId string
+                // or as an ObjectId (marketplace flow uses _id)
+                let publisher;
+                try {
+                    if (item.publisherId && mongoose_1.default.Types.ObjectId.isValid(String(item.publisherId))) {
+                        publisher = yield Publisher_1.Publisher.findById(item.publisherId);
+                    }
+                }
+                catch (err) {
+                    // ignore and fallback
+                }
+                if (!publisher) {
+                    publisher = yield Publisher_1.Publisher.findOne({ publisherId: item.publisherId });
+                }
                 if (!publisher) {
                     console.warn(`Publisher not found for publisherId: ${item.publisherId}`);
                 }
+                // Prepare add-on details
+                const availableAddOns = transformAddOns(publisher === null || publisher === void 0 ? void 0 : publisher.addOns);
+                let addOnsResponse = [];
+                let computedSubtotal = 0;
+                // If item has enhanced subtotal stored, use it
+                if (typeof item.subtotal === 'number') {
+                    computedSubtotal = item.subtotal;
+                }
+                else {
+                    // Compute base price
+                    const basePrice = publisher ? parseFloat(String(publisher.price).replace(/[^0-9.-]+/g, '')) : (item.basePrice || 0);
+                    const qty = item.quantity || 1;
+                    computedSubtotal = basePrice * qty;
+                    // Use selectedAddOns (enhanced) or legacy stored addOns
+                    const selectedAddOns = item.selectedAddOns || [];
+                    for (const a of selectedAddOns) {
+                        const addonId = a.id || a.addonName || a.addon_id;
+                        const addonQty = a.quantity || a.qty || 1;
+                        const addonPriceNum = a.price ? parseFloat(String(a.price).replace(/[^0-9.-]+/g, '')) : (a.addonPrice || 0);
+                        // Find meta info
+                        const meta = availableAddOns.find(x => x.id === addonId || x.name === a.name || x.name === a.addonName);
+                        addOnsResponse.push({
+                            id: addonId,
+                            name: (meta === null || meta === void 0 ? void 0 : meta.name) || a.name || a.addonName || addonId,
+                            price: addonPriceNum,
+                            quantity: addonQty,
+                            description: (meta === null || meta === void 0 ? void 0 : meta.description) || a.description || ''
+                        });
+                        computedSubtotal += (addonPriceNum * addonQty);
+                    }
+                }
+                // Build display price string (legacy flows expect string price)
+                const displayPrice = item.price || (typeof computedSubtotal === 'number' ? `₦${computedSubtotal.toFixed(2)}` : undefined);
                 return {
                     publisherId: item.publisherId,
-                    name: item.name,
-                    price: item.price,
-                    selected: item.selected,
+                    name: item.name || item.publisherTitle || (publisher ? publisher.name : 'Unknown'),
+                    price: displayPrice,
+                    subtotal: computedSubtotal,
+                    quantity: item.quantity || 1,
+                    selected: item.selected !== undefined ? item.selected : true,
+                    addOns: addOnsResponse,
                     region_reach: (publisher === null || publisher === void 0 ? void 0 : publisher.region_reach) || item.region_reach || [],
                     audience_reach: (publisher === null || publisher === void 0 ? void 0 : publisher.audience_reach) || item.audience_reach || 'N/A'
                 };
@@ -715,6 +764,7 @@ exports.getCart = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 
                     name: item.name,
                     price: item.price,
                     selected: item.selected,
+                    addOns: [],
                     region_reach: item.region_reach || [],
                     audience_reach: item.audience_reach || 'N/A'
                 };
@@ -751,10 +801,16 @@ exports.createOrder = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(v
     if (!cart || cart.items.length === 0) {
         throw new ApiError_1.ApiError(400, 'Cart is empty');
     }
-    // Calculate order summary
+    // Calculate order summary (support enhanced items with numeric subtotal)
     const subtotal = cart.items.reduce((acc, item) => {
-        const price = parseFloat(item.price.replace(/[^0-9.-]+/g, ''));
-        return acc + price;
+        if (typeof item.subtotal === 'number') {
+            return acc + item.subtotal;
+        }
+        if (item.price) {
+            const price = parseFloat(String(item.price).replace(/[^0-9.-]+/g, '')) || 0;
+            return acc + price;
+        }
+        return acc;
     }, 0);
     const vat_percentage = '7.5%';
     const vat_amount = subtotal * 0.075;
@@ -1055,6 +1111,7 @@ exports.addToCartWithAddons = (0, AsyncHandler_1.asyncHandler)((req, res) => __a
     const basePrice = parseFloat(publisher.price.replace(/[^0-9.-]+/g, ''));
     let addOnsPrice = 0;
     const processedAddOns = [];
+    const availableAddOns = transformAddOns(publisher.addOns);
     // Process selected add-ons
     for (const addonName of selectedAddOns) {
         const addon = (_a = publisher.addOns) === null || _a === void 0 ? void 0 : _a[addonName];
@@ -1075,10 +1132,13 @@ exports.addToCartWithAddons = (0, AsyncHandler_1.asyncHandler)((req, res) => __a
                 }
             }
             addOnsPrice += addonCost;
+            const meta = availableAddOns.find(x => x.id === addonName);
             processedAddOns.push({
-                addonName,
-                addonPrice: addonCost,
+                id: addonName,
+                name: (meta === null || meta === void 0 ? void 0 : meta.name) || addonName,
+                price: `₦${(addonCost).toFixed(2)}`,
                 quantity: addonQuantity,
+                description: meta === null || meta === void 0 ? void 0 : meta.description,
                 budget: addonName === 'paidAmplification' ? customBudgets[addonName] : undefined
             });
         }
