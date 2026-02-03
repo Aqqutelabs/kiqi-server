@@ -899,7 +899,7 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) 
     }
     const userId = req.user._id;
     const userEmail = req.user.email;
-    const { press_release_id } = req.body;
+    const { press_release_id } = req.body || {};
 
     // Get user's cart
     const cart = await Cart.findOne({ user_id: userId });

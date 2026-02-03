@@ -795,7 +795,7 @@ exports.createOrder = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(v
     }
     const userId = req.user._id;
     const userEmail = req.user.email;
-    const { press_release_id } = req.body;
+    const { press_release_id } = req.body || {};
     // Get user's cart
     const cart = yield Cart_1.Cart.findOne({ user_id: userId });
     if (!cart || cart.items.length === 0) {

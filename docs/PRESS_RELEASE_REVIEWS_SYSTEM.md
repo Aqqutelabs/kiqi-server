@@ -15,7 +15,7 @@ The Press Release Reviews system allows users to submit, view, and manage review
 
 ## API Endpoints
 
-### Get Review Summary
+### s
 ```
 GET /api/v1/press-releases/:pressReleaseId/reviews/summary
 ```
