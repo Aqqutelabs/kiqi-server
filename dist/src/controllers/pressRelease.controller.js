@@ -815,6 +815,11 @@ exports.createOrder = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(v
     const vat_percentage = '7.5%';
     const vat_amount = subtotal * 0.075;
     const total_amount = subtotal + vat_amount;
+    console.log(`💰 Order Calculation:
+       Subtotal (NGN): ${subtotal}
+       VAT (7.5%): ${vat_amount}
+       Total (NGN): ${total_amount}
+       Total in Kobo (for Paystack): ${total_amount * 100}`);
     // Generate unique reference for Paystack
     const reference = `ORDER-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
     // Create the order with 'Pending' status

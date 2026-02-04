@@ -16,6 +16,12 @@ interface PaystackResponse {
 
 export const initializePaystackPayment = async (params: PaystackInitializeParams): Promise<PaystackResponse> => {
     try {
+        console.log(`📱 Initializing Paystack Payment:
+           Amount in Kobo: ${params.amount}
+           Amount in NGN: ${params.amount / 100}
+           Email: ${params.email}
+           Reference: ${params.reference}`);
+        
         const response = await axios.post(
             'https://api.paystack.co/transaction/initialize',
             params,
@@ -28,6 +34,8 @@ export const initializePaystackPayment = async (params: PaystackInitializeParams
         );
 
         const { data } = response.data;
+        console.log(`✅ Paystack initialization successful. Access Code: ${data.access_code}`);
+        
         return {
             authorization_url: data.authorization_url,
             access_code: data.access_code,
@@ -35,6 +43,7 @@ export const initializePaystackPayment = async (params: PaystackInitializeParams
         };
     } catch (error) {
         if (axios.isAxiosError(error)) {
+            console.error(`❌ Paystack initialization failed:`, error.response?.data);
             throw new Error(`Paystack initialization failed: ${error.response?.data?.message || error.message}`);
         }
         throw error;

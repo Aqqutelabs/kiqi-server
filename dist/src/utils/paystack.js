@@ -15,8 +15,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.verifyPaystackPayment = exports.initializePaystackPayment = void 0;
 const axios_1 = __importDefault(require("axios"));
 const initializePaystackPayment = (params) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+    var _a, _b, _c;
     try {
+        console.log(`📱 Initializing Paystack Payment:
+           Amount in Kobo: ${params.amount}
+           Amount in NGN: ${params.amount / 100}
+           Email: ${params.email}
+           Reference: ${params.reference}`);
         const response = yield axios_1.default.post('https://api.paystack.co/transaction/initialize', params, {
             headers: {
                 'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
@@ -24,6 +29,7 @@ const initializePaystackPayment = (params) => __awaiter(void 0, void 0, void 0, 
             }
         });
         const { data } = response.data;
+        console.log(`✅ Paystack initialization successful. Access Code: ${data.access_code}`);
         return {
             authorization_url: data.authorization_url,
             access_code: data.access_code,
@@ -32,7 +38,8 @@ const initializePaystackPayment = (params) => __awaiter(void 0, void 0, void 0, 
     }
     catch (error) {
         if (axios_1.default.isAxiosError(error)) {
-            throw new Error(`Paystack initialization failed: ${((_b = (_a = error.response) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.message) || error.message}`);
+            console.error(`❌ Paystack initialization failed:`, (_a = error.response) === null || _a === void 0 ? void 0 : _a.data);
+            throw new Error(`Paystack initialization failed: ${((_c = (_b = error.response) === null || _b === void 0 ? void 0 : _b.data) === null || _c === void 0 ? void 0 : _c.message) || error.message}`);
         }
         throw error;
     }
