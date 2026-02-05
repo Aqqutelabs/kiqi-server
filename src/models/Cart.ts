@@ -4,7 +4,8 @@ import mongoose, { Schema, Document } from 'mongoose';
 interface CartAddOn {
     id: string;
     name?: string;
-    price?: string; // stored as string for backward compatibility with existing price parsing
+    price?: number; // numeric price
+    type?: string; // addon type (fixed, variable, etc.)
     quantity?: number;
     description?: string;
 }
@@ -46,7 +47,8 @@ const CartItemSchema = new Schema<CartItem>({
     selectedAddOns: [{
         id: { type: String },
         name: { type: String },
-        price: { type: String },
+        price: { type: Number },
+        type: { type: String },
         quantity: { type: Number },
         description: { type: String }
     }],

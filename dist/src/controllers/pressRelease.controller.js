@@ -66,74 +66,67 @@ cloudinary_1.v2.config({
 });
 // Helper function to transform add-ons into user-friendly format
 const transformAddOns = (addOns) => {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s;
     const transformed = [];
     if (!addOns)
         return transformed;
     // Backdating
-    if (((_a = addOns.backdating) === null || _a === void 0 ? void 0 : _a.enabled) && addOns.backdating.price) {
-        transformed.push({
-            id: 'backdating',
-            name: 'Backdating',
-            price: addOns.backdating.price,
-            description: 'Publish your press release with a custom backdated timestamp for better SEO and visibility.'
-        });
-    }
+    transformed.push({
+        id: 'backdating',
+        name: 'Backdating',
+        price: ((_a = addOns.backdating) === null || _a === void 0 ? void 0 : _a.price) || 0,
+        description: 'Publish your press release with a custom backdated timestamp for better SEO and visibility.',
+        enabled: ((_b = addOns.backdating) === null || _b === void 0 ? void 0 : _b.enabled) || false
+    });
     // Social Posting
-    if (((_b = addOns.socialPosting) === null || _b === void 0 ? void 0 : _b.enabled) && addOns.socialPosting.price) {
-        transformed.push({
-            id: 'socialPosting',
-            name: 'Social Media Posting',
-            price: addOns.socialPosting.price,
-            description: 'Additional promotion across the publisher\'s social media channels for increased reach.'
-        });
-    }
+    transformed.push({
+        id: 'socialPosting',
+        name: 'Social Media Posting',
+        price: ((_c = addOns.socialPosting) === null || _c === void 0 ? void 0 : _c.price) || 0,
+        description: 'Additional promotion across the publisher\'s social media channels for increased reach.',
+        enabled: ((_d = addOns.socialPosting) === null || _d === void 0 ? void 0 : _d.enabled) || false
+    });
     // Featured Placement
-    if (((_c = addOns.featuredPlacement) === null || _c === void 0 ? void 0 : _c.enabled) && addOns.featuredPlacement.pricePerUnit) {
-        transformed.push({
-            id: 'featuredPlacement',
-            name: 'Featured Placement',
-            price: addOns.featuredPlacement.pricePerUnit,
-            quantity: addOns.featuredPlacement.maxQuantity || 1,
-            description: 'Premium positioning on the publisher\'s website for maximum visibility and engagement.'
-        });
-    }
+    transformed.push({
+        id: 'featuredPlacement',
+        name: 'Featured Placement',
+        price: ((_e = addOns.featuredPlacement) === null || _e === void 0 ? void 0 : _e.pricePerUnit) || 0,
+        quantity: ((_f = addOns.featuredPlacement) === null || _f === void 0 ? void 0 : _f.maxQuantity) || 1,
+        description: 'Premium positioning on the publisher\'s website for maximum visibility and engagement.',
+        enabled: ((_g = addOns.featuredPlacement) === null || _g === void 0 ? void 0 : _g.enabled) || false
+    });
     // Newsletter Inclusion
-    if (((_d = addOns.newsletterInclusion) === null || _d === void 0 ? void 0 : _d.enabled) && addOns.newsletterInclusion.price) {
-        transformed.push({
-            id: 'newsletterInclusion',
-            name: 'Newsletter Inclusion',
-            price: addOns.newsletterInclusion.price,
-            description: 'Include your press release in the publisher\'s email newsletter distribution.'
-        });
-    }
+    transformed.push({
+        id: 'newsletterInclusion',
+        name: 'Newsletter Inclusion',
+        price: ((_h = addOns.newsletterInclusion) === null || _h === void 0 ? void 0 : _h.price) || 0,
+        description: 'Include your press release in the publisher\'s email newsletter distribution.',
+        enabled: ((_j = addOns.newsletterInclusion) === null || _j === void 0 ? void 0 : _j.enabled) || false
+    });
     // Author Byline
-    if (((_e = addOns.authorByline) === null || _e === void 0 ? void 0 : _e.enabled) && addOns.authorByline.price) {
-        transformed.push({
-            id: 'authorByline',
-            name: 'Custom Author Byline',
-            price: addOns.authorByline.price,
-            description: 'Add a custom author name or company attribution to your press release.'
-        });
-    }
+    transformed.push({
+        id: 'authorByline',
+        name: 'Custom Author Byline',
+        price: ((_k = addOns.authorByline) === null || _k === void 0 ? void 0 : _k.price) || 0,
+        description: 'Add a custom author name or company attribution to your press release.',
+        enabled: ((_l = addOns.authorByline) === null || _l === void 0 ? void 0 : _l.enabled) || false
+    });
     // Paid Amplification
-    if ((_f = addOns.paidAmplification) === null || _f === void 0 ? void 0 : _f.enabled) {
-        transformed.push({
-            id: 'paidAmplification',
-            name: 'Paid Amplification',
-            price: addOns.paidAmplification.minBudget || 0,
-            description: `Budget-based advertising boost ($${addOns.paidAmplification.minBudget || 0} - $${addOns.paidAmplification.maxBudget || 10000}).`
-        });
-    }
+    transformed.push({
+        id: 'paidAmplification',
+        name: 'Paid Amplification',
+        price: ((_m = addOns.paidAmplification) === null || _m === void 0 ? void 0 : _m.minBudget) || 0,
+        description: `Budget-based advertising boost ($${((_o = addOns.paidAmplification) === null || _o === void 0 ? void 0 : _o.minBudget) || 0} - $${((_p = addOns.paidAmplification) === null || _p === void 0 ? void 0 : _p.maxBudget) || 10000}).`,
+        enabled: ((_q = addOns.paidAmplification) === null || _q === void 0 ? void 0 : _q.enabled) || false
+    });
     // White Paper Gating
-    if (((_g = addOns.whitePaperGating) === null || _g === void 0 ? void 0 : _g.enabled) && addOns.whitePaperGating.price) {
-        transformed.push({
-            id: 'whitePaperGating',
-            name: 'White Paper Gating',
-            price: addOns.whitePaperGating.price,
-            description: 'Gate your press release behind a lead generation form to capture valuable contacts.'
-        });
-    }
+    transformed.push({
+        id: 'whitePaperGating',
+        name: 'White Paper Gating',
+        price: ((_r = addOns.whitePaperGating) === null || _r === void 0 ? void 0 : _r.price) || 0,
+        description: 'Gate your press release behind a lead generation form to capture valuable contacts.',
+        enabled: ((_s = addOns.whitePaperGating) === null || _s === void 0 ? void 0 : _s.enabled) || false
+    });
     return transformed;
 };
 /**
@@ -614,6 +607,8 @@ exports.getPublisherDetails = (0, AsyncHandler_1.asyncHandler)((req, res) => __a
         },
         // Add-ons (transformed to user-friendly format)
         addOns: transformAddOns(publisher.addOns),
+        // Raw add-ons data
+        rawAddOns: publisher.addOns || [],
         // Reviews (only approved ones)
         reviews: {
             average: publisher.averageRating || 0,
@@ -661,17 +656,77 @@ exports.addToCart = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(voi
         throw new ApiError_1.ApiError(401, 'Unauthorized');
     }
     const userId = req.user._id;
-    const { publisherId } = req.body;
+    const { publisherId, selectedAddons, addons } = req.body;
+    console.log('📥 Full request body:', JSON.stringify(req.body, null, 2));
+    console.log('📥 Extracted publisherId:', publisherId);
+    console.log('📥 Extracted selectedAddons:', selectedAddons);
+    console.log('📥 Extracted addons:', addons);
+    console.log('📥 selectedAddons type:', typeof selectedAddons, 'length:', Array.isArray(selectedAddons) ? selectedAddons.length : 'not an array');
+    // Use selectedAddons if available, otherwise fall back to addons
+    const addonsList = selectedAddons || addons || [];
+    console.log('📥 Final addonsList to use:', addonsList, 'length:', addonsList.length);
     // Find the publisher
     const publisher = yield Publisher_1.Publisher.findOne({ publisherId });
     if (!publisher) {
         throw new ApiError_1.ApiError(404, 'Publisher not found');
     }
-    // Add or update cart item with all publisher details
+    // Extract numeric price from publisher price string (handles k, m suffixes)
+    const parsePrice = (priceStr) => {
+        const cleaned = String(priceStr).replace(/[^0-9.kmK M]/g, '').toUpperCase();
+        let value = parseFloat(cleaned);
+        if (cleaned.includes('K'))
+            value *= 1000;
+        else if (cleaned.includes('M'))
+            value *= 1000000;
+        return value || 0;
+    };
+    const numericPrice = parsePrice(publisher.price);
+    console.log(`🛒 Adding to cart - Publisher: ${publisher.name}, Price String: "${publisher.price}", Numeric Price: ${numericPrice}`);
+    // Calculate total addon price
+    let totalAddonPrice = 0;
+    const selectedAddonsArray = addonsList || [];
+    // Enrich addon prices from publisher if they're 0 or missing
+    const formattedSelectedAddons = selectedAddonsArray.map((addon) => {
+        let price = addon.price || 0;
+        // If price is 0, try to get it from publisher's addon config
+        if (price === 0 && (publisher === null || publisher === void 0 ? void 0 : publisher.addOns)) {
+            const publisherAddon = publisher.addOns[addon.id];
+            if (publisherAddon && 'price' in publisherAddon) {
+                price = publisherAddon.price || 0;
+            }
+            else if (publisherAddon && 'pricePerUnit' in publisherAddon) {
+                price = publisherAddon.pricePerUnit || 0;
+            }
+            else if (publisherAddon && 'minBudget' in publisherAddon) {
+                price = publisherAddon.minBudget || 0;
+            }
+        }
+        return {
+            id: addon.id,
+            name: addon.name,
+            price: price,
+            type: addon.type
+        };
+    });
+    if (formattedSelectedAddons.length > 0) {
+        totalAddonPrice = formattedSelectedAddons.reduce((sum, addon) => sum + (addon.price || 0), 0);
+    }
+    const totalPrice = numericPrice + totalAddonPrice;
+    console.log('💾 About to save cart item with:', {
+        selectedAddonsCount: formattedSelectedAddons.length,
+        selectedAddonsData: formattedSelectedAddons,
+        totalAddonPrice,
+        totalPrice
+    });
+    // Add or update cart item with all publisher details and selected addons
     const cartItem = {
         publisherId: publisher.publisherId,
         name: publisher.name,
         price: publisher.price,
+        basePrice: numericPrice,
+        quantity: 1,
+        selectedAddOns: formattedSelectedAddons,
+        subtotal: totalPrice,
         region_reach: publisher.region_reach || [],
         audience_reach: publisher.audience_reach,
         selected: true
@@ -716,17 +771,10 @@ exports.getCart = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 
                 const availableAddOns = transformAddOns(publisher === null || publisher === void 0 ? void 0 : publisher.addOns);
                 let addOnsResponse = [];
                 let computedSubtotal = 0;
-                // If item has enhanced subtotal stored, use it
-                if (typeof item.subtotal === 'number') {
-                    computedSubtotal = item.subtotal;
-                }
-                else {
-                    // Compute base price
-                    const basePrice = publisher ? parseFloat(String(publisher.price).replace(/[^0-9.-]+/g, '')) : (item.basePrice || 0);
-                    const qty = item.quantity || 1;
-                    computedSubtotal = basePrice * qty;
-                    // Use selectedAddOns (enhanced) or legacy stored addOns
-                    const selectedAddOns = item.selectedAddOns || [];
+                // Use selectedAddOns (enhanced) or legacy stored addOns
+                const selectedAddOns = item.selectedAddOns || [];
+                // Process selected addons first if they exist
+                if (selectedAddOns.length > 0) {
                     for (const a of selectedAddOns) {
                         const addonId = a.id || a.addonName || a.addon_id;
                         const addonQty = a.quantity || a.qty || 1;
@@ -740,7 +788,22 @@ exports.getCart = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(void 
                             quantity: addonQty,
                             description: (meta === null || meta === void 0 ? void 0 : meta.description) || a.description || ''
                         });
-                        computedSubtotal += (addonPriceNum * addonQty);
+                    }
+                }
+                // If item has enhanced subtotal stored, use it
+                if (typeof item.subtotal === 'number') {
+                    computedSubtotal = item.subtotal;
+                }
+                else {
+                    // Compute base price
+                    const basePrice = publisher ? parseFloat(String(publisher.price).replace(/[^0-9.-]+/g, '')) : (item.basePrice || 0);
+                    const qty = item.quantity || 1;
+                    computedSubtotal = basePrice * qty;
+                    // Add addon prices if they were processed above
+                    if (addOnsResponse.length > 0) {
+                        for (const addon of addOnsResponse) {
+                            computedSubtotal += (addon.price * (addon.quantity || 1));
+                        }
                     }
                 }
                 // Build display price string (legacy flows expect string price)
@@ -802,24 +865,54 @@ exports.createOrder = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(v
         throw new ApiError_1.ApiError(400, 'Cart is empty');
     }
     // Calculate order summary (support enhanced items with numeric subtotal)
+    // Helper to parse prices with k/m suffixes
+    const parsePrice = (priceStr) => {
+        const cleaned = String(priceStr).replace(/[^0-9.kmK M]/g, '').toUpperCase();
+        let value = parseFloat(cleaned);
+        if (cleaned.includes('K'))
+            value *= 1000;
+        else if (cleaned.includes('M'))
+            value *= 1000000;
+        return value || 0;
+    };
     const subtotal = cart.items.reduce((acc, item) => {
+        let itemTotal = 0;
+        // Priority 1: Use precomputed subtotal if available (from addToCartWithAddons)
         if (typeof item.subtotal === 'number') {
-            return acc + item.subtotal;
+            itemTotal = item.subtotal;
+            console.log(`📦 Cart Item [${item.publisherTitle || item.name}]: Using precomputed subtotal = ${itemTotal}`);
+            return acc + itemTotal;
         }
+        // Priority 2: Use basePrice if available (numeric)
+        if (typeof item.basePrice === 'number' && item.basePrice > 0) {
+            const qty = item.quantity || 1;
+            itemTotal = item.basePrice * qty;
+            console.log(`📦 Cart Item [${item.name}]: basePrice = ${item.basePrice}, qty = ${qty}, total = ${itemTotal}`);
+            return acc + itemTotal;
+        }
+        // Priority 3: Parse price string (handles k, m suffixes)
         if (item.price) {
-            const price = parseFloat(String(item.price).replace(/[^0-9.-]+/g, '')) || 0;
-            return acc + price;
+            const price = parsePrice(String(item.price));
+            const qty = item.quantity || 1;
+            itemTotal = price * qty;
+            console.log(`📦 Cart Item [${item.name}]: Parsed price from "${item.price}" = ${price}, qty = ${qty}, total = ${itemTotal}`);
+            return acc + itemTotal;
         }
+        console.log(`⚠️  Cart Item [${item.name}]: No price found!`);
         return acc;
     }, 0);
+    console.log(`\n💳 Subtotal Calculation Complete: ${subtotal}\n`);
     const vat_percentage = '7.5%';
     const vat_amount = subtotal * 0.075;
     const total_amount = subtotal + vat_amount;
-    console.log(`💰 Order Calculation:
-       Subtotal (NGN): ${subtotal}
-       VAT (7.5%): ${vat_amount}
-       Total (NGN): ${total_amount}
-       Total in Kobo (for Paystack): ${total_amount * 100}`);
+    const amountInKobo = Math.round(total_amount * 100); // Ensure integer kobo
+    console.log(`
+💰 FINAL ORDER CALCULATION:
+   ├─ Subtotal (NGN): ₦${subtotal.toFixed(2)}
+   ├─ VAT (7.5%): ₦${vat_amount.toFixed(2)}
+   ├─ Total (NGN): ₦${total_amount.toFixed(2)}
+   └─ Amount in Kobo (for Paystack): ${amountInKobo}
+`);
     // Generate unique reference for Paystack
     const reference = `ORDER-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
     // Create the order with 'Pending' status
@@ -858,7 +951,7 @@ exports.createOrder = (0, AsyncHandler_1.asyncHandler)((req, res) => __awaiter(v
     }
     // Initialize Paystack payment (cart will be cleared only after payment verification)
     const paystackResponse = yield (0, paystack_1.initializePaystackPayment)({
-        amount: total_amount * 100, // Paystack expects amount in kobo
+        amount: amountInKobo, // Paystack expects amount in kobo (integer)
         email: userEmail,
         reference,
         callback_url: `${process.env.FRONTEND_URL}/pr/payment/callback`

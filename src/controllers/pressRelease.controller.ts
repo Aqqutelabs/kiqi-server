@@ -21,6 +21,14 @@ cloudinary.config({
     api_secret: 'otQq6cFFzqGeQO4umSVrrFumA30' // Replace with your actual API secret
 });
 
+// Type definitions
+interface SelectedAddon {
+    id: string;
+    name: string;
+    price: number;
+    type: string;
+}
+
 // Helper function to transform add-ons into user-friendly format
 const transformAddOns = (addOns: PublisherAddon | undefined): Array<{
     id: string;
@@ -28,6 +36,7 @@ const transformAddOns = (addOns: PublisherAddon | undefined): Array<{
     price: number;
     quantity?: number;
     description: string;
+    enabled: boolean;
 }> => {
     const transformed: Array<{
         id: string;
@@ -35,80 +44,74 @@ const transformAddOns = (addOns: PublisherAddon | undefined): Array<{
         price: number;
         quantity?: number;
         description: string;
+        enabled: boolean;
     }> = [];
 
     if (!addOns) return transformed;
 
     // Backdating
-    if (addOns.backdating?.enabled && addOns.backdating.price) {
-        transformed.push({
-            id: 'backdating',
-            name: 'Backdating',
-            price: addOns.backdating.price,
-            description: 'Publish your press release with a custom backdated timestamp for better SEO and visibility.'
-        });
-    }
+    transformed.push({
+        id: 'backdating',
+        name: 'Backdating',
+        price: addOns.backdating?.price || 0,
+        description: 'Publish your press release with a custom backdated timestamp for better SEO and visibility.',
+        enabled: addOns.backdating?.enabled || false
+    });
 
     // Social Posting
-    if (addOns.socialPosting?.enabled && addOns.socialPosting.price) {
-        transformed.push({
-            id: 'socialPosting',
-            name: 'Social Media Posting',
-            price: addOns.socialPosting.price,
-            description: 'Additional promotion across the publisher\'s social media channels for increased reach.'
-        });
-    }
+    transformed.push({
+        id: 'socialPosting',
+        name: 'Social Media Posting',
+        price: addOns.socialPosting?.price || 0,
+        description: 'Additional promotion across the publisher\'s social media channels for increased reach.',
+        enabled: addOns.socialPosting?.enabled || false
+    });
 
     // Featured Placement
-    if (addOns.featuredPlacement?.enabled && addOns.featuredPlacement.pricePerUnit) {
-        transformed.push({
-            id: 'featuredPlacement',
-            name: 'Featured Placement',
-            price: addOns.featuredPlacement.pricePerUnit,
-            quantity: addOns.featuredPlacement.maxQuantity || 1,
-            description: 'Premium positioning on the publisher\'s website for maximum visibility and engagement.'
-        });
-    }
+    transformed.push({
+        id: 'featuredPlacement',
+        name: 'Featured Placement',
+        price: addOns.featuredPlacement?.pricePerUnit || 0,
+        quantity: addOns.featuredPlacement?.maxQuantity || 1,
+        description: 'Premium positioning on the publisher\'s website for maximum visibility and engagement.',
+        enabled: addOns.featuredPlacement?.enabled || false
+    });
 
     // Newsletter Inclusion
-    if (addOns.newsletterInclusion?.enabled && addOns.newsletterInclusion.price) {
-        transformed.push({
-            id: 'newsletterInclusion',
-            name: 'Newsletter Inclusion',
-            price: addOns.newsletterInclusion.price,
-            description: 'Include your press release in the publisher\'s email newsletter distribution.'
-        });
-    }
+    transformed.push({
+        id: 'newsletterInclusion',
+        name: 'Newsletter Inclusion',
+        price: addOns.newsletterInclusion?.price || 0,
+        description: 'Include your press release in the publisher\'s email newsletter distribution.',
+        enabled: addOns.newsletterInclusion?.enabled || false
+    });
 
     // Author Byline
-    if (addOns.authorByline?.enabled && addOns.authorByline.price) {
-        transformed.push({
-            id: 'authorByline',
-            name: 'Custom Author Byline',
-            price: addOns.authorByline.price,
-            description: 'Add a custom author name or company attribution to your press release.'
-        });
-    }
+    transformed.push({
+        id: 'authorByline',
+        name: 'Custom Author Byline',
+        price: addOns.authorByline?.price || 0,
+        description: 'Add a custom author name or company attribution to your press release.',
+        enabled: addOns.authorByline?.enabled || false
+    });
 
     // Paid Amplification
-    if (addOns.paidAmplification?.enabled) {
-        transformed.push({
-            id: 'paidAmplification',
-            name: 'Paid Amplification',
-            price: addOns.paidAmplification.minBudget || 0,
-            description: `Budget-based advertising boost ($${addOns.paidAmplification.minBudget || 0} - $${addOns.paidAmplification.maxBudget || 10000}).`
-        });
-    }
+    transformed.push({
+        id: 'paidAmplification',
+        name: 'Paid Amplification',
+        price: addOns.paidAmplification?.minBudget || 0,
+        description: `Budget-based advertising boost ($${addOns.paidAmplification?.minBudget || 0} - $${addOns.paidAmplification?.maxBudget || 10000}).`,
+        enabled: addOns.paidAmplification?.enabled || false
+    });
 
     // White Paper Gating
-    if (addOns.whitePaperGating?.enabled && addOns.whitePaperGating.price) {
-        transformed.push({
-            id: 'whitePaperGating',
-            name: 'White Paper Gating',
-            price: addOns.whitePaperGating.price,
-            description: 'Gate your press release behind a lead generation form to capture valuable contacts.'
-        });
-    }
+    transformed.push({
+        id: 'whitePaperGating',
+        name: 'White Paper Gating',
+        price: addOns.whitePaperGating?.price || 0,
+        description: 'Gate your press release behind a lead generation form to capture valuable contacts.',
+        enabled: addOns.whitePaperGating?.enabled || false
+    });
 
     return transformed;
 };
@@ -687,6 +690,9 @@ export const getPublisherDetails = asyncHandler(async (req: AuthRequest, res: Re
         // Add-ons (transformed to user-friendly format)
         addOns: transformAddOns(publisher.addOns),
         
+        // Raw add-ons data
+        rawAddOns: publisher.addOns || [],
+        
         // Reviews (only approved ones)
         reviews: {
             average: publisher.averageRating || 0,
@@ -741,7 +747,17 @@ export const addToCart = asyncHandler(async (req: AuthRequest, res: Response) =>
     }
     const userId = req.user._id;
 
-    const { publisherId } = req.body;
+    const { publisherId, selectedAddons, addons } = req.body as { publisherId: string; selectedAddons?: SelectedAddon[]; addons?: SelectedAddon[] };
+
+    console.log('📥 Full request body:', JSON.stringify(req.body, null, 2));
+    console.log('📥 Extracted publisherId:', publisherId);
+    console.log('📥 Extracted selectedAddons:', selectedAddons);
+    console.log('📥 Extracted addons:', addons);
+    console.log('📥 selectedAddons type:', typeof selectedAddons, 'length:', Array.isArray(selectedAddons) ? selectedAddons.length : 'not an array');
+
+    // Use selectedAddons if available, otherwise fall back to addons
+    const addonsList = selectedAddons || addons || [];
+    console.log('📥 Final addonsList to use:', addonsList, 'length:', addonsList.length);
 
     // Find the publisher
     const publisher = await Publisher.findOne({ publisherId });
@@ -749,11 +765,67 @@ export const addToCart = asyncHandler(async (req: AuthRequest, res: Response) =>
         throw new ApiError(404, 'Publisher not found');
     }
 
-    // Add or update cart item with all publisher details
+    // Extract numeric price from publisher price string (handles k, m suffixes)
+    const parsePrice = (priceStr: string): number => {
+        const cleaned = String(priceStr).replace(/[^0-9.kmK M]/g, '').toUpperCase();
+        let value = parseFloat(cleaned);
+        if (cleaned.includes('K')) value *= 1000;
+        else if (cleaned.includes('M')) value *= 1000000;
+        return value || 0;
+    };
+    const numericPrice = parsePrice(publisher.price);
+    console.log(`🛒 Adding to cart - Publisher: ${publisher.name}, Price String: "${publisher.price}", Numeric Price: ${numericPrice}`);
+
+    // Calculate total addon price
+    let totalAddonPrice: number = 0;
+    const selectedAddonsArray: SelectedAddon[] = (addonsList as SelectedAddon[]) || [];
+    
+    // Enrich addon prices from publisher if they're 0 or missing
+    const formattedSelectedAddons: SelectedAddon[] = selectedAddonsArray.map((addon: SelectedAddon): SelectedAddon => {
+        let price = addon.price || 0;
+        
+        // If price is 0, try to get it from publisher's addon config
+        if (price === 0 && publisher?.addOns) {
+            const publisherAddon = publisher.addOns[addon.id as keyof typeof publisher.addOns];
+            if (publisherAddon && 'price' in publisherAddon) {
+                price = (publisherAddon as any).price || 0;
+            } else if (publisherAddon && 'pricePerUnit' in publisherAddon) {
+                price = (publisherAddon as any).pricePerUnit || 0;
+            } else if (publisherAddon && 'minBudget' in publisherAddon) {
+                price = (publisherAddon as any).minBudget || 0;
+            }
+        }
+        
+        return {
+            id: addon.id,
+            name: addon.name,
+            price: price,
+            type: addon.type
+        };
+    });
+
+    if (formattedSelectedAddons.length > 0) {
+        totalAddonPrice = formattedSelectedAddons.reduce((sum: number, addon: SelectedAddon): number => sum + (addon.price || 0), 0);
+    }
+
+    const totalPrice = numericPrice + totalAddonPrice;
+
+    console.log('💾 About to save cart item with:', {
+        selectedAddonsCount: formattedSelectedAddons.length,
+        selectedAddonsData: formattedSelectedAddons,
+        totalAddonPrice,
+        totalPrice
+    });
+
+    // Add or update cart item with all publisher details and selected addons
     const cartItem = {
         publisherId: publisher.publisherId,
         name: publisher.name,
         price: publisher.price,
+        basePrice: numericPrice,
+        quantity: 1,
+        selectedAddOns: formattedSelectedAddons,
+        subtotal: totalPrice,
         region_reach: publisher.region_reach || [],
         audience_reach: publisher.audience_reach,
         selected: true
@@ -812,17 +884,11 @@ export const getCart = asyncHandler(async (req: AuthRequest, res: Response) => {
                     let addOnsResponse: Array<any> = [];
                     let computedSubtotal = 0;
 
-                    // If item has enhanced subtotal stored, use it
-                    if (typeof item.subtotal === 'number') {
-                        computedSubtotal = item.subtotal;
-                    } else {
-                        // Compute base price
-                        const basePrice = publisher ? parseFloat(String(publisher.price).replace(/[^0-9.-]+/g, '')) : (item.basePrice || 0);
-                        const qty = item.quantity || 1;
-                        computedSubtotal = basePrice * qty;
-
-                        // Use selectedAddOns (enhanced) or legacy stored addOns
-                        const selectedAddOns = (item as any).selectedAddOns || [];
+                    // Use selectedAddOns (enhanced) or legacy stored addOns
+                    const selectedAddOns = (item as any).selectedAddOns || [];
+                    
+                    // Process selected addons first if they exist
+                    if (selectedAddOns.length > 0) {
                         for (const a of selectedAddOns) {
                             const addonId = a.id || a.addonName || a.addon_id;
                             const addonQty = a.quantity || a.qty || 1;
@@ -838,8 +904,23 @@ export const getCart = asyncHandler(async (req: AuthRequest, res: Response) => {
                                 quantity: addonQty,
                                 description: meta?.description || a.description || ''
                             });
+                        }
+                    }
 
-                            computedSubtotal += (addonPriceNum * addonQty);
+                    // If item has enhanced subtotal stored, use it
+                    if (typeof item.subtotal === 'number') {
+                        computedSubtotal = item.subtotal;
+                    } else {
+                        // Compute base price
+                        const basePrice = publisher ? parseFloat(String(publisher.price).replace(/[^0-9.-]+/g, '')) : (item.basePrice || 0);
+                        const qty = item.quantity || 1;
+                        computedSubtotal = basePrice * qty;
+
+                        // Add addon prices if they were processed above
+                        if (addOnsResponse.length > 0) {
+                            for (const addon of addOnsResponse) {
+                                computedSubtotal += (addon.price * (addon.quantity || 1));
+                            }
                         }
                     }
 
@@ -908,26 +989,60 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) 
     }
 
     // Calculate order summary (support enhanced items with numeric subtotal)
+    // Helper to parse prices with k/m suffixes
+    const parsePrice = (priceStr: string): number => {
+        const cleaned = String(priceStr).replace(/[^0-9.kmK M]/g, '').toUpperCase();
+        let value = parseFloat(cleaned);
+        if (cleaned.includes('K')) value *= 1000;
+        else if (cleaned.includes('M')) value *= 1000000;
+        return value || 0;
+    };
+
     const subtotal = cart.items.reduce((acc: number, item) => {
+        let itemTotal = 0;
+        
+        // Priority 1: Use precomputed subtotal if available (from addToCartWithAddons)
         if (typeof (item as any).subtotal === 'number') {
-            return acc + (item as any).subtotal;
+            itemTotal = (item as any).subtotal;
+            console.log(`📦 Cart Item [${(item as any).publisherTitle || item.name}]: Using precomputed subtotal = ${itemTotal}`);
+            return acc + itemTotal;
         }
+        
+        // Priority 2: Use basePrice if available (numeric)
+        if (typeof (item as any).basePrice === 'number' && (item as any).basePrice > 0) {
+            const qty = (item as any).quantity || 1;
+            itemTotal = (item as any).basePrice * qty;
+            console.log(`📦 Cart Item [${item.name}]: basePrice = ${(item as any).basePrice}, qty = ${qty}, total = ${itemTotal}`);
+            return acc + itemTotal;
+        }
+        
+        // Priority 3: Parse price string (handles k, m suffixes)
         if (item.price) {
-            const price = parseFloat(String(item.price).replace(/[^0-9.-]+/g, '')) || 0;
-            return acc + price;
+            const price = parsePrice(String(item.price));
+            const qty = (item as any).quantity || 1;
+            itemTotal = price * qty;
+            console.log(`📦 Cart Item [${item.name}]: Parsed price from "${item.price}" = ${price}, qty = ${qty}, total = ${itemTotal}`);
+            return acc + itemTotal;
         }
+        
+        console.log(`⚠️  Cart Item [${item.name}]: No price found!`);
         return acc;
     }, 0);
+    
+    console.log(`\n💳 Subtotal Calculation Complete: ${subtotal}\n`);
 
     const vat_percentage = '7.5%';
     const vat_amount = subtotal * 0.075;
     const total_amount = subtotal + vat_amount;
+    const amountInKobo = Math.round(total_amount * 100); // Ensure integer kobo
     
-    console.log(`💰 Order Calculation:
-       Subtotal (NGN): ${subtotal}
-       VAT (7.5%): ${vat_amount}
-       Total (NGN): ${total_amount}
-       Total in Kobo (for Paystack): ${total_amount * 100}`);
+    console.log(`
+💰 FINAL ORDER CALCULATION:
+   ├─ Subtotal (NGN): ₦${subtotal.toFixed(2)}
+   ├─ VAT (7.5%): ₦${vat_amount.toFixed(2)}
+   ├─ Total (NGN): ₦${total_amount.toFixed(2)}
+   └─ Amount in Kobo (for Paystack): ${amountInKobo}
+`);
 
     // Generate unique reference for Paystack
     const reference = `ORDER-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
@@ -977,7 +1092,7 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) 
 
     // Initialize Paystack payment (cart will be cleared only after payment verification)
     const paystackResponse = await initializePaystackPayment({
-        amount: total_amount * 100, // Paystack expects amount in kobo
+        amount: amountInKobo, // Paystack expects amount in kobo (integer)
         email: userEmail,
         reference,
         callback_url: `${process.env.FRONTEND_URL}/pr/payment/callback`

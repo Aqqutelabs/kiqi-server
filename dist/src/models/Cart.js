@@ -45,7 +45,8 @@ const CartItemSchema = new mongoose_1.Schema({
     selectedAddOns: [{
             id: { type: String },
             name: { type: String },
-            price: { type: String },
+            price: { type: Number },
+            type: { type: String },
             quantity: { type: Number },
             description: { type: String }
         }],
